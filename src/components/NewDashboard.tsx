@@ -141,14 +141,15 @@ export function NewDashboard() {
 
   return (
     <div style={{ padding: 24 }}>
-      {/* 통합 티커 바: 시장 지표 + 자산 */}
+      {/* 통합 티커 바: 시장 지표 + 자산 (횡스크롤) */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 0,
-        padding: '12px 0', marginBottom: 24,
+        overflowX: 'auto', overflowY: 'hidden',
+        padding: '16px 0', marginBottom: 24,
         borderBottom: '1px solid var(--border-primary)',
+        scrollbarWidth: 'none',
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 'max-content' }}>
         {(() => {
-          // 시장 지표 항목
           const marketItems = selectMarketItems(marketData).map(item => {
             const isUp = item.direction === 'RISING';
             const isDown = item.direction === 'FALLING';
@@ -163,15 +164,14 @@ export function NewDashboard() {
               valueColor: 'var(--text-primary)',
             };
           });
-          // 자산 항목
           const assetItems = [
             { label: '총 자산', value: totalAsset, isTotal: true },
-            { label: `${new Date().getFullYear()}년`, value: yearlyChange },
+            { label: `${new Date().getFullYear()}년 증감`, value: yearlyChange },
             {
-              label: (() => { const t = new Date(); const days = ['일','월','화','수','목','금','토']; return `${t.getMonth()+1}/${t.getDate()} ${days[t.getDay()]}`; })(),
+              label: (() => { const t = new Date(); const days = ['일','월','화','수','목','금','토']; return `${t.getMonth()+1}/${t.getDate()} ${days[t.getDay()]} 증감`; })(),
               value: dailyChange,
             },
-            { label: `${new Date().getMonth()+1}월`, value: monthlyChange },
+            { label: `${new Date().getMonth()+1}월 증감`, value: monthlyChange },
           ].map(item => {
             const isPositive = item.value > 0;
             const isNegative = item.value < 0;
@@ -190,7 +190,7 @@ export function NewDashboard() {
               trend: item.isTotal ? 0.3 : isPositive ? 0.5 : isNegative ? -0.5 : 0,
               isMarket: false,
               valueColor: item.isTotal ? 'var(--text-primary)' : changeColor,
-              fontSize: item.isTotal ? 16 : 13,
+              isTotal: item.isTotal,
             };
           });
 
@@ -200,45 +200,45 @@ export function NewDashboard() {
             const sparkPoints = (() => {
               const pts: number[] = [];
               let v = 20;
-              for (let j = 0; j < 16; j++) {
+              for (let j = 0; j < 20; j++) {
                 v += item.trend + (Math.sin(j * 1.3 + i * 5) * 2.5) + (Math.cos(j * 0.7 + i * 3) * 1.5);
                 v = Math.max(4, Math.min(36, v));
                 pts.push(v);
               }
-              return pts.map((y, x) => `${x * (40 / 15)},${40 - y}`).join(' ');
+              return pts.map((y, x) => `${x * (60 / 19)},${40 - y}`).join(' ');
             })();
             const isSep = item.isMarket && i === marketItems.length - 1;
 
             return (
               <div key={i} style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0 12px',
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '0 24px',
                 borderRight: i < allItems.length - 1 ? `1px solid var(${isSep ? '--border-primary' : '--border-secondary'})` : 'none',
               }}>
-                <svg width="40" height="32" viewBox="0 0 40 40" style={{ flexShrink: 0 }}>
+                <svg width="60" height="40" viewBox="0 0 60 40" style={{ flexShrink: 0 }}>
                   <defs>
                     <linearGradient id={`tGrad${i}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={item.sparkColor} stopOpacity="0.25" />
                       <stop offset="100%" stopColor={item.sparkColor} stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <polygon points={`0,40 ${sparkPoints} 40,40`} fill={`url(#tGrad${i})`} />
+                  <polygon points={`0,40 ${sparkPoints} 60,40`} fill={`url(#tGrad${i})`} />
                   <polyline points={sparkPoints} fill="none" stroke={item.sparkColor}
-                    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 1, whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 4, whiteSpace: 'nowrap' }}>
                     {item.label}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <span className="toss-number" style={{
-                      fontSize: (item as any).fontSize || 13, fontWeight: 600,
+                      fontSize: (item as any).isTotal ? 20 : 16, fontWeight: 700,
                       color: item.valueColor, whiteSpace: 'nowrap',
                     }}>
                       {item.displayValue}
                     </span>
                     {item.subValue && (
-                      <span className="toss-number" style={{ fontSize: 10, color: item.color, whiteSpace: 'nowrap' }}>
+                      <span className="toss-number" style={{ fontSize: 13, color: item.color, whiteSpace: 'nowrap' }}>
                         {item.subValue}
                       </span>
                     )}
@@ -248,6 +248,7 @@ export function NewDashboard() {
             );
           });
         })()}
+        </div>
       </div>
 
       {/* 자산 증감 상세 내역 */}
