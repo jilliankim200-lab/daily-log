@@ -227,7 +227,7 @@ export function NewDashboard() {
                     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 4, whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap' }}>
                     {item.label}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>

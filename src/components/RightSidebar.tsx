@@ -46,13 +46,7 @@ export function RightSidebar() {
   const hide = (v: string) => isAmountHidden ? '••••' : v;
 
   return (
-    <aside style={{
-      width: 280, flexShrink: 0, height: '100%',
-      borderLeft: '1px solid var(--border-secondary)',
-      background: 'var(--bg-page)',
-      display: 'flex', flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
+    <>
       {/* Header */}
       <div style={{
         padding: '16px 20px',
@@ -140,6 +134,6 @@ export function RightSidebar() {
           </div>
         )}
       </div>
-    </aside>
+    </>
   );
 }
