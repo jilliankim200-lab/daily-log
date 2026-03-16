@@ -189,9 +189,9 @@ export default function App() {
                 width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'var(--accent-blue)',
               }}>
-                <MIcon name="auto_awesome" size={16} style={{ color: '#fff' }} />
+                <MIcon name="diamond" size={16} style={{ color: '#fff' }} />
               </div>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>자산관리</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Finote</span>
             </div>
           </div>
 
