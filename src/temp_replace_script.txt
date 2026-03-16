@@ -1,0 +1,8 @@
+Replacing text-[10px], text-[11px], text-[12px], text-[13px] to text-[14px] in modal section (lines 1397-1930)
+
+This includes:
+- Modal header subtitle
+- Code blocks
+- Description texts
+- Example texts  
+- All small font sizes in the formula modal

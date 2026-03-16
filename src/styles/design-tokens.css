@@ -1,0 +1,322 @@
+/* ============================================
+   토스증권 스타일 디자인 시스템
+   ============================================ */
+
+:root {
+  /* ── 라이트 모드 ── */
+
+  /* 배경 */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F4F5F7;
+  --bg-tertiary: #EAEBEE;
+  --bg-elevated: #FFFFFF;
+  --bg-page: #F4F5F7;
+
+  /* 텍스트 */
+  --text-primary: #191F28;
+  --text-secondary: #425870;
+  --text-tertiary: #68809a;
+  --text-disabled: #D1D6DB;
+
+  /* 강조 */
+  --accent-blue: #3182F6;
+  --accent-blue-hover: #1B64DA;
+  --accent-blue-bg: #E8F3FF;
+
+  /* 수익/손실 */
+  --color-profit: #F04452;
+  --color-profit-bg: #FFF0F0;
+  --color-loss: #3182F6;
+  --color-loss-bg: #E8F3FF;
+  --color-neutral: #8B95A1;
+
+  /* 보더 */
+  --border-primary: #E5E8EB;
+  --border-secondary: #F2F3F5;
+
+  /* 기타 */
+  --color-success: #30C85E;
+  --color-warning: #FF9500;
+  --color-error: #F04452;
+
+  /* 폰트 */
+  --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', monospace;
+
+  /* 폰트 크기 */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 28px;
+  --text-4xl: 34px;
+
+  /* 폰트 굵기 */
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* 간격 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* 모서리 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* 그림자 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* ── 다크 모드 ── */
+.dark {
+  --bg-primary: #17171C;
+  --bg-secondary: #212126;
+  --bg-tertiary: #2C2C33;
+  --bg-elevated: #27272D;
+  --bg-page: #0D0D10;
+
+  --text-primary: #ECECEC;
+  --text-secondary: #8B8B8E;
+  --text-tertiary: #56565A;
+  --text-disabled: #3C3C40;
+
+  --accent-blue: #4593FC;
+  --accent-blue-hover: #5BA3FF;
+  --accent-blue-bg: rgba(69, 147, 252, 0.12);
+
+  --color-profit: #F04452;
+  --color-profit-bg: rgba(240, 68, 82, 0.12);
+  --color-loss: #4593FC;
+  --color-loss-bg: rgba(69, 147, 252, 0.12);
+  --color-neutral: #56565A;
+
+  --border-primary: #2C2C33;
+  --border-secondary: #212126;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================
+   기본 스타일 리셋 & 적용
+   ============================================ */
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+}
+
+/* ============================================
+   유틸리티 클래스
+   ============================================ */
+
+/* 숫자 전용 (tabular-nums) */
+.toss-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* 수익 색상 */
+.toss-profit {
+  color: var(--color-profit);
+}
+.toss-loss {
+  color: var(--color-loss);
+}
+.toss-neutral {
+  color: var(--color-neutral);
+}
+
+/* 카드 */
+.toss-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* 구분선 */
+.toss-divider {
+  border: none;
+  height: 1px;
+  background: var(--border-primary);
+}
+
+/* 뱃지 */
+.toss-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+.toss-badge-profit {
+  background: var(--color-profit-bg);
+  color: var(--color-profit);
+}
+.toss-badge-loss {
+  background: var(--color-loss-bg);
+  color: var(--color-loss);
+}
+
+/* 버튼 - 토스 스타일 */
+.toss-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+.toss-btn-primary {
+  background: var(--accent-blue);
+  color: #FFFFFF;
+  padding: 10px 20px;
+  font-size: var(--text-sm);
+}
+.toss-btn-primary:hover {
+  background: var(--accent-blue-hover);
+}
+.toss-btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  font-size: var(--text-sm);
+}
+.toss-btn-secondary:hover {
+  background: var(--border-primary);
+}
+.toss-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+}
+.toss-btn-ghost:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* 탭 - 토스증권 필터 스타일 */
+.toss-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.toss-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+.toss-tab-active {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  font-weight: var(--font-bold);
+}
+
+/* 입력 필드 */
+.toss-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: all 0.15s ease;
+}
+.toss-input:focus {
+  border-color: var(--accent-blue);
+  background: var(--bg-primary);
+}
+.toss-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* 테이블 */
+.toss-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.toss-table th {
+  padding: 10px 16px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-primary);
+  white-space: nowrap;
+}
+.toss-table td {
+  padding: 12px 16px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-secondary);
+  white-space: nowrap;
+}
+.toss-table tbody tr {
+  transition: background 0.1s ease;
+}
+.toss-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+.toss-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 셀렉트 */
+.toss-select {
+  padding: 8px 32px 8px 12px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%238B95A1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.toss-select:focus {
+  border-color: var(--accent-blue);
+  background-color: var(--bg-primary);
+}
