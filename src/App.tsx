@@ -60,6 +60,7 @@ export default function App() {
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
   const setOtherAssets = (assets: OtherAsset[]) => {
     setOtherAssetsState(assets);
@@ -250,6 +251,18 @@ export default function App() {
               >
                 <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
               </button>
+              <button
+                onClick={() => setIsRightSidebarOpen(prev => !prev)}
+                style={{
+                  padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                title={isRightSidebarOpen ? '보유종목 숨기기' : '보유종목 보기'}
+              >
+                <MIcon name={isRightSidebarOpen ? "right_panel_open" : "right_panel_close"} size={20} />
+              </button>
             </div>
           </header>
 
@@ -260,7 +273,7 @@ export default function App() {
                 {renderPage()}
               </ErrorBoundary>
             </main>
-            <RightSidebar />
+            {isRightSidebarOpen && <RightSidebar />}
           </div>
         </div>
 
