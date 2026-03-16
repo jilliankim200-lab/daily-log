@@ -176,7 +176,7 @@ export default function App() {
         {/* Sidebar */}
         <aside style={{
           width: 220, flexShrink: 0, height: '100vh', overflowY: 'auto',
-          background: 'var(--bg-primary)', borderRight: '1px solid var(--border-primary)',
+          background: 'var(--bg-primary)',
           display: 'flex', flexDirection: 'column',
         }}>
           {/* 로고 */}
