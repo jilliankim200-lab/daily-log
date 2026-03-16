@@ -226,9 +226,21 @@ export default function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* 헤더 */}
           <header style={{
-            height: 56, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            padding: '0 24px', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-primary)',
+            height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 24px', background: 'var(--bg-primary)',
           }}>
+            {/* 인사말 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--bg-tertiary)',
+              }}>
+                <MIcon name={(() => { const h = new Date().getHours(); if (h >= 5 && h < 12) return 'coffee'; if (h >= 12 && h < 18) return 'wb_sunny'; return 'dark_mode'; })()} size={16} style={{ color: 'var(--text-primary)' }} />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {(() => { const h = new Date().getHours(); if (h >= 5 && h < 12) return 'Good Morning'; if (h >= 12 && h < 18) return 'Good Afternoon'; return 'Good Evening'; })()}
+              </span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
                 onClick={handleSync}

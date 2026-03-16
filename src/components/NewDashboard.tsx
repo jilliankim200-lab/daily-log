@@ -6,17 +6,10 @@ import type { DailySnapshot } from "../types";
 import { fetchMarketData, selectMarketItems, type MarketIndexData } from "../utils/fetchMarketData";
 import {
   TrendingUp,
-  Coffee, Sunset, Moon, Wallet, ArrowUpRight, ArrowDownRight,
+  Wallet, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h >= 5 && h < 12) return { text: 'Good Morning', Icon: Coffee, color: 'var(--text-primary)' };
-  if (h >= 12 && h < 18) return { text: 'Good Afternoon', Icon: Sunset, color: 'var(--text-primary)' };
-  return { text: 'Good Evening', Icon: Moon, color: 'var(--text-primary)' };
-}
 
 export function NewDashboard() {
   const { accounts, isAmountHidden, otherAssets, prices } = useAppContext();
@@ -128,8 +121,6 @@ export function NewDashboard() {
     }
   };
 
-  const greeting = getGreeting();
-  const GreetingIcon = greeting.Icon;
   const hide = (v: string) => isAmountHidden ? '••••' : v;
 
   if (accounts.length === 0) {
@@ -150,22 +141,6 @@ export function NewDashboard() {
 
   return (
     <div style={{ padding: 24 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <GreetingIcon style={{ width: 20, height: 20, color: greeting.color }} />
-          </div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-            {greeting.text}
-          </h1>
-        </div>
-        <div />
-      </div>
-
       {/* 통합 티커 바: 시장 지표 + 자산 */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 0,
