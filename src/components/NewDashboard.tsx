@@ -310,8 +310,20 @@ export function NewDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {snapshots.slice(0, 14).map((snap, i) => {
-                      const prev = snapshots[i + 1];
+                    {(() => {
+                      // 오늘 현재 자산을 첫 행으로 추가
+                      const todayRow: DailySnapshot = {
+                        date: today,
+                        totalAsset,
+                        wifeAsset: wifeTotal,
+                        husbandAsset: husbandTotal,
+                        assetChange: dailyChange,
+                        changeRate: dailyRate,
+                      };
+                      const rows = todaySnap ? snapshots.slice(0, 14) : [todayRow, ...snapshots.slice(0, 13)];
+                      return rows;
+                    })().map((snap, i, arr) => {
+                      const prev = snap.date === today && !todaySnap ? snapshots[0] : (todaySnap ? snapshots[i + 1] : snapshots[i]);
                       const change = prev ? snap.totalAsset - prev.totalAsset : snap.assetChange;
                       const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : snap.changeRate;
                       return (
