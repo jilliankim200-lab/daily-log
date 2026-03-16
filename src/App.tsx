@@ -55,7 +55,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAmountHidden, setIsAmountHidden] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -68,11 +68,13 @@ export default function App() {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
-    const shouldBeDark = saved === 'dark' || saved === null;
+    const shouldBeDark = saved === 'dark';
     setIsDarkMode(shouldBeDark);
     if (shouldBeDark) {
       document.documentElement.classList.add('dark');
-      if (!saved) localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      if (!saved) localStorage.setItem('theme', 'light');
     }
   }, []);
 
