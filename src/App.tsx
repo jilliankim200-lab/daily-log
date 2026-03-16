@@ -10,6 +10,7 @@ import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { fetchAccounts, fetchOtherAssets, saveOtherAssets } from "./api";
 import type { Account, OtherAsset } from "./types";
+import { fetchCurrentPrices } from "./utils/fetchPrices";
 import { loadSeedDataIfNeeded, loadSeedOtherAssets } from "./utils/seedData";
 import { importHistoricalSnapshots } from "./utils/importSnapshots";
 import { fetchGoldPricePerDon } from "./utils/fetchGoldPrice";
@@ -33,10 +34,13 @@ interface AppContextType {
   isAmountHidden: boolean;
   otherAssets: OtherAsset[];
   setOtherAssets: (a: OtherAsset[]) => void;
+  prices: Record<string, number>;
+  loadPrices: () => Promise<void>;
 }
 export const AppContext = createContext<AppContextType>({
   accounts: [], setAccounts: () => {}, reloadAccounts: async () => {}, isAmountHidden: true,
   otherAssets: [], setOtherAssets: () => {},
+  prices: {}, loadPrices: async () => {},
 });
 export const useAppContext = () => useContext(AppContext);
 
@@ -61,6 +65,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [prices, setPrices] = useState<Record<string, number>>({});
 
   const setOtherAssets = (assets: OtherAsset[]) => {
     setOtherAssetsState(assets);
@@ -79,10 +84,20 @@ export default function App() {
     }
   }, []);
 
+  const loadPrices = async (accs?: Account[]) => {
+    const tickers = (accs || accounts).flatMap((a: Account) => a.holdings.map((h: any) => h.ticker)).filter(Boolean);
+    if (tickers.length === 0) return;
+    try {
+      const p = await fetchCurrentPrices(tickers);
+      setPrices(p);
+    } catch (err) { console.error(err); }
+  };
+
   const reloadAccounts = async () => {
     try {
       const data = await fetchAccounts();
       setAccounts(data);
+      await loadPrices(data);
     } catch (err) { console.error(err); }
   };
   useEffect(() => {
@@ -146,7 +161,7 @@ export default function App() {
   };
 
   return (
-    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets }}>
+    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices }}>
       <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (

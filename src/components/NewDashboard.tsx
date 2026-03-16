@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "../App";
 import { fetchSnapshots, saveSnapshot } from "../api";
-import { fetchCurrentPrices } from "../utils/fetchPrices";
 import { holdingValue } from "../types";
 import type { DailySnapshot } from "../types";
 import { fetchMarketData, selectMarketItems, type MarketIndexData } from "../utils/fetchMarketData";
@@ -20,10 +19,9 @@ function getGreeting() {
 }
 
 export function NewDashboard() {
-  const { accounts, isAmountHidden, otherAssets } = useAppContext();
+  const { accounts, isAmountHidden, otherAssets, prices } = useAppContext();
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [savingSnapshot, setSavingSnapshot] = useState(false);
-  const [prices, setPrices] = useState<Record<string, number>>({});
   const [marketData, setMarketData] = useState<MarketIndexData[]>([]);
 
   useEffect(() => { fetchSnapshots().then(s => setSnapshots(s.filter(Boolean))); }, []);
@@ -35,12 +33,6 @@ export function NewDashboard() {
     }, 60_000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    const tickers = accounts.flatMap(a => a.holdings.map(h => h.ticker)).filter(Boolean);
-    if (tickers.length === 0) return;
-    fetchCurrentPrices(tickers).then(setPrices).catch(console.error);
-  }, [accounts]);
 
   const calcHoldings = (accs: typeof accounts) =>
     accs.reduce((s, a) => s + (a.cash || 0) + a.holdings.reduce((ss, h) => ss + holdingValue(h, prices[h.ticker]), 0), 0);

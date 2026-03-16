@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useAppContext } from "../App";
-import { fetchCurrentPrices } from "../utils/fetchPrices";
 import { holdingValue } from "../types";
 
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
@@ -14,14 +13,7 @@ function MIcon({ name, size = 20, style }: { name: string; size?: number; style?
 }
 
 export function RightSidebar() {
-  const { accounts, isAmountHidden } = useAppContext();
-  const [prices, setPrices] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const tickers = accounts.flatMap(a => a.holdings.map(h => h.ticker)).filter(Boolean);
-    if (tickers.length === 0) return;
-    fetchCurrentPrices(tickers).then(setPrices).catch(console.error);
-  }, [accounts]);
+  const { accounts, isAmountHidden, prices } = useAppContext();
 
   const holdingSummary = useMemo(() => {
     const map = new Map<string, {

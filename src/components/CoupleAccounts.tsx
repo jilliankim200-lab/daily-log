@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../App";
 import { saveAccounts } from "../api";
-import { fetchCurrentPrices } from "../utils/fetchPrices";
 import type { Account, Holding, OtherAsset } from "../types";
 import { holdingValue, holdingCost } from "../types";
 
@@ -778,10 +777,9 @@ function OwnerSection({
 
 /* ── 메인 페이지 ── */
 export function CoupleAccounts() {
-  const { accounts, setAccounts, isAmountHidden, otherAssets, setOtherAssets } = useAppContext();
+  const { accounts, setAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices: contextLoadPrices } = useAppContext();
   const [activeTab, setActiveTab] = useState<'wife' | 'husband' | 'other'>('wife');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [prices, setPrices] = useState<Record<string, number>>({});
   const [priceLoading, setPriceLoading] = useState(false);
 
   const wifeAccounts = accounts.filter(a => a.owner === 'wife');
@@ -789,17 +787,11 @@ export function CoupleAccounts() {
 
   // 현재가 조회
   const loadPrices = async () => {
-    const allTickers = accounts.flatMap(a => a.holdings.map(h => h.ticker)).filter(Boolean);
-    if (allTickers.length === 0) return;
     setPriceLoading(true);
-    try {
-      const p = await fetchCurrentPrices(allTickers);
-      setPrices(p);
-    } catch (err) { console.error('현재가 조회 실패:', err); }
+    try { await contextLoadPrices(); }
+    catch (err) { console.error('현재가 조회 실패:', err); }
     finally { setPriceLoading(false); }
   };
-
-  useEffect(() => { loadPrices(); }, [accounts]);
 
   const autoSave = async (next: Account[]) => {
     setAccounts(next);
