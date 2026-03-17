@@ -96,18 +96,9 @@ export default function App() {
     }
   }, []);
 
-  // 폰트 크기 적용 - CSS 변수 직접 스케일링
+  // 폰트 크기 적용 - zoom으로 전체 스케일링
+  const fontScale = FONT_SIZES[fontSizeIndex]?.scale || 1.0;
   useEffect(() => {
-    const scale = FONT_SIZES[fontSizeIndex]?.scale || 1.0;
-    const root = document.documentElement;
-    const baseSizes: Record<string, number> = {
-      '--text-xs': 12, '--text-sm': 13, '--text-base': 15,
-      '--text-lg': 17, '--text-xl': 20, '--text-2xl': 24,
-      '--text-3xl': 28, '--text-4xl': 34,
-    };
-    Object.entries(baseSizes).forEach(([key, base]) => {
-      root.style.setProperty(key, `${Math.round(base * scale)}px`);
-    });
     localStorage.setItem('fontSizeIndex', String(fontSizeIndex));
   }, [fontSizeIndex]);
 
@@ -193,7 +184,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices }}>
-      <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', height: `${100 / fontScale}vh`, background: 'var(--bg-primary)', zoom: fontScale }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (
           <div
