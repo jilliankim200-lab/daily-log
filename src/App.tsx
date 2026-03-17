@@ -36,11 +36,13 @@ interface AppContextType {
   setOtherAssets: (a: OtherAsset[]) => void;
   prices: Record<string, number>;
   loadPrices: () => Promise<void>;
+  navigateTo: (page: string) => void;
 }
 export const AppContext = createContext<AppContextType>({
   accounts: [], setAccounts: () => {}, reloadAccounts: async () => {}, isAmountHidden: true,
   otherAssets: [], setOtherAssets: () => {},
   prices: {}, loadPrices: async () => {},
+  navigateTo: () => {},
 });
 export const useAppContext = () => useContext(AppContext);
 
@@ -183,7 +185,7 @@ export default function App() {
   };
 
   return (
-    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices }}>
+    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage }}>
       <div style={{ display: 'flex', height: `${100 / fontScale}vh`, background: 'var(--bg-primary)', zoom: fontScale }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (

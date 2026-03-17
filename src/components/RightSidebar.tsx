@@ -13,7 +13,7 @@ function MIcon({ name, size = 20, style }: { name: string; size?: number; style?
 }
 
 export function RightSidebar() {
-  const { accounts, isAmountHidden, prices } = useAppContext();
+  const { accounts, isAmountHidden, prices, navigateTo } = useAppContext();
 
   const holdingSummary = useMemo(() => {
     const map = new Map<string, {
@@ -48,11 +48,17 @@ export function RightSidebar() {
   return (
     <>
       {/* Header */}
-      <div style={{
-        padding: '16px 20px',
-        borderBottom: '1px solid var(--border-primary)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <div
+        onClick={() => navigateTo('holdings')}
+        style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border-primary)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', transition: 'background 0.1s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
           보유종목
         </span>
