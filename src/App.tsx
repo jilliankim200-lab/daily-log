@@ -96,10 +96,18 @@ export default function App() {
     }
   }, []);
 
-  // 폰트 크기 적용
+  // 폰트 크기 적용 - CSS 변수 직접 스케일링
   useEffect(() => {
     const scale = FONT_SIZES[fontSizeIndex]?.scale || 1.0;
-    document.documentElement.style.fontSize = `${scale * 16}px`;
+    const root = document.documentElement;
+    const baseSizes: Record<string, number> = {
+      '--text-xs': 12, '--text-sm': 13, '--text-base': 15,
+      '--text-lg': 17, '--text-xl': 20, '--text-2xl': 24,
+      '--text-3xl': 28, '--text-4xl': 34,
+    };
+    Object.entries(baseSizes).forEach(([key, base]) => {
+      root.style.setProperty(key, `${Math.round(base * scale)}px`);
+    });
     localStorage.setItem('fontSizeIndex', String(fontSizeIndex));
   }, [fontSizeIndex]);
 
