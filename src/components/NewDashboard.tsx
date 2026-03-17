@@ -40,40 +40,101 @@ export function NewDashboard() {
   const wifeTotal = wifeHoldings + wifeOther;
   const husbandTotal = husbandHoldings + husbandOther;
 
-  // 자동 스냅샷: 10시, 16시에 자동 저장
+  // 자동 스냅샷: 앱 로드 시 오늘 데이터 없으면 즉시 저장 + 10시/16시 자동 저장
   useEffect(() => {
     if (accounts.length === 0 || totalAsset === 0) return;
 
-    const AUTO_SNAP_KEY = 'auto_snapshot_last';
     const tryAutoSave = async () => {
       const now = new Date();
-      const hour = now.getHours();
       const todayStr = now.toISOString().slice(0, 10);
-      // 10시(10:00~10:59) 또는 16시(16:00~16:59)에만 저장
-      if (hour !== 10 && hour !== 16) return;
+      const hour = now.getHours();
 
-      const slotKey = `${todayStr}_${hour}`;
-      const lastSaved = localStorage.getItem(AUTO_SNAP_KEY);
-      if (lastSaved === slotKey) return; // 이미 이 슬롯에 저장됨
+      // 기존 스냅샷 가져오기
+      const currentSnaps = await fetchSnapshots();
+      const validSnaps = currentSnaps.filter(s => s && s.date);
+      const hasTodaySnap = validSnaps.some(s => s.date === todayStr);
 
-      const prevSnaps = JSON.parse(localStorage.getItem('asset_snapshots') || '[]') as DailySnapshot[];
-      const prev = prevSnaps.find(s => s && s.date && s.date < todayStr);
-      const change = prev ? totalAsset - prev.totalAsset : 0;
-      const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0;
+      // 오늘 스냅샷이 없으면 즉시 저장
+      if (!hasTodaySnap) {
+        const prev = validSnaps.find(s => s.date < todayStr);
+        const change = prev ? totalAsset - prev.totalAsset : 0;
+        const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0;
+        const snap: DailySnapshot = {
+          date: todayStr, totalAsset,
+          wifeAsset: wifeTotal, husbandAsset: husbandTotal,
+          assetChange: change, changeRate: rate,
+        };
+        await saveSnapshot(snap);
+        console.log(`[자동 스냅샷] ${todayStr} 저장 완료 (앱 로드)`);
 
-      const snap: DailySnapshot = {
-        date: todayStr,
-        totalAsset,
-        wifeAsset: wifeTotal,
-        husbandAsset: husbandTotal,
-        assetChange: change,
-        changeRate: rate,
-      };
-      await saveSnapshot(snap);
-      localStorage.setItem(AUTO_SNAP_KEY, slotKey);
-      const updated = await fetchSnapshots();
-      setSnapshots(updated.filter(Boolean));
-      console.log(`[자동 스냅샷] ${todayStr} ${hour}시 저장 완료`);
+        // 빠진 날짜 보간 처리
+        await interpolateMissingDates(validSnaps, snap);
+
+        const updated = await fetchSnapshots();
+        setSnapshots(updated.filter(Boolean));
+        return;
+      }
+
+      // 10시, 16시에 업데이트 (이미 있는 경우 최신 값으로 갱신)
+      if (hour === 10 || hour === 16) {
+        const AUTO_SNAP_KEY = 'auto_snapshot_last';
+        const slotKey = `${todayStr}_${hour}`;
+        const lastSaved = localStorage.getItem(AUTO_SNAP_KEY);
+        if (lastSaved === slotKey) return;
+
+        const prev = validSnaps.find(s => s.date < todayStr);
+        const change = prev ? totalAsset - prev.totalAsset : 0;
+        const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0;
+        const snap: DailySnapshot = {
+          date: todayStr, totalAsset,
+          wifeAsset: wifeTotal, husbandAsset: husbandTotal,
+          assetChange: change, changeRate: rate,
+        };
+        await saveSnapshot(snap);
+        localStorage.setItem(AUTO_SNAP_KEY, slotKey);
+        const updated = await fetchSnapshots();
+        setSnapshots(updated.filter(Boolean));
+        console.log(`[자동 스냅샷] ${todayStr} ${hour}시 갱신 완료`);
+      }
+    };
+
+    // 빠진 날짜 보간: 연속되지 않는 날짜 사이를 이전 날짜 값으로 채움
+    const interpolateMissingDates = async (snaps: DailySnapshot[], todaySnap: DailySnapshot) => {
+      if (snaps.length === 0) return;
+      const sorted = [...snaps, todaySnap].sort((a, b) => a.date.localeCompare(b.date));
+      const missing: DailySnapshot[] = [];
+
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const curr = sorted[i];
+        const next = sorted[i + 1];
+        const currDate = new Date(curr.date);
+        const nextDate = new Date(next.date);
+        const diffDays = Math.round((nextDate.getTime() - currDate.getTime()) / (86400000));
+
+        if (diffDays > 1) {
+          // 빠진 날짜를 이전 값으로 채움
+          for (let d = 1; d < diffDays; d++) {
+            const fillDate = new Date(currDate);
+            fillDate.setDate(fillDate.getDate() + d);
+            const fillDateStr = fillDate.toISOString().slice(0, 10);
+            missing.push({
+              date: fillDateStr,
+              totalAsset: curr.totalAsset,
+              wifeAsset: curr.wifeAsset,
+              husbandAsset: curr.husbandAsset,
+              assetChange: 0,
+              changeRate: 0,
+            });
+          }
+        }
+      }
+
+      if (missing.length > 0) {
+        for (const snap of missing) {
+          await saveSnapshot(snap);
+        }
+        console.log(`[보간] ${missing.length}개 빠진 날짜 보간 완료: ${missing.map(s => s.date).join(', ')}`);
+      }
     };
 
     // 즉시 체크 + 1분마다 체크
