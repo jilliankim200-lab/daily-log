@@ -85,14 +85,12 @@ export function RightSidebar() {
                 padding: '12px 20px',
                 borderBottom: '1px solid var(--border-secondary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: h.ticker ? 'pointer' : 'default',
+                cursor: 'pointer',
                 transition: 'background 0.1s',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              onClick={() => {
-                if (h.ticker) window.open(`https://www.tossinvest.com/stocks/A${h.ticker}/order`, '_blank');
-              }}
+              onClick={() => navigateTo('holdings')}
             >
               {/* Left: icon + name */}
               <div style={{ flex: 1, minWidth: 0 }}>
