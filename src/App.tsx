@@ -54,9 +54,17 @@ const MENU_ITEMS = [
   { id: "dividend", label: "배당", materialIcon: "paid" },
 ];
 
+const FONT_SIZES = [
+  { label: '작게', scale: 0.85 },
+  { label: '보통', scale: 1.0 },
+  { label: '크게', scale: 1.15 },
+  { label: '매우 크게', scale: 1.3 },
+];
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isAmountHidden, setIsAmountHidden] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -66,6 +74,10 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [fontSizeIndex, setFontSizeIndex] = useState(() => {
+    const saved = localStorage.getItem('fontSizeIndex');
+    return saved ? parseInt(saved, 10) : 1;
+  });
 
   const setOtherAssets = (assets: OtherAsset[]) => {
     setOtherAssetsState(assets);
@@ -83,6 +95,17 @@ export default function App() {
       if (!saved) localStorage.setItem('theme', 'light');
     }
   }, []);
+
+  // 폰트 크기 적용
+  useEffect(() => {
+    const scale = FONT_SIZES[fontSizeIndex]?.scale || 1.0;
+    document.documentElement.style.fontSize = `${scale * 16}px`;
+    localStorage.setItem('fontSizeIndex', String(fontSizeIndex));
+  }, [fontSizeIndex]);
+
+  const cycleFontSize = () => {
+    setFontSizeIndex(prev => (prev + 1) % FONT_SIZES.length);
+  };
 
   const loadPrices = async (accs?: Account[]) => {
     const tickers = (accs || accounts).flatMap((a: Account) => a.holdings.map((h: any) => h.ticker)).filter(Boolean);
@@ -175,9 +198,11 @@ export default function App() {
 
         {/* Sidebar */}
         <aside style={{
-          width: 220, flexShrink: 0, height: '100vh', overflowY: 'auto',
+          width: isLeftSidebarOpen ? 220 : 0, flexShrink: 0, height: '100vh', overflowY: 'auto',
+          overflowX: 'hidden',
           background: 'var(--bg-primary)',
           display: 'flex', flexDirection: 'column',
+          transition: 'width 0.2s ease',
         }}>
           {/* 로고 */}
           <div
@@ -228,10 +253,23 @@ export default function App() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* 헤더 좌측 */}
             <header style={{
-              height: 56, display: 'flex', alignItems: 'center',
+              height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '0 24px', background: 'var(--bg-primary)',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  onClick={() => setIsLeftSidebarOpen(prev => !prev)}
+                  style={{
+                    padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  title={isLeftSidebarOpen ? '메뉴 접기' : '메뉴 펼치기'}
+                >
+                  <MIcon name="menu" size={22} />
+                </button>
                 <div style={{
                   width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'var(--bg-tertiary)',
@@ -300,6 +338,26 @@ export default function App() {
                   <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
                 </button>
                 <button
+                  onClick={cycleFontSize}
+                  style={{
+                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
+                    position: 'relative',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  title={`글자 크기: ${FONT_SIZES[fontSizeIndex].label}`}
+                >
+                  <MIcon name="text_fields" size={20} />
+                  <span style={{
+                    position: 'absolute', bottom: 2, right: 2,
+                    fontSize: 8, fontWeight: 700, color: 'var(--text-tertiary)',
+                    lineHeight: 1,
+                  }}>
+                    {fontSizeIndex === 0 ? 'S' : fontSizeIndex === 1 ? 'M' : fontSizeIndex === 2 ? 'L' : 'XL'}
+                  </span>
+                </button>
+                <button
                   onClick={() => setIsRightSidebarOpen(false)}
                   style={{
                     padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -350,6 +408,18 @@ export default function App() {
                 title={isDarkMode ? '라이트 모드' : '다크 모드'}
               >
                 <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
+              </button>
+              <button
+                onClick={cycleFontSize}
+                style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s', position: 'relative' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                title={`글자 크기: ${FONT_SIZES[fontSizeIndex].label}`}
+              >
+                <MIcon name="text_fields" size={20} />
+                <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8, fontWeight: 700, color: 'var(--text-tertiary)', lineHeight: 1 }}>
+                  {fontSizeIndex === 0 ? 'S' : fontSizeIndex === 1 ? 'M' : fontSizeIndex === 2 ? 'L' : 'XL'}
+                </span>
               </button>
               <button
                 onClick={() => setIsRightSidebarOpen(true)}
