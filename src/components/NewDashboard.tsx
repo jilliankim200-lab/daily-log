@@ -436,30 +436,27 @@ export function NewDashboard() {
           padding: 20,
         }} onClick={() => setShowAssetDetail(false)}>
           <div style={{
-            background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 520,
+            background: 'var(--bg-primary)', borderRadius: 12, width: '100%', maxWidth: 420,
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           }} onClick={e => e.stopPropagation()}>
             <div style={{
-              padding: '20px 24px', borderBottom: '1px solid var(--border-primary)',
+              padding: '12px 16px', borderBottom: '1px solid var(--border-primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
-                총자산 상세
-              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>총자산 상세</span>
               <button onClick={() => setShowAssetDetail(false)} style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                color: 'var(--text-tertiary)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-tertiary)',
               }}>
-                <X size={20} />
+                <X size={16} />
               </button>
             </div>
 
-            <div style={{ padding: '16px 24px' }}>
+            <div style={{ padding: '8px 16px 12px' }}>
               {/* 총자산 */}
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 0', borderBottom: '2px solid var(--border-primary)',
-                fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)',
+                padding: '6px 0', borderBottom: '2px solid var(--border-primary)',
+                fontSize: 14, fontWeight: 700,
               }}>
                 <span style={{ color: 'var(--text-primary)' }}>총자산</span>
                 <span className="toss-number" style={{ color: 'var(--text-primary)' }}>
@@ -468,47 +465,34 @@ export function NewDashboard() {
               </div>
 
               {/* 소유자별 소계 */}
-              <div style={{ marginTop: 16 }}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', padding: '8px 0',
-                  fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--accent-blue)',
-                }}>
+              <div style={{ display: 'flex', gap: 16, padding: '6px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)' }}>
                   <span>지윤</span>
                   <span className="toss-number">{hide(`${fmt(wifeTotal)}원`)}</span>
                 </div>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', padding: '8px 0',
-                  fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--color-profit)',
-                }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--color-profit)' }}>
                   <span>오빠</span>
                   <span className="toss-number">{hide(`${fmt(husbandTotal)}원`)}</span>
                 </div>
               </div>
 
               {/* 계좌별 내역 */}
-              <div style={{ marginTop: 16 }}>
-                <div style={{
-                  fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
-                  color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase',
-                }}>
-                  증권/은행 계좌
-                </div>
+              <div style={{ marginTop: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>계좌</div>
                 {accounts.map(acc => {
                   const holdingsVal = (acc.cash || 0) + acc.holdings.reduce((s, h) => s + holdingValue(h, prices[h.ticker]), 0);
                   return (
                     <div key={acc.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '10px 0', borderBottom: '1px solid var(--border-secondary)',
+                      padding: '4px 0', borderBottom: '1px solid var(--border-secondary)',
                     }}>
-                      <div>
-                        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
-                          {acc.alias || acc.institution}
-                        </div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 2 }}>
-                          {acc.institution} · {acc.accountType} · {acc.owner === 'wife' ? '지윤' : '오빠'}
-                        </div>
-                      </div>
-                      <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                        {acc.alias || acc.institution}
+                        <span style={{ fontSize: 10, color: 'var(--text-quaternary)', marginLeft: 4 }}>
+                          {acc.accountType} · {acc.owner === 'wife' ? '지윤' : '오빠'}
+                        </span>
+                      </span>
+                      <span className="toss-number" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
                         {hide(`${fmt(holdingsVal)}원`)}
                       </span>
                     </div>
@@ -518,27 +502,20 @@ export function NewDashboard() {
 
               {/* 기타자산 */}
               {otherAssets.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <div style={{
-                    fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
-                    color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase',
-                  }}>
-                    기타 자산
-                  </div>
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>기타 자산</div>
                   {otherAssets.map(asset => (
                     <div key={asset.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '10px 0', borderBottom: '1px solid var(--border-secondary)',
+                      padding: '4px 0', borderBottom: '1px solid var(--border-secondary)',
                     }}>
-                      <div>
-                        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
-                          {asset.name}
-                        </div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 2 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                        {asset.name}
+                        <span style={{ fontSize: 10, color: 'var(--text-quaternary)', marginLeft: 4 }}>
                           {asset.owner === 'wife' ? '지윤' : asset.owner === 'husband' ? '오빠' : '공동'}
-                        </div>
-                      </div>
-                      <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                        </span>
+                      </span>
+                      <span className="toss-number" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
                         {hide(`${fmt(asset.amount)}원`)}
                       </span>
                     </div>
