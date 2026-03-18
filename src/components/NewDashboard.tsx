@@ -348,21 +348,25 @@ export function NewDashboard() {
                   </thead>
                   <tbody>
                     {(() => {
-                      // 오늘 현재 자산을 첫 행으로 추가
+                      // 오늘 현재 자산을 첫 행으로
                       const todayRow: DailySnapshot = {
                         date: today,
                         totalAsset,
                         wifeAsset: wifeTotal,
                         husbandAsset: husbandTotal,
-                        assetChange: dailyChange,
-                        changeRate: dailyRate,
+                        assetChange: 0,
+                        changeRate: 0,
                       };
-                      const rows = todaySnap ? snapshots.slice(0, 14) : [todayRow, ...snapshots.slice(0, 13)];
-                      return rows;
+                      // 오늘 스냅샷이 저장되어 있으면 현재 실시간 값으로 교체
+                      const allRows = todaySnap
+                        ? [{ ...todaySnap, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal }, ...snapshots.filter(s => s.date !== today).slice(0, 13)]
+                        : [todayRow, ...snapshots.slice(0, 13)];
+                      return allRows;
                     })().map((snap, i, arr) => {
-                      const prev = snap.date === today && !todaySnap ? snapshots[0] : (todaySnap ? snapshots[i + 1] : snapshots[i]);
-                      const change = prev ? snap.totalAsset - prev.totalAsset : snap.assetChange;
-                      const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : snap.changeRate;
+                      // 전날 대비 증감 계산: 바로 다음 row가 전날
+                      const prev = arr[i + 1];
+                      const change = prev ? snap.totalAsset - prev.totalAsset : 0;
+                      const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0;
                       return (
                         <tr key={snap.date}>
                           <td style={{ fontWeight: 'var(--font-medium)' }}>{snap.date}</td>
