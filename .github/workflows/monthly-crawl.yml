@@ -1,0 +1,23 @@
+name: Monthly ETF Crawl
+
+on:
+  schedule:
+    # 매월 1일 한국시간 오전 10시 (UTC 01:00)
+    - cron: '0 1 1 * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  crawl-etf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install puppeteer @supabase/supabase-js
+
+      - name: Crawl ETF data
+        run: node scripts/crawl-etf.js
