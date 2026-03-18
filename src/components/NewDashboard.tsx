@@ -6,7 +6,7 @@ import type { DailySnapshot } from "../types";
 import { fetchMarketData, selectMarketItems, type MarketIndexData } from "../utils/fetchMarketData";
 import {
   TrendingUp,
-  Wallet, ArrowUpRight, ArrowDownRight,
+  Wallet, ArrowUpRight, ArrowDownRight, Info, X,
 } from "lucide-react";
 
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
@@ -16,6 +16,7 @@ export function NewDashboard() {
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [savingSnapshot, setSavingSnapshot] = useState(false);
   const [marketData, setMarketData] = useState<MarketIndexData[]>([]);
+  const [showAssetDetail, setShowAssetDetail] = useState(false);
 
   useEffect(() => { fetchSnapshots().then(s => setSnapshots(s.filter(Boolean))); }, []);
 
@@ -288,8 +289,11 @@ export function NewDashboard() {
                     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
                     {item.label}
+                    {(item as any).isTotal && (
+                      <Info size={13} style={{ cursor: 'pointer', opacity: 0.5 }} onClick={() => setShowAssetDetail(true)} />
+                    )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <span className="toss-number" style={{
@@ -422,6 +426,129 @@ export function NewDashboard() {
           isHidden={isAmountHidden}
         />
       </div>
+
+      {/* 총자산 상세 팝업 */}
+      {showAssetDetail && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20,
+        }} onClick={() => setShowAssetDetail(false)}>
+          <div style={{
+            background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 520,
+            maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              padding: '20px 24px', borderBottom: '1px solid var(--border-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                총자산 상세
+              </span>
+              <button onClick={() => setShowAssetDetail(false)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                color: 'var(--text-tertiary)',
+              }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 24px' }}>
+              {/* 총자산 */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 0', borderBottom: '2px solid var(--border-primary)',
+                fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)',
+              }}>
+                <span style={{ color: 'var(--text-primary)' }}>총자산</span>
+                <span className="toss-number" style={{ color: 'var(--text-primary)' }}>
+                  {hide(`${fmt(totalAsset)}원`)}
+                </span>
+              </div>
+
+              {/* 소유자별 소계 */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', padding: '8px 0',
+                  fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--accent-blue)',
+                }}>
+                  <span>지윤</span>
+                  <span className="toss-number">{hide(`${fmt(wifeTotal)}원`)}</span>
+                </div>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', padding: '8px 0',
+                  fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--color-profit)',
+                }}>
+                  <span>오빠</span>
+                  <span className="toss-number">{hide(`${fmt(husbandTotal)}원`)}</span>
+                </div>
+              </div>
+
+              {/* 계좌별 내역 */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{
+                  fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
+                  color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase',
+                }}>
+                  증권/은행 계좌
+                </div>
+                {accounts.map(acc => {
+                  const holdingsVal = (acc.cash || 0) + acc.holdings.reduce((s, h) => s + holdingValue(h, prices[h.ticker]), 0);
+                  return (
+                    <div key={acc.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '10px 0', borderBottom: '1px solid var(--border-secondary)',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                          {acc.alias || acc.institution}
+                        </div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 2 }}>
+                          {acc.institution} · {acc.accountType} · {acc.owner === 'wife' ? '지윤' : '오빠'}
+                        </div>
+                      </div>
+                      <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                        {hide(`${fmt(holdingsVal)}원`)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 기타자산 */}
+              {otherAssets.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{
+                    fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
+                    color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase',
+                  }}>
+                    기타 자산
+                  </div>
+                  {otherAssets.map(asset => (
+                    <div key={asset.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '10px 0', borderBottom: '1px solid var(--border-secondary)',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                          {asset.name}
+                        </div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 2 }}>
+                          {asset.owner === 'wife' ? '지윤' : asset.owner === 'husband' ? '오빠' : '공동'}
+                        </div>
+                      </div>
+                      <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>
+                        {hide(`${fmt(asset.amount)}원`)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
