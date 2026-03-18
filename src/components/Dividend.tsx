@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "../App";
-import { DollarSign, Plus, Trash2, Edit3, Check, X, Info, Trophy, Briefcase, ExternalLink } from "lucide-react";
+import { DollarSign, Plus, Trash2, Edit3, Check, X, Info, Trophy, Briefcase, ExternalLink, RefreshCw } from "lucide-react";
+import { createClient } from '@supabase/supabase-js';
+import { projectId, publicAnonKey } from '../utils/supabase/info';
+
+const supabase = createClient(`https://${projectId}.supabase.co`, publicAnonKey);
+const KV_TABLE = 'kv_store_cee564ea';
 
 // ─── 타입 ───
 interface DividendStock {
@@ -24,41 +29,51 @@ interface RankingETF {
   annualYield: number;     // 연 분배율 (%)
   category: string;        // 분류
   prevMonthDiv: number;    // 전월 분배금
+  recentDivDate?: string;  // 최근 배당일
+  issuer?: string;         // 발행사
+  netAsset?: number;       // 순자산 (억)
 }
 
-// ─── 월배당 ETF 순위 데이터 (분배율 기준 TOP 30) ───
-const RANKING_DATA: RankingETF[] = [
-  { rank: 1,  name: "KODEX 테슬라인컴프리미엄채권혼합",         ticker: "492180", price: 9730,  recentDividend: 130, prevMonthDiv: 128, annualYield: 16.0, category: "테마 프리미엄" },
-  { rank: 2,  name: "ACE 미국500+15%프리미엄분배(합성)",         ticker: "492560", price: 9810,  recentDividend: 122, prevMonthDiv: 120, annualYield: 14.9, category: "S&P500 커버드콜" },
-  { rank: 3,  name: "KODEX 미국S&P500+12%프리미엄다우존스",      ticker: "492040", price: 10050, recentDividend: 110, prevMonthDiv: 108, annualYield: 13.1, category: "S&P500 커버드콜" },
-  { rank: 4,  name: "SOL 미국S&P500+12%프리미엄",                ticker: "492110", price: 9950,  recentDividend: 108, prevMonthDiv: 105, annualYield: 13.0, category: "S&P500 커버드콜" },
-  { rank: 5,  name: "TIGER 미국나스닥100커버드콜(합성)",          ticker: "441680", price: 10220, recentDividend: 105, prevMonthDiv: 102, annualYield: 12.3, category: "나스닥 커버드콜" },
-  { rank: 6,  name: "KODEX 미국30년국채+12%프리미엄(합성H)",      ticker: "492070", price: 9880,  recentDividend: 105, prevMonthDiv: 100, annualYield: 12.8, category: "채권 프리미엄" },
-  { rank: 7,  name: "KODEX 미국배당+10%프리미엄다우존스",         ticker: "489250", price: 10150, recentDividend: 100, prevMonthDiv: 98,  annualYield: 11.8, category: "배당 다우존스" },
-  { rank: 8,  name: "TIGER 미국테크TOP10+10%프리미엄",            ticker: "489050", price: 10380, recentDividend: 95,  prevMonthDiv: 92,  annualYield: 11.0, category: "테마 프리미엄" },
-  { rank: 9,  name: "HANARO 미국S&P500데일리커버드콜",            ticker: "492820", price: 9700,  recentDividend: 92,  prevMonthDiv: 90,  annualYield: 11.4, category: "S&P500 커버드콜" },
-  { rank: 10, name: "KODEX 미국나스닥100데일리커버드콜",          ticker: "490600", price: 9920,  recentDividend: 90,  prevMonthDiv: 88,  annualYield: 10.9, category: "나스닥 커버드콜" },
-  { rank: 11, name: "KODEX 미국S&P500배당귀족커버드콜",           ticker: "441640", price: 10800, recentDividend: 85,  prevMonthDiv: 82,  annualYield: 9.4,  category: "S&P500 커버드콜" },
-  { rank: 12, name: "TIGER 미국배당+7%프리미엄다우존스",          ticker: "458730", price: 10750, recentDividend: 80,  prevMonthDiv: 78,  annualYield: 8.9,  category: "배당 다우존스" },
-  { rank: 13, name: "TIGER 미국필라델피아반도체+7%프리미엄",      ticker: "489060", price: 10100, recentDividend: 75,  prevMonthDiv: 72,  annualYield: 8.9,  category: "테마 프리미엄" },
-  { rank: 14, name: "TIGER 미국30년국채프리미엄액티브(H)",        ticker: "476300", price: 9650,  recentDividend: 70,  prevMonthDiv: 68,  annualYield: 8.7,  category: "채권 프리미엄" },
-  { rank: 15, name: "TIGER 글로벌멀티에셋TIF액티브",             ticker: "476640", price: 10300, recentDividend: 65,  prevMonthDiv: 63,  annualYield: 7.6,  category: "멀티에셋" },
-  { rank: 16, name: "KODEX 미국배당다우존스타겟커버드콜",         ticker: "492050", price: 10200, recentDividend: 55,  prevMonthDiv: 53,  annualYield: 6.5,  category: "배당 다우존스" },
-  { rank: 17, name: "TIGER 은행고배당플러스TOP10",                ticker: "466940", price: 13500, recentDividend: 50,  prevMonthDiv: 48,  annualYield: 4.4,  category: "국내 고배당" },
-  { rank: 18, name: "KODEX 미국달러SOFR금리액티브(합성)",         ticker: "453080", price: 52800, recentDividend: 200, prevMonthDiv: 198, annualYield: 4.5,  category: "달러 채권" },
-  { rank: 19, name: "TIGER 미국배당+3%프리미엄다우존스",          ticker: "476550", price: 11200, recentDividend: 42,  prevMonthDiv: 40,  annualYield: 4.5,  category: "배당 다우존스" },
-  { rank: 20, name: "ACE 미국30년국채액티브(H)",                   ticker: "453850", price: 9850,  recentDividend: 40,  prevMonthDiv: 38,  annualYield: 4.9,  category: "채권" },
-  { rank: 21, name: "ACE 미국배당다우존스",                        ticker: "402970", price: 12800, recentDividend: 38,  prevMonthDiv: 37,  annualYield: 3.6,  category: "배당 다우존스" },
-  { rank: 22, name: "SOL 미국배당다우존스",                        ticker: "446720", price: 12500, recentDividend: 37,  prevMonthDiv: 36,  annualYield: 3.6,  category: "배당 다우존스" },
-  { rank: 23, name: "TIGER 미국달러단기채권액티브",               ticker: "329750", price: 53200, recentDividend: 190, prevMonthDiv: 185, annualYield: 4.3,  category: "달러 채권" },
-  { rank: 24, name: "PLUS 고배당주",                               ticker: "161510", price: 14200, recentDividend: 40,  prevMonthDiv: 38,  annualYield: 3.4,  category: "국내 고배당" },
-  { rank: 25, name: "KODEX 한국부동산리츠인프라",                  ticker: "476710", price: 5400,  recentDividend: 30,  prevMonthDiv: 28,  annualYield: 6.7,  category: "리츠" },
-  { rank: 26, name: "TIGER 미국S&P500배당귀족",                    ticker: "429000", price: 12600, recentDividend: 30,  prevMonthDiv: 28,  annualYield: 2.9,  category: "배당 다우존스" },
-  { rank: 27, name: "ACE 엔비디아채권혼합블룸버그",               ticker: "453810", price: 13800, recentDividend: 28,  prevMonthDiv: 25,  annualYield: 2.4,  category: "테마" },
-  { rank: 28, name: "TIGER 리츠부동산인프라",                      ticker: "329200", price: 5200,  recentDividend: 25,  prevMonthDiv: 23,  annualYield: 5.8,  category: "리츠" },
-  { rank: 29, name: "TIGER 코리아밸류업",                          ticker: "492090", price: 10800, recentDividend: 20,  prevMonthDiv: 18,  annualYield: 2.2,  category: "국내" },
-  { rank: 30, name: "KODEX 배당성장",                              ticker: "211560", price: 10500, recentDividend: 15,  prevMonthDiv: 12,  annualYield: 1.7,  category: "국내 배당" },
-];
+// ─── 카테고리 자동 분류 ───
+function categorizeETF(name: string): string {
+  if (name.includes('커버드콜') && (name.includes('S&P') || name.includes('500'))) return "S&P500 커버드콜";
+  if (name.includes('커버드콜') && (name.includes('나스닥') || name.includes('테크'))) return "나스닥 커버드콜";
+  if (name.includes('커버드콜') && name.includes('국채')) return "채권 프리미엄";
+  if (name.includes('커버드콜') && (name.includes('배당') || name.includes('고배당'))) return "배당 커버드콜";
+  if (name.includes('커버드콜')) return "커버드콜";
+  if (name.includes('배당') && name.includes('다우존스')) return "배당 다우존스";
+  if (name.includes('리츠') || name.includes('부동산') || name.includes('인프라')) return "리츠";
+  if (name.includes('국채') || name.includes('채권') || name.includes('금리') || name.includes('KOFR') || name.includes('CD')) return "채권";
+  if (name.includes('고배당') || name.includes('배당')) return "국내 고배당";
+  return "기타";
+}
+
+// ─── Supabase에서 ETF 순위 로드 ───
+async function fetchETFRanking(): Promise<RankingETF[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from(KV_TABLE)
+      .select('value')
+      .eq('key', 'etf_ranking')
+      .maybeSingle();
+    if (error || !data?.value?.data) return null;
+    return data.value.data.map((e: any) => ({
+      rank: e.rank,
+      name: e.name,
+      ticker: e.ticker,
+      price: e.price,
+      recentDividend: e.recentDividend,
+      prevMonthDiv: 0,
+      annualYield: e.annualYield,
+      category: categorizeETF(e.name),
+      recentDivDate: e.recentDivDate || '',
+      issuer: e.issuer || '',
+      netAsset: e.netAsset || 0,
+    }));
+  } catch {
+    return null;
+  }
+}
 
 // ─── 내 배당종목 기본 데이터 ───
 const STORAGE_KEY = "dividend_stocks";
@@ -158,6 +173,44 @@ export function Dividend() {
     const saved = localStorage.getItem("dividend_target_monthly");
     return saved ? Number(saved) : 1000000;
   });
+  const [rankingData, setRankingData] = useState<RankingETF[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(true);
+  const [rankingUpdatedAt, setRankingUpdatedAt] = useState<string>("");
+
+  useEffect(() => {
+    (async () => {
+      setRankingLoading(true);
+      try {
+        const { data } = await supabase
+          .from(KV_TABLE)
+          .select('value')
+          .eq('key', 'etf_ranking')
+          .maybeSingle();
+        if (data?.value?.data) {
+          const etfs = data.value.data.map((e: any, idx: number) => ({
+            rank: idx + 1,
+            name: e.name,
+            ticker: e.ticker,
+            price: e.price,
+            recentDividend: e.recentDividend,
+            prevMonthDiv: 0,
+            annualYield: e.annualYield,
+            category: categorizeETF(e.name),
+            recentDivDate: e.recentDivDate || '',
+            issuer: e.issuer || '',
+            netAsset: e.netAsset || 0,
+          }));
+          setRankingData(etfs);
+          if (data.value.updatedAt) {
+            setRankingUpdatedAt(new Date(data.value.updatedAt).toLocaleDateString('ko-KR'));
+          }
+        }
+      } catch (err) {
+        console.error('ETF 순위 로드 실패:', err);
+      }
+      setRankingLoading(false);
+    })();
+  }, []);
 
   useEffect(() => { saveStocks(stocks); }, [stocks]);
   useEffect(() => { localStorage.setItem("dividend_target_monthly", String(targetMonthly)); }, [targetMonthly]);
@@ -268,7 +321,7 @@ export function Dividend() {
             fontSize: "var(--text-xs)", color: "var(--text-tertiary)",
           }}>
             <Info size={14} style={{ flexShrink: 0 }} />
-            <span>연 분배율 기준 상위 30개 월배당 ETF입니다. 분배금은 최근 실적 기준이며 변동될 수 있습니다.</span>
+            <span>연 분배율 기준 상위 {rankingData.length}개 월배당 ETF (ETF CHECK 기준){rankingUpdatedAt && ` · ${rankingUpdatedAt} 업데이트`}</span>
           </div>
 
           <div className="toss-card" style={{ padding: 0, overflow: "hidden" }}>
@@ -276,7 +329,7 @@ export function Dividend() {
               <table className="toss-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border-primary)", background: "var(--bg-secondary)" }}>
-                    {["#", "종목명", "분류", "현재가", "이번달 분배금", "전월 분배금", "연 분배율", ""].map((h, i) => (
+                    {["#", "종목명", "분류", "현재가", "최근 분배금", "배당일", "연 분배율", ""].map((h, i) => (
                       <th key={i} style={{
                         padding: "12px 10px",
                         textAlign: i <= 2 ? "left" : "right",
@@ -289,10 +342,13 @@ export function Dividend() {
                   </tr>
                 </thead>
                 <tbody>
-                  {RANKING_DATA.map((etf) => {
+                  {rankingLoading ? (
+                    <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)" }}>로딩 중...</td></tr>
+                  ) : rankingData.length === 0 ? (
+                    <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)" }}>데이터가 없습니다</td></tr>
+                  ) : rankingData.map((etf) => {
                     const alreadyAdded = stocks.some(s => s.ticker === etf.ticker);
                     const catColor = CATEGORY_COLORS[etf.category] || "var(--text-tertiary)";
-                    const divChange = etf.recentDividend - etf.prevMonthDiv;
                     return (
                       <tr key={etf.ticker} style={{ borderBottom: "1px solid var(--border-primary)" }}
                         onMouseEnter={e => e.currentTarget.style.background = "var(--bg-secondary)"}
@@ -311,7 +367,9 @@ export function Dividend() {
                             {etf.name}
                             <ExternalLink size={12} style={{ opacity: 0.4, flexShrink: 0 }} />
                           </a>
-                          <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>{etf.ticker}</div>
+                          <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>
+                            {etf.ticker}{etf.issuer ? ` · ${etf.issuer}` : ''}
+                          </div>
                         </td>
                         <td style={{ padding: "10px 10px" }}>
                           <span style={{
@@ -328,14 +386,9 @@ export function Dividend() {
                           <div style={{ color: "var(--accent-blue)", fontWeight: "var(--font-bold)" }}>
                             {fmt(etf.recentDividend)}원
                           </div>
-                          {divChange !== 0 && (
-                            <div style={{ fontSize: "var(--text-xs)", color: divChange > 0 ? "var(--color-profit)" : "var(--color-loss)", marginTop: 1 }}>
-                              {divChange > 0 ? "▲" : "▼"}{Math.abs(divChange)}원
-                            </div>
-                          )}
                         </td>
-                        <td className="toss-number" style={{ padding: "10px 10px", textAlign: "right", color: "var(--text-secondary)" }}>
-                          {fmt(etf.prevMonthDiv)}원
+                        <td className="toss-number" style={{ padding: "10px 10px", textAlign: "right", color: "var(--text-secondary)", fontSize: "var(--text-xs)" }}>
+                          {etf.recentDivDate || '-'}
                         </td>
                         <td className="toss-number" style={{
                           padding: "10px 10px", textAlign: "right", fontWeight: "var(--font-bold)",
