@@ -67,7 +67,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
-  const [isAmountHidden, setIsAmountHidden] = useState(true);
+  const [isAmountHidden, setIsAmountHidden] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
