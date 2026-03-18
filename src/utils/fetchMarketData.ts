@@ -128,29 +128,13 @@ export function selectMarketItems(data: MarketIndexData[]): MarketIndexData[] {
   const sp500 = data.find(d => d.code === 'SPI@SPX');
   const nasdaq = data.find(d => d.code === 'NAS@IXIC');
 
+  // 항상 5개 모두 표시: 달러환율, 코스피, 코스닥, S&P500, 나스닥
   const items: MarketIndexData[] = [];
   if (exchange) items.push(exchange);
+  if (kospi) items.push(kospi);
+  if (kosdaq) items.push(kosdaq);
+  if (sp500) items.push(sp500);
+  if (nasdaq) items.push(nasdaq);
 
-  const isDaytime = isKoreanMarketHours();
-
-  if (isDaytime) {
-    // 낮: 코스피, 코스닥 우선 + 나스닥
-    if (kospi) items.push(kospi);
-    if (kosdaq) items.push(kosdaq);
-    if (nasdaq) items.push(nasdaq);
-  } else {
-    // 저녁: S&P, 나스닥 우선 + 코스피
-    if (sp500) items.push(sp500);
-    else if (kospi) items.push(kospi);
-    if (nasdaq) items.push(nasdaq);
-    else if (kosdaq) items.push(kosdaq);
-    if (kospi && !items.includes(kospi)) items.push(kospi);
-  }
-
-  // 최소 4개 보여주기 위해 남은것 추가
-  for (const d of [kospi, kosdaq, sp500, nasdaq]) {
-    if (d && !items.includes(d) && items.length < 4) items.push(d);
-  }
-
-  return items.slice(0, 4);
+  return items;
 }

@@ -227,12 +227,12 @@ export function NewDashboard() {
           });
           const assetItems = [
             { label: '총 자산', value: totalAsset, isTotal: true },
-            { label: `${new Date().getFullYear()}년 증감`, value: yearlyChange },
+            { label: `${new Date().getMonth()+1}월 증감`, value: monthlyChange },
             {
               label: (() => { const t = new Date(); const days = ['일','월','화','수','목','금','토']; return `${t.getMonth()+1}/${t.getDate()} ${days[t.getDay()]} 증감`; })(),
               value: dailyChange,
             },
-            { label: `${new Date().getMonth()+1}월 증감`, value: monthlyChange },
+            { label: `${new Date().getFullYear()}년 증감`, value: yearlyChange },
           ].map(item => {
             const isPositive = item.value > 0;
             const isNegative = item.value < 0;
@@ -255,7 +255,7 @@ export function NewDashboard() {
             };
           });
 
-          const allItems = [...marketItems, ...assetItems];
+          const allItems = [...assetItems, ...marketItems];
 
           return allItems.map((item, i) => {
             const sparkPoints = (() => {
