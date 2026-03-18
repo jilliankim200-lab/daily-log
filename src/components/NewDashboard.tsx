@@ -437,7 +437,7 @@ export function NewDashboard() {
         }} onClick={() => setShowAssetDetail(false)}>
           <div style={{
             background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 520,
-            maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           }} onClick={e => e.stopPropagation()}>
             <div style={{
               padding: '20px 24px', borderBottom: '1px solid var(--border-primary)',
