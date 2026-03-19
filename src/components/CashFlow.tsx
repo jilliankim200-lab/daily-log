@@ -1638,86 +1638,66 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
       {/* 결과 테이블 */}
       {showResults && results.length > 0 && (
         <>
-          {/* ⚠️ 파이어족 실패 경고 */}
+          {/* 파이어족 실패 */}
           {!isFireSuccess && assetDepletionAge && failureInfo && (
-            <div style={{ marginBottom: 24, backgroundColor: '#fef2f2', borderRadius: 16, padding: 16, border: '1px solid rgba(239,68,68,0.3)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ flexShrink: 0, width: 40, height: 40, backgroundColor: '#dc2626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xl)' }}>⚠️</div>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 900, color: '#b91c1c', marginBottom: 8 }}>파이어족 실패 경고!</h2>
-                  <p style={{ fontSize: 15, fontWeight: 'var(--font-bold)' as any, color: 'var(--color-profit)', marginBottom: 4 }}>{assetDepletionAge}세에 현금흐름이 마이너스가 됩니다! 😱</p>
-                  <p style={{ fontSize: 'var(--text-sm)', color: '#ef4444', marginBottom: 8 }}>연 부족액: <strong style={{ fontSize: 15 }}>{formatAmount(failureInfo.deficit)}원</strong></p>
-
-                  <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: 12, padding: 12, marginBottom: 8, border: '2px solid #f87171' }}>
-                    <p style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)' as any, color: '#b91c1c', marginBottom: 8 }}>📊 {assetDepletionAge}세 현금흐름 분석</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 'var(--text-sm)' }}>
-                      <div style={{ backgroundColor: 'var(--accent-blue-bg)', borderRadius: 8, padding: 8 }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 2 }}>총 수입</p>
-                        <p style={{ color: '#1d4ed8', fontWeight: 'var(--font-bold)' as any }}>{formatAmount(failureInfo.totalIncome)}원</p>
-                      </div>
-                      <div style={{ backgroundColor: '#fef2f2', borderRadius: 8, padding: 8 }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 2 }}>총 지출</p>
-                        <p style={{ color: '#b91c1c', fontWeight: 'var(--font-bold)' as any }}>{formatAmount(failureInfo.totalExpense)}원</p>
-                      </div>
-                      <div style={{ backgroundColor: '#fff7ed', borderRadius: 8, padding: 8 }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 2 }}>생활비</p>
-                        <p style={{ color: '#c2410c', fontWeight: 'var(--font-bold)' as any }}>{formatAmount(failureInfo.livingCost)}원</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: 12, padding: 12, marginBottom: 8, border: '2px solid #fb923c' }}>
-                    <p style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)' as any, color: '#c2410c', marginBottom: 8 }}>🔍 실패 원인 분석</p>
-                    <ul style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                      {failureInfo.reason.map((reason, idx) => (
-                        <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, backgroundColor: '#fff7ed', borderRadius: 8, padding: 6 }}>
-                          <span style={{ color: 'var(--color-profit)', fontWeight: 'var(--font-bold)' as any, marginTop: 2 }}>⚠️</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: 12, padding: 12, marginBottom: 8, border: '2px solid #4ade80' }}>
-                    <p style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)' as any, color: '#15803d', marginBottom: 8 }}>💡 해결 방안 (우선순위별)</p>
-                    <ul style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ color: 'var(--color-profit)', fontWeight: 'var(--font-bold)' as any }}>1️⃣</span>
-                        <span><strong style={{ color: 'var(--color-profit)' }}>월 생활비 감소:</strong> 현재 75세이전 {formatAmount(inputs.monthlyLivingCostBefore75)}원 → 추천: <span style={{ color: 'var(--accent-blue)', fontWeight: 'var(--font-bold)' as any }}>{formatAmount(Math.max(inputs.monthlyLivingCostBefore75 - failureInfo.deficit / 12, inputs.monthlyLivingCostBefore75 * 0.7))}원</span> (부족액 해소)</span>
-                      </li>
-                      {inputs.usePensionDepletion ? (
-                        <li style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                          <span style={{ color: '#ea580c', fontWeight: 'var(--font-bold)' as any }}>2️⃣</span>
-                          <span><strong style={{ color: '#ea580c' }}>연금소진 모드 OFF:</strong> 고정 인출액으로 변경하여 초반 현금흐름 안정화</span>
-                        </li>
-                      ) : (
-                        <li style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                          <span style={{ color: '#ea580c', fontWeight: 'var(--font-bold)' as any }}>2️⃣</span>
-                          <span><strong style={{ color: '#ea580c' }}>개인연금 인출액 증가:</strong> 현재 {formatAmount(inputs.pensionWithdrawalAmount)}원 → 추천: <span style={{ color: 'var(--accent-blue)', fontWeight: 'var(--font-bold)' as any }}>{formatAmount(inputs.pensionWithdrawalAmount + failureInfo.deficit)}원</span> (부족액만큼 증액)</span>
-                        </li>
-                      )}
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ color: '#ca8a04', fontWeight: 'var(--font-bold)' as any }}>3️⃣</span>
-                        <span><strong style={{ color: '#ca8a04' }}>은퇴 연기:</strong> 현재 {inputs.retirementStartAge}세 → 추천: <span style={{ color: 'var(--accent-blue)', fontWeight: 'var(--font-bold)' as any }}>{inputs.retirementStartAge + Math.ceil((assetDepletionAge - inputs.retirementStartAge) * 0.1)}세</span> (자산 축적 기간 확보)</span>
-                      </li>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ color: '#16a34a', fontWeight: 'var(--font-bold)' as any }}>4️⃣</span>
-                        <span><strong style={{ color: '#16a34a' }}>초기 자산 증대:</strong> 총 자산을 <span style={{ color: 'var(--accent-blue)', fontWeight: 'var(--font-bold)' as any }}>{formatAmount((inputs.totalPension + inputs.husbandISA + inputs.wifeISA + inputs.overseasInvestmentAmount) * 1.15)}원</span>으로 증액 (15% 상향)</span>
-                      </li>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ color: 'var(--accent-blue)', fontWeight: 'var(--font-bold)' as any }}>5️⃣</span>
-                        <span><strong style={{ color: 'var(--accent-blue)' }}>국민연금 조기 수령:</strong> {inputs.nationalPensionStartAge}세 → <span style={{ color: 'var(--accent-blue)', fontWeight: 'var(--font-bold)' as any }}>63세</span> (감액되지만 현금흐름 개선)</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div style={{ backgroundColor: '#fee2e2', borderRadius: 12, padding: 8, border: '1px solid #fca5a5' }}>
-                    <p style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-bold)' as any, color: '#b91c1c', marginBottom: 4 }}>⚡ 조치 필요</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.375 }}>
-                      위 해결 방안 중 <strong style={{ color: 'var(--color-profit)' }}>1번(생활비 감소) 필수 + 2~5번 중 1개 이상</strong> 조합하여 적용하면 {inputs.simulationEndAge}세까지 안정적인 파이어족 생활이 가능합니다! 🔄
-                    </p>
-                  </div>
+            <div className="toss-card" style={{ padding: 20, marginBottom: 16 }}>
+              {/* 헤더 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--color-loss)' }}>warning</span>
                 </div>
+                <div>
+                  <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>{assetDepletionAge}세부터 현금흐름 적자</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-loss)' }}>연 부족액 {formatAmount(failureInfo.deficit)}원</div>
+                </div>
+              </div>
+
+              {/* 수입/지출 요약 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+                {[
+                  { label: '총 수입', value: failureInfo.totalIncome, color: 'var(--accent-blue)' },
+                  { label: '총 지출', value: failureInfo.totalExpense, color: 'var(--color-loss)' },
+                  { label: '생활비', value: failureInfo.livingCost, color: 'var(--text-secondary)' },
+                ].map(item => (
+                  <div key={item.label} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>{item.label}</div>
+                    <div className="toss-number" style={{ fontSize: 13, fontWeight: 600, color: item.color }}>{formatAmount(item.value)}원</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 원인 */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8 }}>원인 분석</div>
+                {failureInfo.reason.map((reason, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 13, color: 'var(--text-primary)', borderBottom: idx < failureInfo.reason.length - 1 ? '1px solid var(--border-secondary)' : 'none' }}>
+                    <span style={{ color: 'var(--color-loss)', fontSize: 11, fontWeight: 700, minWidth: 16 }}>{idx + 1}</span>
+                    {reason}
+                  </div>
+                ))}
+              </div>
+
+              {/* 해결 방안 */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8 }}>해결 방안</div>
+                {[
+                  { text: `월 생활비 감소: ${formatAmount(inputs.monthlyLivingCostBefore75)}원 → ${formatAmount(Math.max(inputs.monthlyLivingCostBefore75 - failureInfo.deficit / 12, inputs.monthlyLivingCostBefore75 * 0.7))}원` },
+                  inputs.usePensionDepletion
+                    ? { text: '연금소진 모드 OFF → 고정 인출로 변경' }
+                    : { text: `개인연금 인출 증가: ${formatAmount(inputs.pensionWithdrawalAmount)}원 → ${formatAmount(inputs.pensionWithdrawalAmount + failureInfo.deficit)}원` },
+                  { text: `은퇴 연기: ${inputs.retirementStartAge}세 → ${inputs.retirementStartAge + Math.ceil((assetDepletionAge - inputs.retirementStartAge) * 0.1)}세` },
+                  { text: `초기 자산 15% 증액 (${formatAmount((inputs.totalPension + inputs.husbandISA + inputs.wifeISA + inputs.overseasInvestmentAmount) * 1.15)}원)` },
+                  { text: `국민연금 조기수령: ${inputs.nationalPensionStartAge}세 → 63세` },
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '5px 0', fontSize: 13, color: 'var(--text-primary)', borderBottom: idx < 4 ? '1px solid var(--border-secondary)' : 'none' }}>
+                    <span style={{ color: 'var(--accent-blue)', fontSize: 11, fontWeight: 700, minWidth: 16 }}>{idx + 1}</span>
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                1번 필수 + 2~5번 중 1개 이상 조합 시 {inputs.simulationEndAge}세까지 유지 가능
               </div>
             </div>
           )}
