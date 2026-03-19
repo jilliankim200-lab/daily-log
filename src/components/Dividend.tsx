@@ -159,7 +159,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 // 메인 컴포넌트
 // ═══════════════════════════════════════════
 export function Dividend() {
-  const { isAmountHidden } = useAppContext();
+  const { isAmountHidden, accounts } = useAppContext();
   const [activeTab, setActiveTab] = useState<"ranking" | "my">("ranking");
   const [stocks, setStocks] = useState<DividendStock[]>(loadStocks);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -211,6 +211,62 @@ export function Dividend() {
       setRankingLoading(false);
     })();
   }, []);
+
+  // 부부계좌 보유종목과 월배당 순위를 매칭하여 자동 등록
+  useEffect(() => {
+    if (rankingData.length === 0 || accounts.length === 0) return;
+    const rankingMap: Record<string, RankingETF> = {};
+    rankingData.forEach(r => { rankingMap[r.ticker] = r; });
+
+    const autoStocks: DividendStock[] = [];
+    const seenKey = new Set<string>(); // owner+ticker+account dedup
+
+    accounts.forEach(acc => {
+      acc.holdings.forEach(h => {
+        const etf = rankingMap[h.ticker];
+        if (!etf || h.quantity <= 0) return;
+        const key = `${acc.owner}_${h.ticker}_${acc.id}`;
+        if (seenKey.has(key)) return;
+        seenKey.add(key);
+        autoStocks.push({
+          id: `auto_${acc.id}_${h.ticker}`,
+          name: etf.name,
+          ticker: h.ticker,
+          quantity: h.quantity,
+          dividendPerShare: etf.recentDividend,
+          exDividendDay: 0,
+          paymentDay: 5,
+          frequency: "monthly",
+          owner: acc.owner as 'wife' | 'husband',
+        });
+      });
+    });
+
+    if (autoStocks.length > 0) {
+      // 같은 ticker+owner는 수량 합산
+      const merged: Record<string, DividendStock> = {};
+      autoStocks.forEach(s => {
+        const key = `${s.owner}_${s.ticker}`;
+        if (merged[key]) {
+          merged[key].quantity += s.quantity;
+        } else {
+          merged[key] = { ...s, id: `auto_${s.owner}_${s.ticker}` };
+        }
+      });
+      const mergedList = Object.values(merged);
+
+      // 기존 수동 추가 종목 유지 + 자동 종목 교체
+      const manualStocks = stocks.filter(s => !s.id.startsWith('auto_'));
+      const newStockList = [...mergedList, ...manualStocks.filter(m => !mergedList.some(a => a.ticker === m.ticker && a.owner === m.owner))];
+
+      // 변경이 있을 때만 업데이트
+      const currentAutoIds = stocks.filter(s => s.id.startsWith('auto_')).map(s => `${s.id}_${s.quantity}`).sort().join(',');
+      const newAutoIds = mergedList.map(s => `${s.id}_${s.quantity}`).sort().join(',');
+      if (currentAutoIds !== newAutoIds) {
+        setStocks(newStockList);
+      }
+    }
+  }, [rankingData, accounts]);
 
   useEffect(() => { saveStocks(stocks); }, [stocks]);
   useEffect(() => { localStorage.setItem("dividend_target_monthly", String(targetMonthly)); }, [targetMonthly]);
@@ -425,34 +481,48 @@ export function Dividend() {
       {activeTab === "my" && (
         <>
           {/* Summary Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
-            <div className="toss-card" style={{ padding: 20 }}>
-              <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>월 예상 배당</div>
-              <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--accent-blue)" }}>
-                {hide(`${fmt(totalMonthlyEstimate)}원`)}
+          {(() => {
+            const wifeMonthly = activeStocks.filter(s => s.owner === 'wife').reduce((t, s) => t + s.dividendPerShare * s.quantity, 0);
+            const husbandMonthly = activeStocks.filter(s => s.owner === 'husband').reduce((t, s) => t + s.dividendPerShare * s.quantity, 0);
+            return (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
+                <div className="toss-card" style={{ padding: 20 }}>
+                  <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>월 예상 배당 (합산)</div>
+                  <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--accent-blue)" }}>
+                    {hide(`${fmt(totalMonthlyEstimate)}원`)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: "var(--text-xs)" }}>
+                    <span style={{ color: 'var(--accent-blue)' }}>지윤 {hide(`${fmt(wifeMonthly)}원`)}</span>
+                    <span style={{ color: 'var(--color-profit)' }}>오빠 {hide(`${fmt(husbandMonthly)}원`)}</span>
+                  </div>
+                </div>
+                <div className="toss-card" style={{ padding: 20 }}>
+                  <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>연 예상 배당 (합산)</div>
+                  <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-profit)" }}>
+                    {hide(`${fmt(totalYearlyEstimate)}원`)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: "var(--text-xs)" }}>
+                    <span style={{ color: 'var(--accent-blue)' }}>지윤 {hide(`${fmt(wifeMonthly * 12)}원`)}</span>
+                    <span style={{ color: 'var(--color-profit)' }}>오빠 {hide(`${fmt(husbandMonthly * 12)}원`)}</span>
+                  </div>
+                </div>
+                <div className="toss-card" style={{ padding: 20 }}>
+                  <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>
+                    목표 달성률
+                    <span style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginLeft: 6 }}>
+                      (목표: {hide(`${fmt(targetMonthly)}원/월`)})
+                    </span>
+                  </div>
+                  <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: achievementRate >= 100 ? "var(--color-profit)" : "var(--text-primary)" }}>
+                    {hide(`${achievementRate.toFixed(1)}%`)}
+                  </div>
+                  <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: "var(--bg-tertiary)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${Math.min(achievementRate, 100)}%`, borderRadius: 3, background: achievementRate >= 100 ? "var(--color-profit)" : "var(--accent-blue)", transition: "width 0.3s" }} />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="toss-card" style={{ padding: 20 }}>
-              <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>연 예상 배당</div>
-              <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-profit)" }}>
-                {hide(`${fmt(totalYearlyEstimate)}원`)}
-              </div>
-            </div>
-            <div className="toss-card" style={{ padding: 20 }}>
-              <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>
-                목표 달성률
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginLeft: 6 }}>
-                  (목표: {hide(`${fmt(targetMonthly)}원/월`)})
-                </span>
-              </div>
-              <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: achievementRate >= 100 ? "var(--color-profit)" : "var(--text-primary)" }}>
-                {hide(`${achievementRate.toFixed(1)}%`)}
-              </div>
-              <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: "var(--bg-tertiary)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${Math.min(achievementRate, 100)}%`, borderRadius: 3, background: achievementRate >= 100 ? "var(--color-profit)" : "var(--accent-blue)", transition: "width 0.3s" }} />
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* 목표 설정 */}
           <div className="toss-card" style={{ padding: 16, marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -492,7 +562,7 @@ export function Dividend() {
           <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>
-                내 배당 종목 ({stocks.length})
+                내 배당 종목 ({activeStocks.length}종목)
               </h2>
               <button className="toss-btn-primary" style={{ fontSize: "var(--text-sm)", padding: "6px 14px", display: "flex", alignItems: "center", gap: 4 }}
                 onClick={() => setShowAddForm(!showAddForm)}>
