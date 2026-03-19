@@ -961,10 +961,10 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           {toastMsg}
         </div>
       )}
-      <div style={{ height: '100%', overflowY: 'auto', padding: 24, backgroundColor: 'var(--bg-page)' }}>
+      <div style={{ padding: 24 }}>
 
       {/* 입력 폼 */}
-      <div className="toss-card" style={{ padding: 24, marginBottom: 24, border: '1px solid var(--border-primary)', borderRadius: 16, backgroundColor: 'var(--bg-primary)' }}>
+      <div className="toss-card" style={{ padding: 24, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Calculator style={{ width: 18, height: 18, color: 'var(--accent-blue)' }} />
@@ -1640,14 +1640,14 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
         <>
           {/* 파이어족 실패 */}
           {!isFireSuccess && assetDepletionAge && failureInfo && (
-            <div className="toss-card" style={{ padding: 20, marginBottom: 16 }}>
+            <div style={{ padding: 20, marginBottom: 16, borderRadius: 12, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.03)' }}>
               {/* 헤더 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--color-loss)' }}>warning</span>
                 </div>
                 <div>
-                  <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>{assetDepletionAge}세부터 현금흐름 적자</div>
+                  <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-loss)' }}>{assetDepletionAge}세부터 현금흐름 적자</div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-loss)' }}>연 부족액 {formatAmount(failureInfo.deficit)}원</div>
                 </div>
               </div>
@@ -1713,7 +1713,7 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
             </div>
           )}
 
-        <div className="toss-card" style={{ backgroundColor: 'var(--bg-primary)', borderRadius: 16, padding: 24, border: '1px solid var(--border-primary)' }}>
+        <div className="toss-card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <h2 style={{ fontSize: 18, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)' }}>연도별 시뮬레이션 결과</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
