@@ -103,6 +103,8 @@ export function NewDashboard() {
     // 빠진 날짜 보간: 연속되지 않는 날짜 사이를 이전 날짜 값으로 채움
     const interpolateMissingDates = async (snaps: DailySnapshot[], todaySnap: DailySnapshot) => {
       if (snaps.length === 0) return;
+      const existingDates = new Set(snaps.map(s => s.date));
+      existingDates.add(todaySnap.date);
       const sorted = [...snaps, todaySnap].sort((a, b) => a.date.localeCompare(b.date));
       const missing: DailySnapshot[] = [];
 
@@ -114,11 +116,12 @@ export function NewDashboard() {
         const diffDays = Math.round((nextDate.getTime() - currDate.getTime()) / (86400000));
 
         if (diffDays > 1) {
-          // 빠진 날짜를 이전 값으로 채움
           for (let d = 1; d < diffDays; d++) {
             const fillDate = new Date(currDate);
             fillDate.setDate(fillDate.getDate() + d);
             const fillDateStr = fillDate.toISOString().slice(0, 10);
+            // 이미 존재하는 날짜는 건너뜀
+            if (existingDates.has(fillDateStr)) continue;
             missing.push({
               date: fillDateStr,
               totalAsset: curr.totalAsset,
