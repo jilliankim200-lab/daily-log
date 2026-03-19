@@ -199,6 +199,8 @@ export function Dividend() {
             recentDivDate: e.recentDivDate || '',
             issuer: e.issuer || '',
             netAsset: e.netAsset || 0,
+            priceChange: e.priceChange || 0,
+            priceChangeRate: e.priceChangeRate || 0,
           }));
           setRankingData(etfs);
           if (data.value.updatedAt) {
@@ -435,8 +437,17 @@ export function Dividend() {
                             {etf.category}
                           </span>
                         </td>
-                        <td className="toss-number" style={{ padding: "10px 10px", textAlign: "right", color: "var(--text-primary)" }}>
-                          {fmt(etf.price)}원
+                        <td className="toss-number" style={{ padding: "10px 10px", textAlign: "right" }}>
+                          <div style={{ color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{fmt(etf.price)}원</div>
+                          {(etf as any).priceChange != null && (etf as any).priceChange !== 0 && (
+                            <div style={{
+                              fontSize: "var(--text-xs)", marginTop: 1,
+                              color: (etf as any).priceChange > 0 ? 'var(--color-profit)' : 'var(--color-loss)',
+                            }}>
+                              {(etf as any).priceChange > 0 ? '▲' : '▼'}{fmt(Math.abs((etf as any).priceChange))}
+                              ({(etf as any).priceChangeRate > 0 ? '+' : ''}{((etf as any).priceChangeRate || 0).toFixed(2)}%)
+                            </div>
+                          )}
                         </td>
                         <td className="toss-number" style={{ padding: "10px 10px", textAlign: "right" }}>
                           <div style={{ color: "var(--accent-blue)", fontWeight: "var(--font-bold)" }}>

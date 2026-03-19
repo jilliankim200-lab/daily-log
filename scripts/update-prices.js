@@ -18,25 +18,26 @@ try {
 
 const TABLE = 'kv_store_cee564ea';
 
-async function fetchPrice(ticker) {
+async function fetchPriceInfo(ticker) {
   try {
+    // Naver mobile API (most reliable for change data)
+    const apiRes = await fetch(`https://m.stock.naver.com/api/stock/${ticker}/basic`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    if (apiRes.ok) {
+      const json = await apiRes.json();
+      const price = parseInt(String(json.closePrice || '0').replace(/,/g, ''));
+      const change = parseInt(String(json.compareToPreviousClosePrice || '0').replace(/,/g, ''));
+      const changeRate = parseFloat(json.fluctuationsRatio || '0');
+      if (price > 0) return { price, change, changeRate };
+    }
+
+    // Fallback: HTML scraping
     const url = `https://finance.naver.com/item/sise.naver?code=${ticker}`;
     const res = await fetch(url);
     const html = await res.text();
-    // Extract current price from the page
     const match = html.match(/현재가\s*<\/th>\s*<td[^>]*>\s*<strong[^>]*>\s*([\d,]+)/);
-    if (match) return parseInt(match[1].replace(/,/g, ''));
-
-    // Alternative pattern
-    const match2 = html.match(/<strong[^>]*id="_nowVal"[^>]*>([\d,]+)/);
-    if (match2) return parseInt(match2[1].replace(/,/g, ''));
-
-    // Try API
-    const apiRes = await fetch(`https://m.stock.naver.com/api/stock/${ticker}/basic`);
-    if (apiRes.ok) {
-      const json = await apiRes.json();
-      if (json.closePrice) return parseInt(String(json.closePrice).replace(/,/g, ''));
-    }
+    if (match) return { price: parseInt(match[1].replace(/,/g, '')), change: 0, changeRate: 0 };
 
     return null;
   } catch {
@@ -62,9 +63,11 @@ async function main() {
 
   let updated = 0;
   for (const etf of etfs) {
-    const price = await fetchPrice(etf.ticker);
-    if (price && price > 0) {
-      etf.price = price;
+    const info = await fetchPriceInfo(etf.ticker);
+    if (info && info.price > 0) {
+      etf.price = info.price;
+      etf.priceChange = info.change;
+      etf.priceChangeRate = info.changeRate;
       updated++;
     }
     // Avoid rate limiting
