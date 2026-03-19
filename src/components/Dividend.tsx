@@ -528,8 +528,8 @@ export function Dividend() {
           <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
               <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: "var(--font-medium)" }}>월 목표 배당금</span>
-              <input className="toss-input" type="number" value={targetMonthly}
-                onChange={e => setTargetMonthly(Number(e.target.value) || 0)}
+              <input className="toss-input" type="text" value={targetMonthly.toLocaleString('ko-KR')}
+                onChange={e => setTargetMonthly(Number(e.target.value.replace(/,/g, '')) || 0)}
                 style={{ width: 160, textAlign: "right", fontSize: "var(--text-sm)" }} />
               <span style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>원</span>
             </div>
