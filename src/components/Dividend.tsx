@@ -86,23 +86,23 @@ const DEFAULT_STOCKS: DividendStock[] = [
 ];
 
 const STOCKS_VERSION_KEY = "dividend_stocks_version";
-const CURRENT_VERSION = "v5_yieldmax_both";
+const CURRENT_VERSION = "v6_yieldmax_weekly";
 
-// YieldMax ETF (USD)
+// YieldMax ETF (USD) - 주배당(weekly), dividendPerShare = 주간 평균 × 4.33 (월환산)
 const YIELDMAX_STOCKS: DividendStock[] = [
   // 아내
-  { id: "ym_w_tsly", name: "TSLY (Tesla Option)",         ticker: "TSLY",  quantity: 44,  dividendPerShare: 1.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_w_nvdy", name: "NVDY (Nvidia Option)",        ticker: "NVDY",  quantity: 122, dividendPerShare: 0.70, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_w_cony", name: "CONY (Coinbase Option)",      ticker: "CONY",  quantity: 45,  dividendPerShare: 2.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_w_msty", name: "MSTY (MicroStrategy Option)", ticker: "MSTY",  quantity: 159, dividendPerShare: 2.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_w_plty", name: "PLTY (Palantir Option)",      ticker: "PLTY",  quantity: 26,  dividendPerShare: 1.20, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_w_ulty", name: "ULTY (Ultra Option)",         ticker: "ULTY",  quantity: 15,  dividendPerShare: 1.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_tsly", name: "TSLY (Tesla Option)",         ticker: "TSLY",   quantity: 44,  dividendPerShare: 1.32, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_nvdy", name: "NVDY (Nvidia Option)",        ticker: "NVDY",   quantity: 122, dividendPerShare: 0.48, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_cony", name: "CONY (Coinbase Option)",      ticker: "CONY",   quantity: 45,  dividendPerShare: 1.65, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_msty", name: "MSTY (MicroStrategy Option)", ticker: "MSTY",   quantity: 159, dividendPerShare: 1.51, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_plty", name: "PLTY (Palantir Option)",      ticker: "PLTY",   quantity: 26,  dividendPerShare: 2.23, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_ulty", name: "ULTY (Ultra Option)",         ticker: "ULTY",   quantity: 15,  dividendPerShare: 1.92, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
   // 남편
-  { id: "ym_h_tsly", name: "TSLY (Tesla Option)",         ticker: "TSLY_H", quantity: 108, dividendPerShare: 1.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
-  { id: "ym_h_nvdy", name: "NVDY (Nvidia Option)",        ticker: "NVDY_H", quantity: 114, dividendPerShare: 0.70, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
-  { id: "ym_h_cony", name: "CONY (Coinbase Option)",      ticker: "CONY_H", quantity: 37,  dividendPerShare: 2.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
-  { id: "ym_h_msty", name: "MSTY (MicroStrategy Option)", ticker: "MSTY_H", quantity: 148, dividendPerShare: 2.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
-  { id: "ym_h_plty", name: "PLTY (Palantir Option)",      ticker: "PLTY_H", quantity: 12,  dividendPerShare: 1.20, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_tsly", name: "TSLY (Tesla Option)",         ticker: "TSLY_H", quantity: 108, dividendPerShare: 1.32, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_nvdy", name: "NVDY (Nvidia Option)",        ticker: "NVDY_H", quantity: 114, dividendPerShare: 0.48, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_cony", name: "CONY (Coinbase Option)",      ticker: "CONY_H", quantity: 37,  dividendPerShare: 1.65, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_msty", name: "MSTY (MicroStrategy Option)", ticker: "MSTY_H", quantity: 148, dividendPerShare: 1.51, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_plty", name: "PLTY (Palantir Option)",      ticker: "PLTY_H", quantity: 12,  dividendPerShare: 2.23, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
 ];
 
 function loadStocks(): DividendStock[] {
