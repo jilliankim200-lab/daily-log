@@ -43,7 +43,8 @@ export function NewDashboard() {
 
   // 자동 스냅샷: 앱 로드 시 오늘 데이터 없으면 즉시 저장 + 10시/16시 자동 저장
   useEffect(() => {
-    if (accounts.length === 0 || totalAsset === 0) return;
+    // prices가 로드되지 않으면 저장하지 않음 (매입가 기준으로 잘못 저장되는 것 방지)
+    if (accounts.length === 0 || totalAsset === 0 || Object.keys(prices).length === 0) return;
 
     const tryAutoSave = async () => {
       const now = new Date();
