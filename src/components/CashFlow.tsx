@@ -996,532 +996,147 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
 
         {isInputExpanded && (
           <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 24 }}>
-          {/* 기본 정보 */}
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              시작 년도
-            </label>
-            <input
-              type="number"
-              value={inputs.startYear}
-              onChange={(e) => handleInputChange('startYear', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {/* 기본설정 */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 0 }}>기본설정</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>시작 년도</span>
+            <input type="number" value={inputs.startYear} onChange={(e) => handleInputChange('startYear', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              {isCoupleMode ? '본인 은퇴 시작 나이' : '은퇴 시작 나이'}
-            </label>
-            <input
-              type="number"
-              value={inputs.retirementStartAge}
-              onChange={(e) => handleInputChange('retirementStartAge', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{isCoupleMode ? '본인 은퇴 시작 나이' : '은퇴 시작 나이'}</span>
+            <input type="number" value={inputs.retirementStartAge} onChange={(e) => handleInputChange('retirementStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
-
           {isCoupleMode && (
-            <div>
-              <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                배우자 은퇴 시작 나이
-              </label>
-              <input
-                type="number"
-                value={inputs.spouseRetirementStartAge}
-                onChange={(e) => handleInputChange('spouseRetirementStartAge', e.target.value)}
-                className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-              />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>배우자 은퇴 시작 나이</span>
+              <input type="number" value={inputs.spouseRetirementStartAge} onChange={(e) => handleInputChange('spouseRetirementStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
             </div>
           )}
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              시뮬레이션 종료 나이
-            </label>
-            <input
-              type="number"
-              value={inputs.simulationEndAge}
-              onChange={(e) => handleInputChange('simulationEndAge', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>시뮬레이션 종료 나이</span>
+            <input type="number" value={inputs.simulationEndAge} onChange={(e) => handleInputChange('simulationEndAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>물가상승률 (%)</span>
+            <input type="number" step="0.1" value={inputs.inflationRate} onChange={(e) => handleInputChange('inflationRate', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
 
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              75세 이전 월 생활비 (원)
-              <div style={{ position: 'relative' }}>
-                <Info style={{ width: 16, height: 16, color: 'var(--accent-blue)', cursor: 'help' }} />
-                <div style={{ position: 'absolute', left: '100%', marginLeft: 8, top: 0, width: 288, padding: 12, backgroundColor: '#111827', color: '#ffffff', borderRadius: 8, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', zIndex: 50, display: 'none' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p style={{ fontWeight: 'var(--font-bold)' as any, fontSize: 'var(--text-xs)', marginBottom: 8, color: '#93c5fd', borderBottom: '1px solid #374151', paddingBottom: 6 }}>💰 월별 지출 내역</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>도시가스</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩50,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>관리비</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩200,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>인터넷</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩55,230</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>오빠휴대폰1</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩21,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>지윤휴대폰2</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩100,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>대중교통</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩100,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>하이패스</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩300,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>구독료</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩20,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>오빠실비</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩55,897</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>JY실비</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩69,020</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>JY암</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩28,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>오빠암보험</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩32,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>운전자보험</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩13,350</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>JY보험(K)</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩12,672</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>JY보험(K)</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩10,140</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>주택화재보험</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩9,900</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>JY독감보험</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩10,140</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>자동차세</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩500,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>오빠치아보험</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩30,700</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>어머님실비</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩161,684</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>엄마실비</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩123,610</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>엄마암</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩33,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>양압기</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩15,200</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>대출</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩930,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>용돈</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩850,000</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 'var(--font-bold)' as any, color: '#fde047', marginTop: 8, paddingTop: 8, borderTop: '1px solid #374151' }}>
-                        <span>합계</span>
-                        <span style={{ fontFamily: 'monospace' }}>₩3,731,543</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ position: 'absolute', right: '100%', top: 16, marginRight: -8, width: 0, height: 0, borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderRight: '8px solid #111827' }}></div>
-                </div>
-              </div>
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.monthlyLivingCostBefore75)}
-              onChange={(e) => handleInputChange('monthlyLivingCostBefore75', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.monthlyLivingCostBefore75 > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.monthlyLivingCostBefore75)}
-              </p>
-            )}
+          {/* 생활비 */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>생활비</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>75세 이전 월 생활비</span>
+            <input type="text" value={formatInputAmount(inputs.monthlyLivingCostBefore75)} onChange={(e) => handleInputChange('monthlyLivingCostBefore75', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              75세 이후 월 생활비 (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.monthlyLivingCostAfter75)}
-              onChange={(e) => handleInputChange('monthlyLivingCostAfter75', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.monthlyLivingCostAfter75 > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-profit)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.monthlyLivingCostAfter75)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              물가상승률 (%)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              value={inputs.inflationRate}
-              onChange={(e) => handleInputChange('inflationRate', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>75세 이후 월 생활비</span>
+            <input type="text" value={formatInputAmount(inputs.monthlyLivingCostAfter75)} onChange={(e) => handleInputChange('monthlyLivingCostAfter75', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
 
           {/* 자산 */}
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              남편 ISA (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.husbandISA)}
-              onChange={(e) => handleInputChange('husbandISA', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.husbandISA > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.husbandISA)}
-              </p>
-            )}
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>자산</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>남편 ISA</span>
+            <input type="text" value={formatInputAmount(inputs.husbandISA)} onChange={(e) => handleInputChange('husbandISA', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>아내 ISA</span>
+            <input type="text" value={formatInputAmount(inputs.wifeISA)} onChange={(e) => handleInputChange('wifeISA', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>해외직투금액</span>
+            <input type="text" value={formatInputAmount(inputs.overseasInvestmentAmount)} onChange={(e) => handleInputChange('overseasInvestmentAmount', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>주택 시가</span>
+            <input type="text" value={formatInputAmount(inputs.homeValue)} onChange={(e) => handleInputChange('homeValue', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              아내 ISA (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.wifeISA)}
-              onChange={(e) => handleInputChange('wifeISA', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.wifeISA > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.wifeISA)}
-              </p>
-            )}
+          {/* 수익률 */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>수익률</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>ISA 연수익률 (%)</span>
+            <input type="text" value={((inputs.isaReturnRate || 0.05) * 100).toFixed(1)} onChange={(e) => { const value = parseFloat(e.target.value) || 0; setInputs(prev => ({ ...prev, isaReturnRate: value / 100 })); }} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
-
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              해외직투금액
-              <div style={{ position: 'relative' }}>
-                <Info style={{ width: 16, height: 16, color: 'var(--accent-blue)', cursor: 'help' }} />
-                <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '100%', marginBottom: 8, width: 288, padding: 12, backgroundColor: '#111827', color: '#ffffff', fontSize: 'var(--text-xs)', borderRadius: 8, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', zIndex: 50, pointerEvents: 'none', display: 'none' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <p style={{ fontWeight: 'var(--font-semibold)' as any, color: '#93c5fd' }}>해외직투 배당+매도 전략</p>
-                    <p style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-                      <span>📊</span>
-                      <span>연 6% 배당 수령 + 90세에 잔액 0 목표</span>
-                    </p>
-                    <p style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-                      <span>💡</span>
-                      <span>2억 투자 시 매달 배당 100만원 + 매도 약 32만원 = 총 132만원 확보</span>
-                    </p>
-                  </div>
-                  <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '100%', width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '4px solid #111827' }}></div>
-                </div>
-              </div>
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.overseasInvestmentAmount)}
-              onChange={(e) => handleInputChange('overseasInvestmentAmount', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.overseasInvestmentAmount > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.overseasInvestmentAmount)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              ISA 연수익률 (%)
-            </label>
-            <input
-              type="text"
-              value={((inputs.isaReturnRate || 0.05) * 100).toFixed(1)}
-              onChange={(e) => {
-                const value = parseFloat(e.target.value) || 0;
-                setInputs(prev => ({ ...prev, isaReturnRate: value / 100 }));
-              }}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              해외주식 연수익률 (%)
-            </label>
-            <input
-              type="text"
-              value={((inputs.overseasReturnRate || 0.07) * 100).toFixed(1)}
-              onChange={(e) => {
-                const value = parseFloat(e.target.value) || 0;
-                setInputs(prev => ({ ...prev, overseasReturnRate: value / 100 }));
-              }}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              연금계좌 합계 (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.totalPension)}
-              onChange={(e) => handleInputChange('totalPension', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.totalPension > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.totalPension)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              연금 인출 금액 (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.pensionWithdrawalAmount)}
-              onChange={(e) => handleInputChange('pensionWithdrawalAmount', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.pensionWithdrawalAmount > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.pensionWithdrawalAmount)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              연금 연수익률 (%)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              value={inputs.pensionReturnRate ? (inputs.pensionReturnRate * 100).toFixed(1) : '5.0'}
-              onChange={(e) => {
-                const value = parseFloat(e.target.value) || 0;
-                handleInputChange('pensionReturnRate', (value / 100).toString());
-              }}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            <p style={{ fontSize: 'var(--text-xs)', color: '#059669', marginTop: 6 }}>
-              연간 수익 = 연금잔액 × {inputs.pensionReturnRate ? (inputs.pensionReturnRate * 100).toFixed(1) : '3.0'}%
-            </p>
-          </div>
-
-          {/* 연금소진 토글 */}
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              <span>연금소진 모드</span>
-              <button
-                type="button"
-                onClick={() => setInputs({ ...inputs, usePensionDepletion: !inputs.usePensionDepletion })}
-                style={{ position: 'relative', display: 'inline-flex', height: 24, width: 44, alignItems: 'center', borderRadius: 9999, backgroundColor: inputs.usePensionDepletion ? 'var(--accent-blue)' : '#d1d5db' }}
-              >
-                <span
-                  style={{ display: 'inline-block', height: 16, width: 16, borderRadius: '50%', backgroundColor: '#ffffff', transform: inputs.usePensionDepletion ? 'translateX(24px)' : 'translateX(4px)' }}
-                />
-              </button>
-            </label>
-            <p style={{ fontSize: 'var(--text-xs)', color: '#d97706', marginTop: 6 }}>
-              {inputs.usePensionDepletion 
-                ? `✅ ON: ${inputs.simulationEndAge}세에 연금잔액 0원이 되도록 자동 계산` 
-                : '❌ OFF: 입력한 연금인출금액 사용'}
-            </p>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              주택 시가 (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.homeValue)}
-              onChange={(e) => handleInputChange('homeValue', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.homeValue > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.homeValue)}
-              </p>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>해외주식 연수익률 (%)</span>
+            <input type="text" value={((inputs.overseasReturnRate || 0.07) * 100).toFixed(1)} onChange={(e) => { const value = parseFloat(e.target.value) || 0; setInputs(prev => ({ ...prev, overseasReturnRate: value / 100 })); }} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
 
           {/* 연금 */}
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              연금 개시 나이
-            </label>
-            <input
-              type="number"
-              value={inputs.pensionStartAge}
-              onChange={(e) => handleInputChange('pensionStartAge', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>연금</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>연금계좌 합계</span>
+            <input type="text" value={formatInputAmount(inputs.totalPension)} onChange={(e) => handleInputChange('totalPension', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              국민연금 개시 나이
-            </label>
-            <input
-              type="number"
-              value={inputs.nationalPensionStartAge}
-              onChange={(e) => handleInputChange('nationalPensionStartAge', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>연금 인출 금액 (월)</span>
+            <input type="text" value={formatInputAmount(inputs.pensionWithdrawalAmount)} onChange={(e) => handleInputChange('pensionWithdrawalAmount', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>연금 연수익률 (%)</span>
+            <input type="number" step="0.1" value={inputs.pensionReturnRate ? (inputs.pensionReturnRate * 100).toFixed(1) : '5.0'} onChange={(e) => { const value = parseFloat(e.target.value) || 0; handleInputChange('pensionReturnRate', (value / 100).toString()); }} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>연금소진 모드</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, color: '#d97706' }}>{inputs.usePensionDepletion ? 'ON' : 'OFF'}</span>
+              <button
+                type="button"
+                onClick={() => setInputs({ ...inputs, usePensionDepletion: !inputs.usePensionDepletion })}
+                style={{ position: 'relative', display: 'inline-flex', height: 24, width: 44, alignItems: 'center', borderRadius: 9999, backgroundColor: inputs.usePensionDepletion ? 'var(--accent-blue)' : '#d1d5db', border: 'none', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'inline-block', height: 16, width: 16, borderRadius: '50%', backgroundColor: '#ffffff', transform: inputs.usePensionDepletion ? 'translateX(24px)' : 'translateX(4px)' }} />
+              </button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>연금 개시 나이</span>
+            <input type="number" value={inputs.pensionStartAge} onChange={(e) => handleInputChange('pensionStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>국민연금 개시 나이</span>
+              <input type="number" value={inputs.nationalPensionStartAge} onChange={(e) => handleInputChange('nationalPensionStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+            </div>
             {inputs.nationalPensionStartAge < 67 && (
-              <div style={{ marginTop: 8, padding: 10, backgroundColor: '#fff7ed', borderRadius: 8, border: '1px solid #fed7aa' }}>
-                <p style={{ fontSize: 'var(--text-xs)', color: '#c2410c', fontWeight: 'var(--font-medium)' as any }}>
-                  ⚠️ 조기수령 감액: {67 - inputs.nationalPensionStartAge}년 × 6% = {((67 - inputs.nationalPensionStartAge) * 6)}% 감액
-                </p>
-              </div>
+              <p style={{ fontSize: 11, color: '#c2410c', marginTop: 4 }}>
+                조기수령 감액: {67 - inputs.nationalPensionStartAge}년 x 6% = {((67 - inputs.nationalPensionStartAge) * 6)}% 감액
+              </p>
             )}
           </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              국민연금 연금액 (월, 원)
-            </label>
-            <p style={{ fontSize: 11, color: 'var(--accent-blue)', marginBottom: 6 }}>
-              📌 67세 정상수령 기준 금액을 입력하세요
-            </p>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.nationalPensionYearly / 12)}
-              onChange={(e) => {
-                const monthlyValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
-                handleInputChange('nationalPensionYearly', (monthlyValue * 12).toString());
-              }}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.nationalPensionYearly > 0 && (
-              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)' }}>
-                  67세 기준: 월 {formatKoreanAmount(inputs.nationalPensionYearly / 12)} (연 {formatKoreanAmount(inputs.nationalPensionYearly)})
-                </p>
-                {inputs.nationalPensionStartAge < 67 && (
-                  <p style={{ fontSize: 'var(--text-xs)', color: '#ea580c', fontWeight: 'var(--font-medium)' as any }}>
-                    {inputs.nationalPensionStartAge}세 수령 시: 월 {formatKoreanAmount((inputs.nationalPensionYearly / 12) * (1 - (67 - inputs.nationalPensionStartAge) * 0.06))} (연 {formatKoreanAmount(inputs.nationalPensionYearly * (1 - (67 - inputs.nationalPensionStartAge) * 0.06))})
-                  </p>
-                )}
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>국민연금 월액 (67세 기준)</span>
+              <input type="text" value={formatInputAmount(inputs.nationalPensionYearly / 12)} onChange={(e) => { const monthlyValue = parseFloat(e.target.value.replace(/,/g, '')) || 0; handleInputChange('nationalPensionYearly', (monthlyValue * 12).toString()); }} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+            </div>
+            {inputs.nationalPensionStartAge < 67 && inputs.nationalPensionYearly > 0 && (
+              <p style={{ fontSize: 11, color: '#ea580c', marginTop: 4 }}>
+                {inputs.nationalPensionStartAge}세 수령 시: 월 {formatKoreanAmount((inputs.nationalPensionYearly / 12) * (1 - (67 - inputs.nationalPensionStartAge) * 0.06))}
+              </p>
             )}
           </div>
 
           {/* 주택연금 */}
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              주택연금 개시 나이
-            </label>
-            <input
-              type="number"
-              value={inputs.homePensionStartAge}
-              onChange={(e) => handleInputChange('homePensionStartAge', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>주택연금</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>주택연금 개시 나이</span>
+            <input type="number" value={inputs.homePensionStartAge} onChange={(e) => handleInputChange('homePensionStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>주택연금 월수령액</span>
+            <input type="text" value={formatInputAmount(inputs.homePensionMonthly)} onChange={(e) => handleInputChange('homePensionMonthly', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              주택연금 월수령액 (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.homePensionMonthly)}
-              onChange={(e) => handleInputChange('homePensionMonthly', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.homePensionMonthly > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.homePensionMonthly)}
-              </p>
-            )}
+          {/* 생명보험 */}
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>생명보험</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>생명보험연금 개시 나이</span>
+            <input type="number" value={inputs.lifeInsurancePensionStartAge} onChange={(e) => handleInputChange('lifeInsurancePensionStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
-        </div>
-
-        {/* 생명보험연금 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              생명보험연금 개시 나이
-            </label>
-            <input
-              type="number"
-              value={inputs.lifeInsurancePensionStartAge}
-              onChange={(e) => handleInputChange('lifeInsurancePensionStartAge', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-secondary)', marginBottom: 8 }}>
-              생명보험연금 연수령액 (원)
-            </label>
-            <input
-              type="text"
-              value={formatInputAmount(inputs.lifeInsurancePensionYearly)}
-              onChange={(e) => handleInputChange('lifeInsurancePensionYearly', e.target.value)}
-              className="toss-input" style={{ width: '100%', paddingLeft: 16, paddingRight: 16, paddingTop: 10, paddingBottom: 10, borderRadius: 8, border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
-            />
-            {inputs.lifeInsurancePensionYearly > 0 && (
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', marginTop: 6 }}>
-                {formatKoreanAmount(inputs.lifeInsurancePensionYearly)}
-              </p>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>생명보험연금 연수령액</span>
+            <input type="text" value={formatInputAmount(inputs.lifeInsurancePensionYearly)} onChange={(e) => handleInputChange('lifeInsurancePensionYearly', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
         </div>
 
