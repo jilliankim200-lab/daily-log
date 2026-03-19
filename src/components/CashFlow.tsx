@@ -1713,9 +1713,9 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
             </div>
           )}
 
-        <div className="toss-card" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)' }}>연도별 시뮬레이션 결과</h2>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' as any, color: 'var(--text-primary)' }}>연도별 시뮬레이션 결과</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={() => setShowFormulaModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4, fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)' as any, color: 'var(--accent-blue)', borderRadius: 4, border: '1px solid #93c5fd', backgroundColor: 'transparent', cursor: 'pointer' }} title="계산식 보기">
                 <Info style={{ width: 16, height: 16 }} />
@@ -1730,92 +1730,58 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
 
           <div style={{ overflowX: 'auto' }}>
             <div style={{ maxHeight: 600, overflowY: 'auto' }}>
-              <table className="toss-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-secondary)' }}>
+              <table className="toss-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                   <tr>
-                    {['나이','년도','연 생활비','ISA 인출'].map(h => <th key={h} style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#dbeafe' }}>{h}</th>)}
-                    {['해외배당\n세후','해외주식\n매도'].map(h => <th key={h} style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#d1fae5' }} dangerouslySetInnerHTML={{__html: h.replace('\n','<br/>')}} />)}
-                    {['연금\n세후','국민연금\n세후','주택연금','생명보험\n연금','총소득\n(세후)','건보료','총지출','연 잉여/\n부족','ISA 잔액'].map(h => <th key={h} style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#dbeafe' }} dangerouslySetInnerHTML={{__html: h.replace('\n','<br/>')}} />)}
-                    <th style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#d1fae5' }} dangerouslySetInnerHTML={{__html: '해외주식<br/>잔액'}} />
-                    <th style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#dbeafe' }}>연금 잔액</th>
+                    {['나이','년도','연 생활비','ISA 인출','해외배당','해외매도','연금','국민연금','주택연금','생명보험','총소득','건보료','총지출','잉여/부족','ISA잔액','해외잔액','연금잔액'].map(h => (
+                      <th key={h} style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text-tertiary)', fontSize: 11, whiteSpace: 'nowrap', borderBottom: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {results.map((row, index) => {
-                    const cellBase: React.CSSProperties = { border: '1px solid var(--border-primary)', padding: 12, textAlign: 'right' };
+                    const c: React.CSSProperties = { padding: '8px 6px', textAlign: 'right', borderBottom: '1px solid var(--border-secondary)', whiteSpace: 'nowrap' };
                     return (
-                    <tr key={index} style={{ backgroundColor: index % 5 === 0 ? 'rgba(219,234,254,0.3)' : 'transparent' }}>
-                      <td style={{ ...cellBase, textAlign: 'center', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-primary)', position: 'sticky', left: 0, backgroundColor: 'var(--bg-primary)', zIndex: 10 }}>{row.age}</td>
-                      <td style={{ ...cellBase, textAlign: 'center', fontWeight: 'var(--font-medium)' as any, color: 'var(--text-primary)' }}>{row.year}</td>
-                      <td style={{ ...cellBase, color: 'var(--text-secondary)' }}>{formatAmount(row.livingCost, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: 'var(--accent-blue)' }}>{formatAmount(row.isaWithdrawal, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#059669' }}>{formatAmount(row.overseasDividend, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#047857', fontWeight: 'var(--font-semibold)' as any }}>{formatAmount(row.overseasStockSale, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#9333ea' }}>{formatAmount(row.pensionAfterTax, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#4f46e5' }}>{formatAmount(row.nationalPension, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#ea580c' }}>{formatAmount(row.homePension, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#db2777' }}>{formatAmount(row.lifeInsurancePension, hideAmounts)}</td>
-                      <td style={{ ...cellBase, fontWeight: 'var(--font-semibold)' as any, color: 'var(--text-primary)' }}>{formatAmount(row.totalIncome, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: 'var(--color-profit)' }}>{formatAmount(row.healthInsurance, hideAmounts)}</td>
-                      <td style={{ ...cellBase, fontWeight: 'var(--font-medium)' as any, color: 'var(--text-primary)' }}>{formatAmount(row.totalExpense, hideAmounts)}</td>
-                      <td style={{ ...cellBase, fontWeight: 'var(--font-bold)' as any, color: getAmountColor(row.yearlySurplus) }}>{formatAmount(row.yearlySurplus, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: 'var(--accent-blue)', fontWeight: 'var(--font-medium)' as any }}>{formatAmount(row.isaBalance, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#059669', fontWeight: 'var(--font-medium)' as any }}>{formatAmount(row.overseasBalance, hideAmounts)}</td>
-                      <td style={{ ...cellBase, color: '#9333ea', fontWeight: 'var(--font-medium)' as any }}>{formatAmount(row.pensionBalance, hideAmounts)}</td>
+                    <tr key={index} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ ...c, textAlign: 'center', fontWeight: 500, color: 'var(--text-primary)' }}>{row.age}</td>
+                      <td style={{ ...c, textAlign: 'center', color: 'var(--text-tertiary)' }}>{row.year}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.livingCost, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.isaWithdrawal, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.overseasDividend, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.overseasStockSale, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.pensionAfterTax, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.nationalPension, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.homePension, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-secondary)' }}>{formatAmount(row.lifeInsurancePension, hideAmounts)}</td>
+                      <td style={{ ...c, fontWeight: 600, color: 'var(--text-primary)' }}>{formatAmount(row.totalIncome, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-tertiary)' }}>{formatAmount(row.healthInsurance, hideAmounts)}</td>
+                      <td style={{ ...c, fontWeight: 500, color: 'var(--text-primary)' }}>{formatAmount(row.totalExpense, hideAmounts)}</td>
+                      <td style={{ ...c, fontWeight: 600, color: getAmountColor(row.yearlySurplus) }}>{formatAmount(row.yearlySurplus, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-tertiary)' }}>{formatAmount(row.isaBalance, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-tertiary)' }}>{formatAmount(row.overseasBalance, hideAmounts)}</td>
+                      <td style={{ ...c, color: 'var(--text-tertiary)' }}>{formatAmount(row.pensionBalance, hideAmounts)}</td>
                     </tr>
                     );
                   })}
-                  <tr style={{ backgroundColor: '#fef3c7', borderTop: '4px solid #f59e0b' }}>
-                    <td colSpan={2} style={{ border: '1px solid var(--border-primary)', padding: 12, textAlign: 'center', fontWeight: 900, color: '#92400e', position: 'sticky', left: 0, backgroundColor: '#fef3c7', zIndex: 10 }}>합계</td>
-                    {[
-                      results.reduce((s, r) => s + r.livingCost, 0),
-                      results.reduce((s, r) => s + r.isaWithdrawal, 0),
-                      results.reduce((s, r) => s + r.overseasDividend, 0),
-                      results.reduce((s, r) => s + r.overseasStockSale, 0),
-                      results.reduce((s, r) => s + r.pensionAfterTax, 0),
-                      results.reduce((s, r) => s + r.nationalPension, 0),
-                      results.reduce((s, r) => s + r.homePension, 0),
-                      results.reduce((s, r) => s + r.lifeInsurancePension, 0),
-                      results.reduce((s, r) => s + r.totalIncome, 0),
-                      results.reduce((s, r) => s + r.healthInsurance, 0),
-                      results.reduce((s, r) => s + r.totalExpense, 0),
-                      results.reduce((s, r) => s + r.yearlySurplus, 0),
-                    ].map((val, i) => (
-                      <td key={i} style={{ border: '1px solid var(--border-primary)', padding: 12, textAlign: 'right', fontWeight: [8,10,11].includes(i) ? 900 : 'var(--font-bold)' as any, color: '#78350f' }}>{formatAmount(val, hideAmounts)}</td>
-                    ))}
-                    <td colSpan={3} style={{ border: '1px solid var(--border-primary)', padding: 12, textAlign: 'center', fontWeight: 'var(--font-medium)' as any, color: '#b45309', fontStyle: 'italic' }}>잔액 항목 제외</td>
-                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
           {/* 요약 정보 */}
-          <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
-            <div style={{ backgroundColor: 'var(--accent-blue-bg)', borderRadius: 12, padding: 20, border: '1px solid #bfdbfe' }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>총 시뮬레이션 기간</p>
-              <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' as any, color: 'var(--accent-blue)' }}>{inputs.simulationEndAge - inputs.retirementStartAge + 1}년</p>
-            </div>
-            <div style={{ backgroundColor: '#ecfdf5', borderRadius: 12, padding: 20, border: '1px solid #a7f3d0' }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>최종 ISA 잔액</p>
-              <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' as any, color: '#059669' }}>{formatAmount(results[results.length - 1]?.isaBalance || 0, hideAmounts)}원</p>
-              {!hideAmounts && <p style={{ fontSize: 'var(--text-base)', color: '#059669', marginTop: 4 }}>({formatKoreanAmount(results[results.length - 1]?.isaBalance || 0)}원)</p>}
-            </div>
-            <div style={{ backgroundColor: '#fff7ed', borderRadius: 12, padding: 20, border: '1px solid #fed7aa' }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>최종 해외주식 잔액</p>
-              <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' as any, color: '#ea580c' }}>{formatAmount(results[results.length - 1]?.overseasBalance || 0, hideAmounts)}원</p>
-              {!hideAmounts && <p style={{ fontSize: 'var(--text-base)', color: '#ea580c', marginTop: 4 }}>({formatKoreanAmount(results[results.length - 1]?.overseasBalance || 0)}원)</p>}
-            </div>
-            <div style={{ backgroundColor: '#faf5ff', borderRadius: 12, padding: 20, border: '1px solid #e9d5ff' }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>최종 연금 잔액</p>
-              <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' as any, color: '#9333ea' }}>{formatAmount(results[results.length - 1]?.pensionBalance || 0, hideAmounts)}원</p>
-              {!hideAmounts && <p style={{ fontSize: 'var(--text-base)', color: '#9333ea', marginTop: 4 }}>({formatKoreanAmount(results[results.length - 1]?.pensionBalance || 0)}원)</p>}
-            </div>
-            <div style={{ borderRadius: 12, padding: 20, border: '1px solid', borderColor: results.reduce((sum, row) => sum + row.yearlySurplus, 0) >= 0 ? '#fecaca' : '#bfdbfe', backgroundColor: results.reduce((sum, row) => sum + row.yearlySurplus, 0) >= 0 ? '#fef2f2' : 'var(--accent-blue-bg)' }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>전체 연 잉여/부족 합계</p>
-              <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' as any, color: getAmountColor(results.reduce((sum, row) => sum + row.yearlySurplus, 0)) }}>{formatAmount(results.reduce((sum, row) => sum + row.yearlySurplus, 0), hideAmounts)}원</p>
-              {!hideAmounts && <p style={{ fontSize: 'var(--text-base)', marginTop: 4, color: results.reduce((sum, row) => sum + row.yearlySurplus, 0) >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>({formatKoreanAmount(results.reduce((sum, row) => sum + row.yearlySurplus, 0))}원)</p>}
-            </div>
+          <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+            {[
+              { label: '시뮬레이션 기간', value: `${inputs.simulationEndAge - inputs.retirementStartAge + 1}년`, color: 'var(--text-primary)' },
+              { label: '최종 ISA 잔액', value: `${formatAmount(results[results.length - 1]?.isaBalance || 0, hideAmounts)}원`, color: 'var(--text-primary)' },
+              { label: '최종 해외주식 잔액', value: `${formatAmount(results[results.length - 1]?.overseasBalance || 0, hideAmounts)}원`, color: 'var(--text-primary)' },
+              { label: '최종 연금 잔액', value: `${formatAmount(results[results.length - 1]?.pensionBalance || 0, hideAmounts)}원`, color: 'var(--text-primary)' },
+              { label: '잉여/부족 합계', value: `${formatAmount(results.reduce((s, r) => s + r.yearlySurplus, 0), hideAmounts)}원`, color: getAmountColor(results.reduce((s, r) => s + r.yearlySurplus, 0)) },
+            ].map(item => (
+              <div key={item.label} style={{ padding: '14px 16px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6 }}>{item.label}</div>
+                <div className="toss-number" style={{ fontSize: 14, fontWeight: 600, color: item.color }}>{item.value}</div>
+              </div>
+            ))}
           </div>
         </div>
         </>
