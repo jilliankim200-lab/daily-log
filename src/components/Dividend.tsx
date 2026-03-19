@@ -185,7 +185,8 @@ const USD_TICKERS = new Set(['TSLY', 'NVDY', 'CONY', 'MSTY', 'PLTY', 'ULTY']);
 function isUSD(ticker: string) { return USD_TICKERS.has(ticker.replace(/_H$/, '').toUpperCase()) || /^[A-Z]{2,5}(_H)?$/.test(ticker); }
 function divAmount(s: DividendStock, exchangeRate: number) {
   const base = s.dividendPerShare * s.quantity;
-  return isUSD(s.ticker) ? base * exchangeRate : base;
+  // USD 종목: 15% 세금 공제 후 환율 적용
+  return isUSD(s.ticker) ? base * 0.85 * exchangeRate : base;
 }
 
 export function Dividend() {
