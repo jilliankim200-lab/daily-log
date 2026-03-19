@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Calculator, TrendingUp, Eye, EyeOff, RotateCcw, Info, X, Download, FileText, FileSpreadsheet, FileJson, ChevronDown, ChevronUp } from "lucide-react";
-import { toast, Toaster } from "sonner";
 
 interface CashFlowProps {
   isAmountHidden?: boolean;
@@ -59,8 +58,14 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
   const [hideAmounts, setHideAmounts] = useState(false);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [isCoupleMode, setIsCoupleMode] = useState(false); // 부부 모드
-  const [isInputExpanded, setIsInputExpanded] = useState(true); // 입력 폼 접기/펼치기
+  const [isCoupleMode, setIsCoupleMode] = useState(false);
+  const [isInputExpanded, setIsInputExpanded] = useState(true);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2000);
+  }, []);
 
   const [inputs, setInputs] = useState<InputValues>({
     startYear: 2025, // 시작년도
@@ -734,9 +739,7 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
     setShowResults(true);
     
     // 토스트 메시지 표시
-    toast('시뮬레이션 결과가 저장되었습니다', {
-      duration: 2000,
-    });
+    showToast('시뮬레이션 결과가 저장되었습니다');
   };
 
   const formatAmount = (amount: number, hideAmount: boolean = false): string => {
@@ -945,18 +948,19 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
 
   return (
     <>
-      <Toaster position="top-center" toastOptions={{
-        style: {
-          background: 'var(--bg-primary)',
-          color: 'var(--text-primary)',
-          border: '1px solid var(--border-primary)',
-          borderRadius: 12,
-          padding: '12px 16px',
-          fontSize: 13,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-        },
-        descriptionClassName: 'toast-desc',
-      }} />
+      {toastMsg && (
+        <div style={{
+          position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+          padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 500,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.3)', border: '1px solid var(--border-primary)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8,
+          animation: 'toast-in 0.25s ease',
+        }}>
+          <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--color-success, #22c55e)' }}>check_circle</span>
+          {toastMsg}
+        </div>
+      )}
       <div style={{ height: '100%', overflowY: 'auto', padding: 24, backgroundColor: 'var(--bg-page)' }}>
 
       {/* 입력 폼 */}
