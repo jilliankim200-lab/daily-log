@@ -792,11 +792,12 @@ export function Dividend() {
                 </thead>
                 <tbody>
                   {stocks.map((stock) => {
+                    const rawAmount = divAmount(stock, exchangeRate);
                     const monthlyAmount = stock.frequency === "monthly"
-                      ? stock.dividendPerShare * stock.quantity
+                      ? rawAmount
                       : stock.frequency === "quarterly"
-                      ? (stock.dividendPerShare * stock.quantity) / 3
-                      : (stock.dividendPerShare * stock.quantity) / 12;
+                      ? rawAmount / 3
+                      : rawAmount / 12;
                     const nextEx = getNextExDividendDate(stock.exDividendDay);
                     const dLeft = daysUntil(nextEx);
                     const isEditing = editingId === stock.id;
@@ -830,7 +831,7 @@ export function Dividend() {
                             <input className="toss-input" type="number" value={editForm.dividendPerShare ?? stock.dividendPerShare}
                               onChange={e => setEditForm({ ...editForm, dividendPerShare: Number(e.target.value) })}
                               style={{ width: 80, textAlign: "right", fontSize: "var(--text-sm)" }} />
-                          ) : hide(`${fmt(stock.dividendPerShare)}원`)}
+                          ) : isUSD(stock.ticker) ? hide(`$${stock.dividendPerShare}`) : hide(`${fmt(stock.dividendPerShare)}원`)}
                         </td>
                         <td className="toss-number" style={{
                           padding: "10px 12px", textAlign: "right",
