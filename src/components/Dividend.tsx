@@ -86,7 +86,17 @@ const DEFAULT_STOCKS: DividendStock[] = [
 ];
 
 const STOCKS_VERSION_KEY = "dividend_stocks_version";
-const CURRENT_VERSION = "v3_tabs";
+const CURRENT_VERSION = "v4_yieldmax";
+
+// YieldMax ETF (USD) - 아내 보유
+const YIELDMAX_STOCKS: DividendStock[] = [
+  { id: "ym_tsly",  name: "TSLY (Tesla Option)",      ticker: "TSLY",  quantity: 44,  dividendPerShare: 1.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_nvdy",  name: "NVDY (Nvidia Option)",     ticker: "NVDY",  quantity: 122, dividendPerShare: 0.70, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_cony",  name: "CONY (Coinbase Option)",   ticker: "CONY",  quantity: 45,  dividendPerShare: 2.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_msty",  name: "MSTY (MicroStrategy Option)", ticker: "MSTY", quantity: 159, dividendPerShare: 2.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_plty",  name: "PLTY (Palantir Option)",   ticker: "PLTY",  quantity: 26,  dividendPerShare: 1.20, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_ulty",  name: "ULTY (Ultra Option)",      ticker: "ULTY",  quantity: 15,  dividendPerShare: 1.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+];
 
 function loadStocks(): DividendStock[] {
   try {
@@ -95,9 +105,15 @@ function loadStocks(): DividendStock[] {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     }
+    // 버전 업그레이드: 기존 데이터 유지 + YieldMax 추가
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const existing: DividendStock[] = raw ? JSON.parse(raw) : DEFAULT_STOCKS;
+    const existingTickers = new Set(existing.map(s => s.ticker));
+    const merged = [...existing, ...YIELDMAX_STOCKS.filter(ym => !existingTickers.has(ym.ticker))];
     localStorage.setItem(STOCKS_VERSION_KEY, CURRENT_VERSION);
+    return merged;
   } catch {}
-  return DEFAULT_STOCKS;
+  return [...DEFAULT_STOCKS, ...YIELDMAX_STOCKS];
 }
 
 function saveStocks(stocks: DividendStock[]) {
@@ -158,8 +174,15 @@ const CATEGORY_COLORS: Record<string, string> = {
 // ═══════════════════════════════════════════
 // 메인 컴포넌트
 // ═══════════════════════════════════════════
+const USD_TICKERS = new Set(['TSLY', 'NVDY', 'CONY', 'MSTY', 'PLTY', 'ULTY']);
+function isUSD(ticker: string) { return USD_TICKERS.has(ticker.toUpperCase()) || /^[A-Z]{2,5}$/.test(ticker); }
+function divAmount(s: DividendStock, exchangeRate: number) {
+  const base = s.dividendPerShare * s.quantity;
+  return isUSD(s.ticker) ? base * exchangeRate : base;
+}
+
 export function Dividend() {
-  const { isAmountHidden, accounts } = useAppContext();
+  const { isAmountHidden, accounts, prices } = useAppContext();
   const [activeTab, setActiveTab] = useState<"ranking" | "my">("ranking");
   const [stocks, setStocks] = useState<DividendStock[]>(loadStocks);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -176,6 +199,17 @@ export function Dividend() {
   const [rankingData, setRankingData] = useState<RankingETF[]>([]);
   const [rankingLoading, setRankingLoading] = useState(true);
   const [rankingUpdatedAt, setRankingUpdatedAt] = useState<string>("");
+  const [exchangeRate, setExchangeRate] = useState(1450);
+
+  // 환율 가져오기
+  useEffect(() => {
+    fetch('https://m.stock.naver.com/front-api/marketIndex/productDetail?category=exchange&reutersCode=FX_USDKRW')
+      .then(r => r.json())
+      .then(d => {
+        const rate = parseFloat(d?.result?.closePrice?.replace(/,/g, '') || '0');
+        if (rate > 0) setExchangeRate(rate);
+      }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -288,9 +322,9 @@ export function Dividend() {
       let total = 0;
       for (const s of activeStocks) {
         let amount = 0;
-        if (s.frequency === "monthly") amount = s.dividendPerShare * s.quantity;
-        else if (s.frequency === "quarterly" && (m % 3 === 2)) amount = s.dividendPerShare * s.quantity;
-        else if (s.frequency === "yearly" && m === 11) amount = s.dividendPerShare * s.quantity;
+        if (s.frequency === "monthly") amount = divAmount(s, exchangeRate);
+        else if (s.frequency === "quarterly" && (m % 3 === 2)) amount = divAmount(s, exchangeRate);
+        else if (s.frequency === "yearly" && m === 11) amount = divAmount(s, exchangeRate);
         if (amount > 0) { details.push({ name: s.name, amount }); total += amount; }
       }
       months.push({ month: monthLabel, total, details });
@@ -300,9 +334,9 @@ export function Dividend() {
 
   const totalMonthlyEstimate = useMemo(() => {
     return activeStocks.reduce((sum, s) => {
-      if (s.frequency === "monthly") return sum + s.dividendPerShare * s.quantity;
-      if (s.frequency === "quarterly") return sum + (s.dividendPerShare * s.quantity) / 3;
-      if (s.frequency === "yearly") return sum + (s.dividendPerShare * s.quantity) / 12;
+      if (s.frequency === "monthly") return sum + divAmount(s, exchangeRate);
+      if (s.frequency === "quarterly") return sum + divAmount(s, exchangeRate) / 3;
+      if (s.frequency === "yearly") return sum + divAmount(s, exchangeRate) / 12;
       return sum;
     }, 0);
   }, [activeStocks]);
@@ -493,8 +527,8 @@ export function Dividend() {
         <>
           {/* Summary Cards */}
           {(() => {
-            const wifeMonthly = activeStocks.filter(s => s.owner === 'wife').reduce((t, s) => t + s.dividendPerShare * s.quantity, 0);
-            const husbandMonthly = activeStocks.filter(s => s.owner === 'husband').reduce((t, s) => t + s.dividendPerShare * s.quantity, 0);
+            const wifeMonthly = activeStocks.filter(s => s.owner === 'wife').reduce((t, s) => t + divAmount(s, exchangeRate), 0);
+            const husbandMonthly = activeStocks.filter(s => s.owner === 'husband').reduce((t, s) => t + divAmount(s, exchangeRate), 0);
             return (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
                 <div className="toss-card" style={{ padding: 20 }}>
