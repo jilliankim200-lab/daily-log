@@ -734,7 +734,7 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
     setShowResults(true);
     
     // 토스트 메시지 표시
-    toast.success('💾 시뮬레이션 결과가 자동 저장되었습니다', {
+    toast.success('시뮬레이션 결과가 자동 저장되었습니다', {
       description: '다른 페이지로 이동해도 결과가 유지됩니다.',
       duration: 3000,
     });
@@ -946,20 +946,14 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
 
   return (
     <>
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-center" richColors toastOptions={{ style: { fontSize: '14px' } }} />
       <div style={{ height: '100%', overflowY: 'auto', padding: 24, backgroundColor: 'var(--bg-page)' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', marginBottom: 8 }}>현금흐름 시뮬레이션</h1>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
-          실제 은퇴 후 세후 현금흐름 + 건보 + 주택연금까지 반영된 연도별 시뮬레이션
-        </p>
-      </div>
 
       {/* 입력 폼 */}
       <div className="toss-card" style={{ padding: 24, marginBottom: 24, border: '1px solid var(--border-primary)', borderRadius: 16, backgroundColor: 'var(--bg-primary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Calculator style={{ width: 24, height: 24, color: 'var(--accent-blue)' }} />
+            <Calculator style={{ width: 18, height: 18, color: 'var(--accent-blue)' }} />
             입력값 설정
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1520,7 +1514,7 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
         <div style={{ marginTop: 32, display: 'flex', flexDirection: 'row', gap: 16 }}>
           <button
             onClick={calculateSimulation}
-            className="toss-btn" style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 14, paddingBottom: 14, backgroundColor: 'var(--accent-blue)', color: '#ffffff', fontWeight: 'var(--font-semibold)' as any, borderRadius: 12, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', cursor: 'pointer' }}
+            className="toss-btn" style={{ padding: '10px 24px', backgroundColor: 'var(--accent-blue)', color: '#fff', fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)' }}
           >
             <TrendingUp style={{ width: 20, height: 20 }} />
             시뮬레이션 실행
@@ -1529,7 +1523,7 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           {showResults && results.length > 0 && (
             <button
               onClick={() => setShowDownloadModal(true)}
-              className="toss-btn" style={{ paddingLeft: 32, paddingRight: 32, paddingTop: 14, paddingBottom: 14, backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 'var(--font-semibold)' as any, borderRadius: 12, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: 'none', cursor: 'pointer' }}
+              className="toss-btn" style={{ padding: '10px 24px', backgroundColor: '#16a34a', color: '#fff', fontWeight: 600, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6, border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)' }}
             >
               <Download style={{ width: 20, height: 20 }} />
               결과 다운로드
@@ -1632,11 +1626,11 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
         <>
           {/* ⚠️ 파이어족 실패 경고 */}
           {!isFireSuccess && assetDepletionAge && failureInfo && (
-            <div style={{ marginBottom: 24, backgroundColor: '#fef2f2', borderRadius: 16, padding: 12, border: '4px solid #ef4444', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div style={{ marginBottom: 24, backgroundColor: '#fef2f2', borderRadius: 16, padding: 16, border: '1px solid rgba(239,68,68,0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flexShrink: 0, width: 40, height: 40, backgroundColor: '#dc2626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xl)' }}>⚠️</div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 900, color: '#b91c1c', marginBottom: 8 }}>🚨 파이어족 실패 경고!</h2>
+                  <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 900, color: '#b91c1c', marginBottom: 8 }}>파이어족 실패 경고!</h2>
                   <p style={{ fontSize: 15, fontWeight: 'var(--font-bold)' as any, color: 'var(--color-profit)', marginBottom: 4 }}>{assetDepletionAge}세에 현금흐름이 마이너스가 됩니다! 😱</p>
                   <p style={{ fontSize: 'var(--text-sm)', color: '#ef4444', marginBottom: 8 }}>연 부족액: <strong style={{ fontSize: 15 }}>{formatAmount(failureInfo.deficit)}원</strong></p>
 
@@ -1716,13 +1710,11 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
 
           {/* ✅ 파이어족 성공 메시지 */}
           {isFireSuccess && (
-            <div style={{ marginBottom: 24, backgroundColor: '#f0fdf4', borderRadius: 16, padding: 24, border: '2px solid #4ade80', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flexShrink: 0, width: 48, height: 48, backgroundColor: '#16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-2xl)' }}>✅</div>
-                <div>
-                  <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' as any, color: '#15803d', marginBottom: 4 }}>🎉 파이어족 성공!</h3>
-                  <p style={{ fontSize: 'var(--text-base)', color: '#16a34a' }}>{inputs.simulationEndAge}세까지 안정적인 현금흐름이 유지됩니다! 👏</p>
-                </div>
+            <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 10, background: 'rgba(0,184,148,0.08)', border: '1px solid rgba(0,184,148,0.2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-profit)' }}>파이어족 성공!</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{inputs.simulationEndAge}세까지 안정적인 현금흐름이 유지됩니다</div>
               </div>
             </div>
           )}
@@ -1745,7 +1737,7 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           <div style={{ overflowX: 'auto' }}>
             <div style={{ maxHeight: 600, overflowY: 'auto' }}>
               <table className="toss-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#dbeafe', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg-secondary)' }}>
                   <tr>
                     {['나이','년도','연 생활비','ISA 인출'].map(h => <th key={h} style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#dbeafe' }}>{h}</th>)}
                     {['해외배당\n세후','해외주식\n매도'].map(h => <th key={h} style={{ border: '1px solid var(--border-primary)', padding: 12, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', backgroundColor: '#d1fae5' }} dangerouslySetInnerHTML={{__html: h.replace('\n','<br/>')}} />)}
