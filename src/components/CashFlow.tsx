@@ -1181,88 +1181,44 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
         )}
       </div>
 
-      {/* 다운로드 모달 */}
+      {/* 다운로드 모달 - 토스 스타일 */}
       {showDownloadModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
-          <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: 16, padding: 24, maxWidth: 672, width: '100%', border: '2px solid var(--accent-blue)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-              <h3 style={{ fontSize: 22, fontWeight: 'var(--font-bold)' as any, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Download style={{ width: 24, height: 24, color: 'var(--accent-blue)' }} />
-                시뮬레이션 결과 다운로드
-              </h3>
-              <button onClick={() => setShowDownloadModal(false)} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }}>
-                <X style={{ width: 20, height: 20 }} />
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }} onClick={() => setShowDownloadModal(false)}>
+          <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: 16, maxWidth: 360, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>다운로드</span>
+              <button onClick={() => setShowDownloadModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-tertiary)' }}>
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ marginBottom: 24, padding: 16, backgroundColor: 'var(--accent-blue-bg)', borderRadius: 12, border: '1px solid #bfdbfe' }}>
-              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>
-                <strong style={{ color: 'var(--accent-blue)' }}>총 {results.length}개 연도</strong>의 시뮬레이션 데이터를 다양한 형식으로 다운로드할 수 있습니다.
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-              {/* Excel 다운로드 */}
-              <button onClick={() => { downloadExcel(); setShowDownloadModal(false); }} style={{ padding: 24, backgroundColor: '#f0fdf4', borderRadius: 12, border: '2px solid #4ade80', cursor: 'pointer', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ flexShrink: 0, width: 48, height: 48, backgroundColor: '#16a34a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileSpreadsheet style={{ width: 24, height: 24, color: '#ffffff' }} />
+            {/* Items */}
+            <div style={{ padding: '4px 0' }}>
+              {[
+                { label: 'Excel', desc: '.xls', icon: FileSpreadsheet, fn: downloadExcel },
+                { label: 'CSV', desc: '.csv', icon: FileSpreadsheet, fn: downloadCSV },
+                { label: 'JSON', desc: '.json (백업)', icon: FileJson, fn: downloadJSON },
+                { label: '리포트', desc: '.txt', icon: FileText, fn: downloadReport },
+              ].map((item, i) => (
+                <button key={i} onClick={() => { item.fn(); setShowDownloadModal(false); }}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 20px', border: 'none', background: 'transparent',
+                    cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <item.icon size={18} style={{ color: 'var(--text-primary)' }} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' as any, color: '#15803d', marginBottom: 4 }}>Excel 파일</h4>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>.xls 형식 (Excel에서 바로 열기)</p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: '#059669' }}>✅ 추천: 데이터 분석 및 차트 작성</p>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{item.desc}</div>
                   </div>
-                </div>
-              </button>
-
-              {/* CSV 다운로드 */}
-              <button onClick={() => { downloadCSV(); setShowDownloadModal(false); }} style={{ padding: 24, backgroundColor: 'var(--accent-blue-bg)', borderRadius: 12, border: '2px solid var(--accent-blue)', cursor: 'pointer', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ flexShrink: 0, width: 48, height: 48, backgroundColor: 'var(--accent-blue)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileSpreadsheet style={{ width: 24, height: 24, color: '#ffffff' }} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' as any, color: '#1d4ed8', marginBottom: 4 }}>CSV 파일</h4>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>.csv 형식 (범용 데이터)</p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)' }}>📊 Google 스프레드시트 호환</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* JSON 다운로드 */}
-              <button onClick={() => { downloadJSON(); setShowDownloadModal(false); }} style={{ padding: 24, backgroundColor: '#faf5ff', borderRadius: 12, border: '2px solid #c084fc', cursor: 'pointer', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ flexShrink: 0, width: 48, height: 48, backgroundColor: '#9333ea', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileJson style={{ width: 24, height: 24, color: '#ffffff' }} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' as any, color: '#7e22ce', marginBottom: 4 }}>JSON 파일</h4>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>.json 형식 (완전한 백업)</p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: '#9333ea' }}>💾 입력값 + 결과 + 실패정보 포함</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* 텍스트 리포트 다운로드 */}
-              <button onClick={() => { downloadReport(); setShowDownloadModal(false); }} style={{ padding: 24, backgroundColor: '#fffbeb', borderRadius: 12, border: '2px solid #fbbf24', cursor: 'pointer', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ flexShrink: 0, width: 48, height: 48, backgroundColor: '#d97706', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileText style={{ width: 24, height: 24, color: '#ffffff' }} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' as any, color: '#b45309', marginBottom: 4 }}>텍스트 리포트</h4>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>.txt 형식 (읽기 쉬운 리포트)</p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: '#d97706' }}>📄 요약 정보 + 전체 데이터</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div style={{ marginTop: 24, padding: 16, backgroundColor: 'var(--bg-secondary)', borderRadius: 12 }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                💡 <strong>Tip:</strong> Excel 파일은 즉시 편집 가능하며, JSON은 나중에 불러오기 용도로 사용할 수 있습니다.
-              </p>
+                </button>
+              ))}
             </div>
           </div>
         </div>
