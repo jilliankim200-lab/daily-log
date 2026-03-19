@@ -734,9 +734,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
     setShowResults(true);
     
     // 토스트 메시지 표시
-    toast.success('시뮬레이션 결과가 자동 저장되었습니다', {
-      description: '다른 페이지로 이동해도 결과가 유지됩니다.',
-      duration: 3000,
+    toast('시뮬레이션 결과가 저장되었습니다', {
+      duration: 2000,
     });
   };
 
@@ -946,7 +945,18 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
 
   return (
     <>
-      <Toaster position="top-center" richColors toastOptions={{ style: { fontSize: '14px' } }} />
+      <Toaster position="top-center" toastOptions={{
+        style: {
+          background: 'var(--bg-primary)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border-primary)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          fontSize: 13,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        },
+        descriptionClassName: 'toast-desc',
+      }} />
       <div style={{ height: '100%', overflowY: 'auto', padding: 24, backgroundColor: 'var(--bg-page)' }}>
 
       {/* 입력 폼 */}
