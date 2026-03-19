@@ -524,13 +524,125 @@ export function Dividend() {
             );
           })()}
 
-          {/* 목표 설정 */}
-          <div className="toss-card" style={{ padding: 16, marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: "var(--font-medium)" }}>월 목표 배당금</span>
-            <input className="toss-input" type="number" value={targetMonthly}
-              onChange={e => setTargetMonthly(Number(e.target.value) || 0)}
-              style={{ width: 160, textAlign: "right", fontSize: "var(--text-sm)" }} />
-            <span style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>원</span>
+          {/* 목표 설정 + 제안 */}
+          <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: "var(--font-medium)" }}>월 목표 배당금</span>
+              <input className="toss-input" type="number" value={targetMonthly}
+                onChange={e => setTargetMonthly(Number(e.target.value) || 0)}
+                style={{ width: 160, textAlign: "right", fontSize: "var(--text-sm)" }} />
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>원</span>
+            </div>
+
+            {/* 목표 달성 제안 */}
+            {(() => {
+              const gap = targetMonthly - totalMonthlyEstimate;
+              if (gap <= 0) {
+                return (
+                  <div style={{
+                    padding: 14, borderRadius: 10,
+                    background: 'rgba(0,184,148,0.08)', border: '1px solid rgba(0,184,148,0.2)',
+                  }}>
+                    <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--color-profit)', marginBottom: 4 }}>
+                      목표 달성!
+                    </div>
+                    <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+                      월 목표 배당금을 <strong>{fmt(Math.abs(gap))}원</strong> 초과 달성 중입니다.
+                      현재 월 {fmt(totalMonthlyEstimate)}원 / 목표 {fmt(targetMonthly)}원
+                    </div>
+                  </div>
+                );
+              }
+
+              // 부족한 경우: 월배당 순위에서 추천 종목 선정
+              // 이미 보유한 종목 제외, 연배당률 높은 순으로
+              const ownedTickers = new Set(activeStocks.map(s => s.ticker));
+              const candidates = rankingData
+                .filter(r => !ownedTickers.has(r.ticker) && r.recentDividend > 0 && r.annualYield > 0)
+                .sort((a, b) => b.annualYield - a.annualYield)
+                .slice(0, 5);
+
+              // 각 후보별 필요 수량 계산
+              const suggestions = candidates.map(c => {
+                const qtyNeeded = Math.ceil(gap / c.recentDividend);
+                const investNeeded = qtyNeeded * c.price;
+                return { ...c, qtyNeeded, investNeeded };
+              });
+
+              // 혼합 추천: 상위 3개 종목을 균등 배분
+              const topMix = candidates.slice(0, 3);
+              const mixGapEach = gap / topMix.length;
+              const mixSuggestions = topMix.map(c => {
+                const qty = Math.ceil(mixGapEach / c.recentDividend);
+                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield };
+              });
+              const mixTotalCost = mixSuggestions.reduce((s, m) => s + m.cost, 0);
+              const mixTotalDiv = mixSuggestions.reduce((s, m) => s + m.monthlyDiv, 0);
+
+              return (
+                <div style={{
+                  padding: 14, borderRadius: 10,
+                  background: 'rgba(49,130,246,0.06)', border: '1px solid rgba(49,130,246,0.15)',
+                }}>
+                  <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--accent-blue)', marginBottom: 8 }}>
+                    월 {fmt(gap)}원 부족 — 추천 종목
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 12 }}>
+                    미보유 종목 중 연배당률이 높은 종목을 추천합니다.
+                  </div>
+
+                  {/* 개별 종목 추천 */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>단일 종목으로 채우기</div>
+                    {suggestions.map(s => (
+                      <div key={s.ticker} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '6px 0', borderBottom: '1px solid var(--border-secondary)', fontSize: 12,
+                      }}>
+                        <div>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{s.name}</span>
+                          <span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({s.annualYield}%)</span>
+                        </div>
+                        <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{s.qtyNeeded}주</span>
+                          <span style={{ color: 'var(--text-tertiary)', marginLeft: 6 }}>≈ {fmt(s.investNeeded)}원</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 혼합 추천 */}
+                  {mixSuggestions.length >= 2 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>분산 투자로 채우기 (추천)</div>
+                      {mixSuggestions.map(m => (
+                        <div key={m.ticker} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '5px 0', fontSize: 12,
+                        }}>
+                          <span style={{ color: 'var(--text-primary)' }}>{m.name}</span>
+                          <div style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span>
+                            <span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span>
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{
+                        marginTop: 8, padding: '8px 10px', borderRadius: 6,
+                        background: 'rgba(49,130,246,0.08)', fontSize: 12,
+                        display: 'flex', justifyContent: 'space-between',
+                      }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>합계</span>
+                        <span>
+                          <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>투자 {fmt(mixTotalCost)}원</span>
+                          <span style={{ color: 'var(--text-secondary)', marginLeft: 8 }}>→ 월 +{fmt(mixTotalDiv)}원</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* 월별 배당 캘린더 */}
