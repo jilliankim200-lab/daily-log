@@ -71,16 +71,24 @@ export async function fetchSnapshots(): Promise<DailySnapshot[]> {
 }
 
 export async function saveSnapshot(snapshot: DailySnapshot): Promise<void> {
-  // 로컬 먼저 업데이트
-  const raw = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]') as DailySnapshot[];
-  const existing = raw.filter(s => s && s.date);
+  // Supabase에서 최신 데이터를 가져와서 업데이트 (localStorage 기준으로 덮어쓰기 방지)
+  let existing: DailySnapshot[] = [];
+  try {
+    const remote = await kvGet<DailySnapshot[]>('snapshots');
+    if (remote) existing = remote.filter(s => s && s.date);
+  } catch {
+    // Supabase 실패 시 로컬 폴백
+    const raw = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '[]') as DailySnapshot[];
+    existing = raw.filter(s => s && s.date);
+  }
+
   const idx = existing.findIndex(s => s.date === snapshot.date);
   if (idx >= 0) existing[idx] = snapshot;
   else existing.push(snapshot);
   const sorted = existing.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 365);
-  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(sorted));
 
-  // Supabase에도 저장
+  // 로컬 + Supabase 동기화
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(sorted));
   try {
     await kvSet('snapshots', sorted);
   } catch (err) {
