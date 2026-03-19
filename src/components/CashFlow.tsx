@@ -1002,8 +1002,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {/* 기본설정 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 0 }}>기본설정</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0', gridRow: '1 / 3' }}>기본설정</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>시작 년도</span>
             <input type="number" value={inputs.startYear} onChange={(e) => handleInputChange('startYear', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
@@ -1029,8 +1029,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           </div>
 
           {/* 생활비 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>생활비</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start', marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0' }}>생활비</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>75세 이전 월 생활비</span>
             <input type="text" value={formatInputAmount(inputs.monthlyLivingCostBefore75)} onChange={(e) => handleInputChange('monthlyLivingCostBefore75', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
@@ -1042,8 +1042,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           </div>
 
           {/* 자산 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>자산</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start', marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0', gridRow: '1 / 3' }}>자산</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>남편 ISA</span>
             <input type="text" value={formatInputAmount(inputs.husbandISA)} onChange={(e) => handleInputChange('husbandISA', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
@@ -1063,8 +1063,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           </div>
 
           {/* 수익률 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>수익률</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start', marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0' }}>수익률</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>ISA 연수익률 (%)</span>
             <input type="text" value={((inputs.isaReturnRate || 0.05) * 100).toFixed(1)} onChange={(e) => { const value = parseFloat(e.target.value) || 0; setInputs(prev => ({ ...prev, isaReturnRate: value / 100 })); }} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
@@ -1076,8 +1076,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           </div>
 
           {/* 연금 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>연금</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start', marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0', gridRow: '1 / 4' }}>연금</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>연금계좌 합계</span>
             <input type="text" value={formatInputAmount(inputs.totalPension)} onChange={(e) => handleInputChange('totalPension', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
@@ -1132,8 +1132,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           </div>
 
           {/* 주택연금 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>주택연금</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start', marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0' }}>주택연금</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>주택연금 개시 나이</span>
             <input type="number" value={inputs.homePensionStartAge} onChange={(e) => handleInputChange('homePensionStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
@@ -1145,8 +1145,8 @@ export function CashFlow({ isAmountHidden = false }: CashFlowProps) {
           </div>
 
           {/* 생명보험 */}
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', padding: '12px 0 6px', marginTop: 8 }}>생명보험</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: '0 20px', alignItems: 'start', marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', padding: '10px 0' }}>생명보험</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'right' as const }}>생명보험연금 개시 나이</span>
             <input type="number" value={inputs.lifeInsurancePensionStartAge} onChange={(e) => handleInputChange('lifeInsurancePensionStartAge', e.target.value)} style={{ width: 120, textAlign: 'right' as const, padding: '6px 10px', fontSize: 13, border: '1px solid var(--border-primary)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
