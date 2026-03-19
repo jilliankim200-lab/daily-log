@@ -86,16 +86,23 @@ const DEFAULT_STOCKS: DividendStock[] = [
 ];
 
 const STOCKS_VERSION_KEY = "dividend_stocks_version";
-const CURRENT_VERSION = "v4_yieldmax";
+const CURRENT_VERSION = "v5_yieldmax_both";
 
-// YieldMax ETF (USD) - 아내 보유
+// YieldMax ETF (USD)
 const YIELDMAX_STOCKS: DividendStock[] = [
-  { id: "ym_tsly",  name: "TSLY (Tesla Option)",      ticker: "TSLY",  quantity: 44,  dividendPerShare: 1.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_nvdy",  name: "NVDY (Nvidia Option)",     ticker: "NVDY",  quantity: 122, dividendPerShare: 0.70, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_cony",  name: "CONY (Coinbase Option)",   ticker: "CONY",  quantity: 45,  dividendPerShare: 2.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_msty",  name: "MSTY (MicroStrategy Option)", ticker: "MSTY", quantity: 159, dividendPerShare: 2.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_plty",  name: "PLTY (Palantir Option)",   ticker: "PLTY",  quantity: 26,  dividendPerShare: 1.20, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
-  { id: "ym_ulty",  name: "ULTY (Ultra Option)",      ticker: "ULTY",  quantity: 15,  dividendPerShare: 1.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  // 아내
+  { id: "ym_w_tsly", name: "TSLY (Tesla Option)",         ticker: "TSLY",  quantity: 44,  dividendPerShare: 1.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_nvdy", name: "NVDY (Nvidia Option)",        ticker: "NVDY",  quantity: 122, dividendPerShare: 0.70, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_cony", name: "CONY (Coinbase Option)",      ticker: "CONY",  quantity: 45,  dividendPerShare: 2.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_msty", name: "MSTY (MicroStrategy Option)", ticker: "MSTY",  quantity: 159, dividendPerShare: 2.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_plty", name: "PLTY (Palantir Option)",      ticker: "PLTY",  quantity: 26,  dividendPerShare: 1.20, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  { id: "ym_w_ulty", name: "ULTY (Ultra Option)",         ticker: "ULTY",  quantity: 15,  dividendPerShare: 1.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "wife" },
+  // 남편
+  { id: "ym_h_tsly", name: "TSLY (Tesla Option)",         ticker: "TSLY_H", quantity: 108, dividendPerShare: 1.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_nvdy", name: "NVDY (Nvidia Option)",        ticker: "NVDY_H", quantity: 114, dividendPerShare: 0.70, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_cony", name: "CONY (Coinbase Option)",      ticker: "CONY_H", quantity: 37,  dividendPerShare: 2.50, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_msty", name: "MSTY (MicroStrategy Option)", ticker: "MSTY_H", quantity: 148, dividendPerShare: 2.00, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
+  { id: "ym_h_plty", name: "PLTY (Palantir Option)",      ticker: "PLTY_H", quantity: 12,  dividendPerShare: 1.20, exDividendDay: 0, paymentDay: 5, frequency: "monthly", owner: "husband" },
 ];
 
 function loadStocks(): DividendStock[] {
@@ -175,7 +182,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 // 메인 컴포넌트
 // ═══════════════════════════════════════════
 const USD_TICKERS = new Set(['TSLY', 'NVDY', 'CONY', 'MSTY', 'PLTY', 'ULTY']);
-function isUSD(ticker: string) { return USD_TICKERS.has(ticker.toUpperCase()) || /^[A-Z]{2,5}$/.test(ticker); }
+function isUSD(ticker: string) { return USD_TICKERS.has(ticker.replace(/_H$/, '').toUpperCase()) || /^[A-Z]{2,5}(_H)?$/.test(ticker); }
 function divAmount(s: DividendStock, exchangeRate: number) {
   const base = s.dividendPerShare * s.quantity;
   return isUSD(s.ticker) ? base * exchangeRate : base;
