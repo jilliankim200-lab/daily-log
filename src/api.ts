@@ -83,8 +83,17 @@ export async function saveSnapshot(snapshot: DailySnapshot): Promise<void> {
   }
 
   const idx = existing.findIndex(s => s.date === snapshot.date);
-  if (idx >= 0) existing[idx] = snapshot;
-  else existing.push(snapshot);
+  if (idx >= 0) {
+    // 이미 저장된 값보다 20% 이상 낮으면 잘못된 데이터로 판단하여 무시
+    const existingTotal = existing[idx].totalAsset;
+    if (existingTotal > 0 && snapshot.totalAsset < existingTotal * 0.8) {
+      console.warn(`[스냅샷 보호] ${snapshot.date}: ${snapshot.totalAsset} < ${existingTotal} * 0.8 → 저장 차단`);
+      return;
+    }
+    existing[idx] = snapshot;
+  } else {
+    existing.push(snapshot);
+  }
   const sorted = existing.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 365);
 
   // 로컬 + Supabase 동기화
