@@ -371,10 +371,14 @@ export function NewDashboard() {
                         : [todayRow, ...snapshots.slice(0, 13)];
                       return allRows;
                     })().map((snap, i, arr) => {
-                      // 전날 대비 증감 계산: 바로 다음 row가 전날
+                      // 오늘(i===0)은 실시간 값으로 재계산, 과거는 저장된 값 사용
                       const prev = arr[i + 1];
-                      const change = prev ? snap.totalAsset - prev.totalAsset : 0;
-                      const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0;
+                      const change = i === 0
+                        ? (prev ? snap.totalAsset - prev.totalAsset : 0)
+                        : snap.assetChange;
+                      const rate = i === 0
+                        ? (prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0)
+                        : snap.changeRate;
                       return (
                         <tr key={snap.date}>
                           <td style={{ fontWeight: 'var(--font-medium)' }}>{snap.date}</td>

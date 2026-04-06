@@ -1,0 +1,26 @@
+name: Daily Asset Snapshot
+
+on:
+  schedule:
+    # 매일 KST 오후 4시 30분 (UTC 07:30) - Vercel cron(07:00) 실패 시 백업
+    - cron: '30 7 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js
+
+      - name: Run daily snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: node scripts/daily-snapshot.js
