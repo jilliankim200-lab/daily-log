@@ -1,5 +1,5 @@
 // 매일 자산 스냅샷 저장 (GitHub Actions용)
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
