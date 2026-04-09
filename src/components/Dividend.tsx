@@ -190,7 +190,7 @@ function divAmount(s: DividendStock, exchangeRate: number) {
 }
 
 export function Dividend() {
-  const { isAmountHidden, accounts, prices } = useAppContext();
+  const { isAmountHidden, accounts, prices, isMobile } = useAppContext();
   const [activeTab, setActiveTab] = useState<"ranking" | "my">("ranking");
   const [stocks, setStocks] = useState<DividendStock[]>(loadStocks);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -538,7 +538,7 @@ export function Dividend() {
             const wifeMonthly = activeStocks.filter(s => s.owner === 'wife').reduce((t, s) => t + divAmount(s, exchangeRate), 0);
             const husbandMonthly = activeStocks.filter(s => s.owner === 'husband').reduce((t, s) => t + divAmount(s, exchangeRate), 0);
             return (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? '1fr' : "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
                 <div className="toss-card" style={{ padding: 20 }}>
                   <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>월 예상 배당 (합산)</div>
                   <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--accent-blue)" }}>

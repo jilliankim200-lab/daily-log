@@ -4,6 +4,12 @@ import { fetchCurrentPrices } from '../utils/fetchPrices';
 import { RefreshCw, TrendingDown, TrendingUp, Minus, Info, X, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Account, Holding } from '../types';
 
+interface AccountDetail {
+  alias: string;
+  quantity: number;
+  avgPrice: number;
+}
+
 interface MergedHolding {
   name: string;
   ticker: string;
@@ -11,6 +17,7 @@ interface MergedHolding {
   quantity: number;
   totalCost: number;
   accounts: string[];
+  accountDetails: AccountDetail[];
   isFund?: boolean;
   amount?: number;
 }
@@ -24,7 +31,7 @@ function mergeHoldings(accounts: Account[]): MergedHolding[] {
         const key = `fund_${h.name}_${acc.alias}`;
         map.set(key, {
           name: h.name, ticker: '', avgPrice: 0, quantity: 0,
-          totalCost: h.amount || 0, accounts: [acc.alias],
+          totalCost: h.amount || 0, accounts: [acc.alias], accountDetails: [],
           isFund: true, amount: h.amount,
         });
         continue;
@@ -38,11 +45,13 @@ function mergeHoldings(accounts: Account[]): MergedHolding[] {
         existing.quantity = newQty;
         existing.totalCost = newTotalCost;
         if (!existing.accounts.includes(acc.alias)) existing.accounts.push(acc.alias);
+        existing.accountDetails.push({ alias: acc.alias, quantity: h.quantity, avgPrice: h.avgPrice });
       } else {
         map.set(key, {
           name: h.name, ticker: h.ticker, avgPrice: h.avgPrice,
           quantity: h.quantity, totalCost: h.avgPrice * h.quantity,
           accounts: [acc.alias],
+          accountDetails: [{ alias: acc.alias, quantity: h.quantity, avgPrice: h.avgPrice }],
         });
       }
     }
@@ -85,10 +94,12 @@ function SignalBadge({ signal }: { signal: 'buy' | 'sell' | 'hold' | 'none' }) {
   );
 }
 
-function HoldingInfoPopup({ accounts, avgPrice, isFund, isAmountHidden }: {
-  accounts: string[]; avgPrice: number; isFund?: boolean; isAmountHidden?: boolean;
+function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice }: {
+  accountDetails: AccountDetail[]; isFund?: boolean; isAmountHidden?: boolean; currentPrice?: number;
 }) {
   const [open, setOpen] = useState(false);
+  const multiAccount = accountDetails.length > 1;
+
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }}>
       <button
@@ -103,27 +114,52 @@ function HoldingInfoPopup({ accounts, avgPrice, isFund, isAmountHidden }: {
           <div style={{
             position: 'absolute', top: '100%', left: 0, zIndex: 50, marginTop: 4,
             background: 'var(--bg-primary)', border: '1px solid var(--border-primary)',
-            borderRadius: 10, padding: '12px 16px', minWidth: 180,
+            borderRadius: 10, padding: '12px 16px', minWidth: multiAccount ? 260 : 180,
             boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>상세 정보</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>계좌별 상세</span>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-tertiary)' }}>
                 <X style={{ width: 12, height: 12 }} />
               </button>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-tertiary)' }}>계좌</span>
-                <span style={{ fontWeight: 600 }}>{accounts.join(', ')}</span>
+            {!isFund && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {accountDetails.map((d, i) => {
+                  const signal = getSignal(d.avgPrice, currentPrice);
+                  const pnlRate = currentPrice && d.avgPrice > 0 ? ((currentPrice - d.avgPrice) / d.avgPrice) * 100 : null;
+                  const signalConfig = {
+                    buy: { label: '매수', color: '#34c759' },
+                    sell: { label: '매도', color: '#ff453a' },
+                    hold: { label: '보유', color: 'var(--text-tertiary)' },
+                    none: { label: '—', color: 'var(--text-quaternary)' },
+                  }[signal];
+                  return (
+                    <div key={i} style={{
+                      padding: '8px 10px', borderRadius: 8,
+                      background: 'var(--bg-secondary)',
+                      border: multiAccount && signal === 'sell' ? '1px solid rgba(255,69,58,0.3)' : '1px solid transparent',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{d.alias}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: signalConfig.color }}>{signalConfig.label}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                        <span>수량 <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{d.quantity.toLocaleString('ko-KR')}</span></span>
+                        <span>평단 <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {isAmountHidden ? '••••' : `${Math.round(d.avgPrice).toLocaleString('ko-KR')}원`}
+                        </span></span>
+                        {pnlRate !== null && (
+                          <span style={{ color: pnlRate > 0 ? 'var(--color-gain)' : pnlRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)', fontWeight: 600 }}>
+                            {pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              {!isFund && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-tertiary)' }}>평단가</span>
-                  <span style={{ fontWeight: 600 }}>{isAmountHidden ? '••••' : `${Math.round(avgPrice).toLocaleString('ko-KR')}원`}</span>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </>
       )}
@@ -136,11 +172,13 @@ function OwnerSection({
   accounts,
   prices,
   isAmountHidden,
+  isMobile,
 }: {
   ownerName: string;
   accounts: Account[];
   prices: Record<string, number>;
   isAmountHidden: boolean;
+  isMobile?: boolean;
 }) {
   const [signalFilter, setSignalFilter] = useState<'all' | 'buy' | 'sell'>('all');
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -198,7 +236,11 @@ function OwnerSection({
     }}>
       {/* Header */}
       <div style={{
-        padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: isMobile ? '14px 16px' : '20px 24px',
+        display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 10 : 0,
+        justifyContent: 'space-between',
         borderBottom: '1px solid var(--border-primary)',
       }}>
         <div>
@@ -238,43 +280,98 @@ function OwnerSection({
 
       {/* Summary */}
       <div style={{
-        padding: '16px 24px', display: 'flex', gap: 32,
+        padding: isMobile ? '12px 16px' : '16px 24px',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, auto)',
+        gap: isMobile ? 12 : 32,
         borderBottom: '1px solid var(--border-primary)', background: 'var(--bg-secondary)',
       }}>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>매입금액</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {isAmountHidden ? '••••••' : `${fmt(totalCost)}원`}
+        {[
+          { label: '매입금액', value: isAmountHidden ? '••••••' : `${fmt(totalCost)}원`, color: 'var(--text-primary)' },
+          { label: '평가금액', value: isAmountHidden ? '••••••' : `${fmt(totalCurrent)}원`, color: 'var(--text-primary)' },
+          { label: '수익금', value: isAmountHidden ? '••••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원`, color: totalPnl > 0 ? 'var(--color-gain)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
+          { label: '수익률', value: `${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%`, color: totalPnlRate > 0 ? 'var(--color-gain)' : totalPnlRate < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
+        ].map(({ label, value, color }) => (
+          <div key={label}>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+            <div className="toss-number" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{value}</div>
           </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>평가금액</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {isAmountHidden ? '••••••' : `${fmt(totalCurrent)}원`}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>수익금</div>
-          <div style={{
-            fontSize: 16, fontWeight: 700,
-            color: totalPnl > 0 ? 'var(--color-gain)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)',
-          }}>
-            {isAmountHidden ? '••••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원`}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>수익률</div>
-          <div style={{
-            fontSize: 16, fontWeight: 700,
-            color: totalPnlRate > 0 ? 'var(--color-gain)' : totalPnlRate < 0 ? 'var(--color-loss)' : 'var(--text-primary)',
-          }}>
-            {totalPnlRate > 0 ? '+' : ''}{totalPnlRate.toFixed(2)}%
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
+      {/* Mobile card list */}
+      {isMobile && (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {holdings.map((h, i) => {
+            if (h.isFund) {
+              return (
+                <div key={`fund-${h.name}-${i}`} style={{
+                  padding: '14px 16px', borderBottom: '1px solid var(--border-primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
+                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
+                  </div>
+                  <span className="toss-number" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                    {isAmountHidden ? '••••••' : `${fmt(h.amount || 0)}원`}
+                  </span>
+                </div>
+              );
+            }
+            const cp = prices[h.ticker];
+            const evalAmount = cp ? cp * h.quantity : h.totalCost;
+            const pnl = evalAmount - h.totalCost;
+            const pnlRate = h.totalCost > 0 ? ((evalAmount - h.totalCost) / h.totalCost) * 100 : 0;
+            const changeRate = cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
+            const signal = getSignal(h.avgPrice, cp);
+            const pnlColor = pnl > 0 ? 'var(--color-gain)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
+            const sellAccounts = h.accountDetails.filter(d => getSignal(d.avgPrice, cp) === 'sell').map(d => d.alias);
+            return (
+              <div key={`${h.ticker}-${h.name}-${i}`} style={{
+                padding: '14px 16px', borderBottom: '1px solid var(--border-primary)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <SignalBadge signal={signal} />
+                      {sellAccounts.length > 0 && (
+                        <span style={{ fontSize: 10, color: '#ff453a', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {sellAccounts.join('·')}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
+                        <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-quaternary)', marginTop: 2 }}>{h.ticker}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="toss-number" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                      {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
+                    </div>
+                    <div className="toss-number" style={{ fontSize: 12, fontWeight: 600, color: pnlColor, marginTop: 2, whiteSpace: 'nowrap' }}>
+                      {isAmountHidden ? '••••' : `${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(2)}%`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                  <span>현재가 <span className="toss-number" style={{ color: cp ? (changeRate > 0 ? 'var(--color-gain)' : changeRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)') : 'var(--text-quaternary)', fontWeight: 600 }}>
+                    {cp ? `${fmt(cp)}` : '—'}{cp && changeRate !== 0 ? ` (${changeRate > 0 ? '+' : ''}${changeRate.toFixed(2)}%)` : ''}
+                  </span></span>
+                  <span>수량 <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{fmt(h.quantity)}</span></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Desktop Table */}
+      {!isMobile && <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
@@ -316,7 +413,7 @@ function OwnerSection({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {h.name}
                         <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
-                        <HoldingInfoPopup accounts={h.accounts} avgPrice={0} isFund />
+                        <HoldingInfoPopup accountDetails={h.accountDetails} isFund />
                       </div>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
@@ -340,22 +437,30 @@ function OwnerSection({
               const changeRate = cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
               const signal = getSignal(h.avgPrice, cp);
               const pnlColor = pnl > 0 ? 'var(--color-gain)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
+              const sellAccounts = h.accountDetails.filter(d => getSignal(d.avgPrice, cp) === 'sell').map(d => d.alias);
 
               return (
                 <tr
                   key={`${h.ticker}-${h.name}-${i}`}
                   style={{
                     borderBottom: '1px solid var(--border-primary)',
-                    background: signal === 'buy' ? 'rgba(52, 199, 89, 0.04)' : signal === 'sell' ? 'rgba(255, 69, 58, 0.04)' : 'transparent',
+                    background: 'transparent',
                   }}
                 >
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <SignalBadge signal={signal} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <SignalBadge signal={signal} />
+                      {sellAccounts.length > 0 && (
+                        <span style={{ fontSize: 10, color: '#ff453a', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {sellAccounts.join('·')}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {h.name}
-                      <HoldingInfoPopup accounts={h.accounts} avgPrice={h.avgPrice} isAmountHidden={isAmountHidden} />
+                      <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
                     </div>
                     <a
                       href={`https://www.tossinvest.com/stocks/A${h.ticker}/order`}
@@ -395,13 +500,13 @@ function OwnerSection({
             })}
           </tbody>
         </table>
-      </div>
+      </div>}
     </div>
   );
 }
 
 export function Holdings() {
-  const { accounts, isAmountHidden } = useAppContext();
+  const { accounts, isAmountHidden, isMobile } = useAppContext();
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
 
@@ -425,11 +530,11 @@ export function Holdings() {
   const husbandAccounts = accounts.filter(a => a.owner === 'husband');
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: isMobile ? 12 : 24 }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 28,
+        marginBottom: isMobile ? 16 : 28,
       }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
@@ -461,12 +566,14 @@ export function Holdings() {
           accounts={wifeAccounts}
           prices={prices}
           isAmountHidden={isAmountHidden}
+          isMobile={isMobile}
         />
         <OwnerSection
           ownerName="오빠"
           accounts={husbandAccounts}
           prices={prices}
           isAmountHidden={isAmountHidden}
+          isMobile={isMobile}
         />
       </div>
     </div>

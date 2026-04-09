@@ -108,7 +108,7 @@ function saveTargets(targets: TargetAllocation) {
 }
 
 export function Rebalancing() {
-  const { accounts, isAmountHidden } = useAppContext();
+  const { accounts, isAmountHidden, isMobile } = useAppContext();
   const [targets, setTargets] = useState<TargetAllocation>(loadTargets);
   const [editingTargets, setEditingTargets] = useState(false);
   const [tempTargets, setTempTargets] = useState<TargetAllocation>({
@@ -304,7 +304,7 @@ export function Rebalancing() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(180px, 1fr))",
           gap: 12,
           marginBottom: 24,
         }}
@@ -370,7 +370,7 @@ export function Rebalancing() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: showPieChart ? "1fr 1fr" : "1fr",
+          gridTemplateColumns: (showPieChart && !isMobile) ? "1fr 1fr" : "1fr",
           gap: 16,
           marginBottom: 24,
         }}
@@ -560,7 +560,7 @@ export function Rebalancing() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))",
                 gap: 12,
                 marginBottom: 12,
               }}
@@ -1073,7 +1073,7 @@ export function Rebalancing() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))",
                   gap: 8,
                 }}
               >

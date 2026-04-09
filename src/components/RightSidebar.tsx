@@ -59,7 +59,7 @@ export function RightSidebar() {
         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+        <span style={{ fontSize: 15, color: 'var(--text-primary)' }}>
           보유종목
         </span>
         <span style={{
@@ -73,10 +73,9 @@ export function RightSidebar() {
       {/* Holdings List */}
       <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
         {holdingSummary.map((h, i) => {
-          const pnl = h.totalCurrent - h.totalCost;
-          const pnlRate = h.totalCost > 0 ? (pnl / h.totalCost) * 100 : 0;
           const currentPrice = h.ticker ? prices[h.ticker] : undefined;
-          const pnlColor = pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-secondary)';
+          const dailyRate = h.ticker ? (prices[`${h.ticker}_rate`] ?? null) : null;
+          const rateColor = dailyRate == null ? 'var(--text-secondary)' : dailyRate > 0 ? 'var(--color-profit)' : dailyRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)';
 
           return (
             <div
@@ -92,10 +91,10 @@ export function RightSidebar() {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               onClick={() => navigateTo('holdings')}
             >
-              {/* Left: icon + name */}
+              {/* Left: name + owner */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
+                  fontSize: 14, color: 'var(--text-primary)',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {h.name}
@@ -109,23 +108,19 @@ export function RightSidebar() {
                 </div>
               </div>
 
-              {/* Right: price + change */}
+              {/* Right: 당일주가 + 당일등락률 */}
               <div style={{ textAlign: 'right', marginLeft: 8, flexShrink: 0 }}>
-                <div className="toss-number" style={{
-                  fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
-                }}>
-                  {hide(`${fmt(h.totalCurrent)}원`)}
-                </div>
                 {!h.isFund && currentPrice ? (
-                  <div className="toss-number" style={{
-                    fontSize: 11, color: pnlColor, marginTop: 2,
-                  }}>
-                    {hide(`${pnl > 0 ? '+' : ''}${fmt(pnl)}원 (${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(1)}%)`)}
-                  </div>
+                  <>
+                    <div className="toss-number" style={{ fontSize: 14, color: 'var(--text-primary)' }}>
+                      {fmt(currentPrice)}원
+                    </div>
+                    <div className="toss-number" style={{ fontSize: 11, color: rateColor, marginTop: 2 }}>
+                      {dailyRate != null ? `${dailyRate > 0 ? '+' : ''}${dailyRate.toFixed(2)}%` : '-'}
+                    </div>
+                  </>
                 ) : (
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                    {hide(`${fmt(h.totalQty)}주`)}
-                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>펀드</div>
                 )}
               </div>
             </div>

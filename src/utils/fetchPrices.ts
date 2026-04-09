@@ -58,6 +58,9 @@ export async function fetchCurrentPrices(tickers: string[]): Promise<Record<stri
         const item = data.datas?.[0];
         if (item?.closePriceRaw) {
           result[ticker] = parseInt(item.closePriceRaw, 10);
+          const rawRate = parseFloat(item.fluctuationsRatioRaw || '0');
+          const isFalling = item.compareToPreviousPrice?.name === 'FALLING';
+          result[`${ticker}_rate`] = isFalling ? -Math.abs(rawRate) : rawRate;
         }
       } catch { /* skip */ }
     });

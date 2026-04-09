@@ -306,9 +306,9 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
 
 /* ── 계좌 카드 ── */
 function AccountCard({
-  account, onUpdate, onDelete, isAmountHidden, prices,
+  account, onUpdate, onDelete, isAmountHidden, prices, isMobile,
 }: {
-  account: Account; onUpdate: (a: Account) => void; onDelete: () => void; isAmountHidden: boolean; prices: Record<string, number>;
+  account: Account; onUpdate: (a: Account) => void; onDelete: () => void; isAmountHidden: boolean; prices: Record<string, number>; isMobile?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -318,7 +318,6 @@ function AccountCard({
   const [addingHolding, setAddingHolding] = useState(false);
   const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
 
-  const isFunsu = account.alias === '펀슈';
   const [addingFund, setAddingFund] = useState(false);
   const [editingCash, setEditingCash] = useState(false);
   const [cashInput, setCashInput] = useState((account.cash || 0).toString());
@@ -372,77 +371,90 @@ function AccountCard({
   return (
     <div className="toss-card">
       {/* 헤더 */}
-      <div
-        className="px-5 py-4 flex items-center justify-between cursor-pointer transition-colors"
-        style={{ borderBottom: expanded ? '1px solid var(--border-primary)' : 'none', padding: 20 }}
-        onClick={() => setExpanded(!expanded)}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>
-            <AccountTypeIcon type={account.accountType} />
-          </div>
-          <div>
-            {editing ? (
-              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                <input className="toss-input" style={{ width: 120, padding: '6px 10px' }} value={editAlias} onChange={e => setEditAlias(e.target.value)} />
-                <select className="toss-select" value={editInst} onChange={e => setEditInst(e.target.value)}>
-                  {INSTITUTIONS.map(i => <option key={i}>{i}</option>)}
-                </select>
-                <select className="toss-select" value={editType} onChange={e => setEditType(e.target.value)}>
-                  {ACCOUNT_TYPES.map(t => <option key={t}>{t}</option>)}
-                </select>
-                <button onClick={e => { e.stopPropagation(); saveEdit(); }} className="toss-btn toss-btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
-                  <Save className="w-3 h-3" />
-                </button>
-                <button onClick={e => { e.stopPropagation(); setEditing(false); }} className="toss-btn toss-btn-ghost" style={{ padding: '6px 8px' }}>
-                  <X className="w-3 h-3" />
-                </button>
+      {isMobile ? (
+        /* 모바일: 수직 스택 */
+        <div
+          style={{ padding: '16px', borderBottom: expanded ? '1px solid var(--border-primary)' : 'none', cursor: 'pointer' }}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {/* 상단: 아이콘 + 계좌명 + 배지 + 펼치기 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', flexShrink: 0 }}>
+                <AccountTypeIcon type={account.accountType} />
               </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>{account.alias}</span>
-                  <span className="toss-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>{account.accountType}</span>
-                </div>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>
-                  {account.institution} · {account.holdings.length}개 종목
-                </p>
-              </>
-            )}
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{account.alias}</span>
+              <span className="toss-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11 }}>{account.accountType}</span>
+            </div>
+            <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0 }} />
           </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="text-right mr-1">
-            <p className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+          {/* 하단: 금액 + 수익 */}
+          <div style={{ paddingLeft: 40 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 2 }}>{account.institution} · {account.holdings.length}개 종목</p>
+            <p className="toss-number" style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
               {isAmountHidden ? '••••' : `${fmt(totalWithCash)}원`}
             </p>
             <p className="toss-number" style={{
-              fontSize: 'var(--text-xs)', marginTop: 2,
+              fontSize: 12, marginTop: 2, whiteSpace: 'nowrap',
               color: totalPnl > 0 ? 'var(--color-profit)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
             }}>
               {isAmountHidden ? '••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원 (${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%)`}
             </p>
           </div>
-          {!editing && (
-            <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setEditing(true)} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-tertiary)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={onDelete} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-tertiary)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-profit-bg)'; e.currentTarget.style.color = 'var(--color-profit)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-          <ChevronDown className="w-4 h-4 transition-transform" style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }} />
         </div>
-      </div>
+      ) : (
+        /* 데스크탑: 기존 가로 레이아웃 */
+        <div
+          className="px-5 py-4 flex items-center justify-between cursor-pointer transition-colors"
+          style={{ borderBottom: expanded ? '1px solid var(--border-primary)' : 'none', padding: 20 }}
+          onClick={() => setExpanded(!expanded)}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}>
+              <AccountTypeIcon type={account.accountType} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>{account.alias}</span>
+                <span className="toss-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>{account.accountType}</span>
+              </div>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                {account.institution} · {account.holdings.length}개 종목
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right mr-1">
+              <p className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+                {isAmountHidden ? '••••' : `${fmt(totalWithCash)}원`}
+              </p>
+              <p className="toss-number" style={{
+                fontSize: 'var(--text-xs)', marginTop: 2,
+                color: totalPnl > 0 ? 'var(--color-profit)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
+              }}>
+                {isAmountHidden ? '••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원 (${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%)`}
+              </p>
+            </div>
+            {!editing && (
+              <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
+                <button onClick={() => setEditing(true)} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-tertiary)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={onDelete} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-tertiary)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-profit-bg)'; e.currentTarget.style.color = 'var(--color-profit)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            <ChevronDown className="w-4 h-4 transition-transform" style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }} />
+          </div>
+        </div>
+      )}
 
       {/* 종목 목록 */}
       {expanded && (
@@ -499,7 +511,52 @@ function AccountCard({
             </div>
           </div>
 
-          {account.holdings.length > 0 && (
+          {account.holdings.length > 0 && isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px' }}>
+              {account.holdings.map(h => {
+                const cp = prices[h.ticker];
+                const evalAmt = cp ? cp * h.quantity : (h.isFund ? (h.amount || 0) : h.avgPrice * h.quantity);
+                const pnl = cp && !h.isFund ? evalAmt - h.avgPrice * h.quantity : 0;
+                const pnlRate = cp && !h.isFund && h.avgPrice > 0 ? ((cp - h.avgPrice) / h.avgPrice) * 100 : null;
+                return (
+                  <div key={h.id} style={{
+                    borderBottom: '1px solid var(--border-primary)', padding: '10px 4px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {h.name}
+                        </span>
+                        {h.isFund && (
+                          <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', flexShrink: 0 }}>펀드</span>
+                        )}
+                      </div>
+                      {!h.isFund && (
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                          {h.ticker}{h.quantity ? ` · ${fmt(h.quantity)}주` : ''}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        {isAmountHidden ? '••••' : `${fmt(evalAmt)}원`}
+                      </div>
+                      {pnlRate !== null && (
+                        <div className="toss-number" style={{
+                          fontSize: 11, fontWeight: 'var(--font-semibold)', whiteSpace: 'nowrap',
+                          color: pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
+                        }}>
+                          {isAmountHidden ? '••••' : `${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(2)}%`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : account.holdings.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
             <table className="toss-table">
               <thead>
                 <tr>
@@ -638,9 +695,10 @@ function AccountCard({
                 })}
               </tbody>
             </table>
+            </div>
           )}
 
-          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {!isMobile && <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {addingHolding ? (
               <HoldingForm onSave={addHolding} onCancel={() => setAddingHolding(false)} />
             ) : addingFund ? (
@@ -656,20 +714,18 @@ function AccountCard({
                 >
                   <Plus className="w-3.5 h-3.5" /> 종목 추가
                 </button>
-                {isFunsu && (
-                  <button
-                    onClick={() => setAddingFund(true)}
-                    className="py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                    style={{ flex: 1, border: '2px dashed var(--border-primary)', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
-                  >
-                    <Plus className="w-3.5 h-3.5" /> 펀드 추가
-                  </button>
-                )}
+                <button
+                  onClick={() => setAddingFund(true)}
+                  className="py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                  style={{ flex: 1, border: '2px dashed var(--border-primary)', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+                >
+                  <Plus className="w-3.5 h-3.5" /> 펀드 추가
+                </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       )}
 
@@ -737,6 +793,7 @@ function OwnerSection({
   onUpdateAccount: (a: Account) => void; onDeleteAccount: (id: string) => void; onAddAccount: (a: Account) => void;
   isAmountHidden: boolean; prices: Record<string, number>;
 }) {
+  const { isMobile } = useAppContext();
   const [adding, setAdding] = useState(false);
   const total = accounts.reduce((s, a) => s + (a.cash || 0) + a.holdings.reduce((ss, h) => {
     return ss + holdingValue(h, prices[h.ticker]);
@@ -755,7 +812,7 @@ function OwnerSection({
       </div>
 
       {accounts.map(acc => (
-        <AccountCard key={acc.id} account={acc} onUpdate={onUpdateAccount} onDelete={() => onDeleteAccount(acc.id)} isAmountHidden={isAmountHidden} prices={prices} />
+        <AccountCard key={acc.id} account={acc} onUpdate={onUpdateAccount} onDelete={() => onDeleteAccount(acc.id)} isAmountHidden={isAmountHidden} prices={prices} isMobile={isMobile} />
       ))}
 
       {adding ? (
@@ -777,7 +834,7 @@ function OwnerSection({
 
 /* ── 메인 페이지 ── */
 export function CoupleAccounts() {
-  const { accounts, setAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices: contextLoadPrices } = useAppContext();
+  const { accounts, setAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices: contextLoadPrices, isMobile } = useAppContext();
   const [activeTab, setActiveTab] = useState<'wife' | 'husband' | 'other'>('wife');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [priceLoading, setPriceLoading] = useState(false);
@@ -842,12 +899,41 @@ export function CoupleAccounts() {
       </div>
 
       {/* 요약 카드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <SummaryCard label="부부 합산" value={totalAll} sub={`${accounts.length}개 계좌 + 기타 ${otherAssets.length}건`} isAmountHidden={isAmountHidden} accent />
-        <SummaryCard label="👩 지윤" value={wifeTotal + otherAssets.filter(a => a.owner === 'wife').reduce((s, a) => s + a.amount, 0)} sub={`${wifeAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
-        <SummaryCard label="👨 오빠" value={husbandTotal + otherAssets.filter(a => a.owner === 'husband').reduce((s, a) => s + a.amount, 0)} sub={`${husbandAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
-        <SummaryCard label="📦 기타" value={otherTotal} sub={`${otherAssets.length}건`} isAmountHidden={isAmountHidden} />
-      </div>
+      {isMobile ? (
+        <div className="toss-card" style={{ marginBottom: 24, overflow: 'hidden' }}>
+          {[
+            { label: '부부 합산', value: totalAll, sub: `${accounts.length}개 계좌 + 기타 ${otherAssets.length}건`, accent: true },
+            { label: '👩 지윤', value: wifeTotal, sub: `${wifeAccounts.length}개 계좌` },
+            { label: '👨 오빠', value: husbandTotal, sub: `${husbandAccounts.length}개 계좌` },
+            { label: '📦 기타', value: otherTotal, sub: `${otherAssets.length}건` },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px',
+              borderBottom: i < arr.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+              background: item.accent ? 'var(--accent-blue)' : 'transparent',
+            }}>
+              <div>
+                <span style={{ fontSize: 13, color: item.accent ? 'rgba(255,255,255,0.75)' : 'var(--text-tertiary)' }}>{item.label}</span>
+                <span style={{ fontSize: 11, color: item.accent ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary)', marginLeft: 6 }}>{item.sub}</span>
+              </div>
+              <span className="toss-number" style={{
+                fontSize: 16, fontWeight: 600, color: item.accent ? '#fff' : 'var(--text-primary)',
+                whiteSpace: 'nowrap',
+              }}>
+                {isAmountHidden ? '••••' : `${fmt(item.value)}원`}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+          <SummaryCard label="부부 합산" value={totalAll} sub={`${accounts.length}개 계좌 + 기타 ${otherAssets.length}건`} isAmountHidden={isAmountHidden} accent />
+          <SummaryCard label="👩 지윤" value={wifeTotal} sub={`${wifeAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
+          <SummaryCard label="👨 오빠" value={husbandTotal} sub={`${husbandAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
+          <SummaryCard label="📦 기타" value={otherTotal} sub={`${otherAssets.length}건`} isAmountHidden={isAmountHidden} />
+        </div>
+      )}
 
       {/* 탭 */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, padding: '4px 0' }}>

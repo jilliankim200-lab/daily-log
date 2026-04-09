@@ -81,7 +81,7 @@ function getChangeColor(value: number): string {
 }
 
 export function AssetChange() {
-  const { accounts, isAmountHidden } = useAppContext();
+  const { accounts, isAmountHidden, isMobile } = useAppContext();
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [period, setPeriod] = useState<PeriodKey>("1m");
   const [sortNewest, setSortNewest] = useState(true);
@@ -241,7 +241,7 @@ export function AssetChange() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))",
           gap: 16,
           marginBottom: 24,
         }}

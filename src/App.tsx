@@ -3,7 +3,6 @@ import { CoupleAccounts } from "./components/CoupleAccounts";
 import { NewDashboard } from "./components/NewDashboard";
 import { AssetChange } from "./components/AssetChange";
 import { Rebalancing } from "./components/Rebalancing";
-import { CashFlow } from "./components/CashFlow";
 import { Holdings } from "./components/Holdings";
 import { Dividend } from "./components/Dividend";
 import { PasswordModal } from "./components/PasswordModal";
@@ -37,12 +36,14 @@ interface AppContextType {
   prices: Record<string, number>;
   loadPrices: () => Promise<void>;
   navigateTo: (page: string) => void;
+  isMobile: boolean;
 }
 export const AppContext = createContext<AppContextType>({
   accounts: [], setAccounts: () => {}, reloadAccounts: async () => {}, isAmountHidden: true,
   otherAssets: [], setOtherAssets: () => {},
   prices: {}, loadPrices: async () => {},
   navigateTo: () => {},
+  isMobile: false,
 });
 export const useAppContext = () => useContext(AppContext);
 
@@ -52,7 +53,6 @@ const MENU_ITEMS = [
   { id: "holdings", label: "보유종목", materialIcon: "bar_chart" },
   { id: "asset-change", label: "자산증감", materialIcon: "show_chart" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
-  { id: "cashflow", label: "현금흐름", materialIcon: "account_balance_wallet" },
   { id: "dividend", label: "배당", materialIcon: "paid" },
 ];
 
@@ -66,10 +66,11 @@ const FONT_SIZES = [
 export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [isAmountHidden, setIsAmountHidden] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -78,7 +79,8 @@ export default function App() {
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [fontSizeIndex, setFontSizeIndex] = useState(() => {
     const saved = localStorage.getItem('fontSizeIndex');
-    return saved ? parseInt(saved, 10) : 1;
+    if (saved) return parseInt(saved, 10);
+    return window.innerWidth < 768 ? 2 : 1; // 모바일 기본: 크게(1.15x)
   });
 
   const setOtherAssets = (assets: OtherAsset[]) => {
@@ -88,14 +90,20 @@ export default function App() {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
-    const shouldBeDark = saved === 'dark';
+    const shouldBeDark = saved !== 'light'; // 기본값 다크
     setIsDarkMode(shouldBeDark);
     if (shouldBeDark) {
       document.documentElement.classList.add('dark');
+      if (!saved) localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      if (!saved) localStorage.setItem('theme', 'light');
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
   }, []);
 
   // 폰트 크기 적용 - zoom으로 전체 스케일링
@@ -179,18 +187,17 @@ export default function App() {
       case "dashboard": return <NewDashboard />;
       case "asset-change": return <AssetChange />;
       case "rebalancing": return <Rebalancing />;
-      case "cashflow": return <CashFlow isAmountHidden={isAmountHidden} />;
       case "dividend": return <Dividend />;
     }
   };
 
   return (
-    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage }}>
+    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile }}>
       <div style={{ display: 'flex', height: `${100 / fontScale}vh`, background: 'var(--bg-primary)', zoom: fontScale }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (
           <div
-            onClick={() => setIsSidebarOpen(false)}
+            onClick={() => { setIsSidebarOpen(false); setIsLeftSidebarOpen(false); }}
             style={{
               position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40,
             }}
@@ -199,18 +206,26 @@ export default function App() {
 
         {/* Sidebar */}
         <aside style={{
-          width: isLeftSidebarOpen ? 220 : 0, flexShrink: 0, height: '100vh', overflowY: 'auto',
-          overflowX: 'hidden',
+          ...(isMobile ? {
+            position: 'fixed', top: 0, left: 0, zIndex: 50,
+            width: isLeftSidebarOpen ? 220 : 0,
+            height: '100vh',
+            boxShadow: isLeftSidebarOpen ? '4px 0 24px rgba(0,0,0,0.4)' : 'none',
+          } : {
+            width: isLeftSidebarOpen ? 220 : 0,
+            flexShrink: 0,
+          }),
+          overflowY: 'auto', overflowX: 'hidden',
           background: 'var(--bg-primary)',
           display: 'flex', flexDirection: 'column',
-          transition: 'width 0.2s ease',
+          transition: 'width 0.2s ease, box-shadow 0.2s ease',
         }}>
-          {/* 로고 */}
-          <div
-            onClick={() => setCurrentPage('dashboard')}
-            style={{ height: 56, display: 'flex', alignItems: 'center', paddingLeft: 20, cursor: 'pointer' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* 로고 + 닫기 버튼 */}
+          <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 8 }}>
+            <div
+              onClick={() => setCurrentPage('dashboard')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+            >
               <div style={{
                 width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'var(--accent-blue)',
@@ -219,6 +234,18 @@ export default function App() {
               </div>
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Finote</span>
             </div>
+            <button
+              onClick={() => { setIsLeftSidebarOpen(false); setIsSidebarOpen(false); }}
+              style={{
+                padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: 'transparent', color: 'var(--text-tertiary)', transition: 'background 0.15s',
+                display: 'flex', alignItems: 'center',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <MIcon name="close" size={20} />
+            </button>
           </div>
 
           {/* 메뉴 */}
@@ -228,7 +255,7 @@ export default function App() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => { setCurrentPage(item.id); setIsSidebarOpen(false); }}
+                  onClick={() => { setCurrentPage(item.id); setIsSidebarOpen(false); setIsLeftSidebarOpen(isMobile ? false : isLeftSidebarOpen); }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -255,11 +282,15 @@ export default function App() {
             {/* 헤더 좌측 */}
             <header style={{
               height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0 24px', background: 'var(--bg-primary)',
+              padding: isMobile ? '0 16px' : '0 24px', background: 'var(--bg-primary)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button
-                  onClick={() => setIsLeftSidebarOpen(prev => !prev)}
+                  onClick={() => {
+                    const next = !isLeftSidebarOpen;
+                    setIsLeftSidebarOpen(next);
+                    if (isMobile) setIsSidebarOpen(next);
+                  }}
                   style={{
                     padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
                     background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
@@ -281,6 +312,16 @@ export default function App() {
                   {(() => { const h = new Date().getHours(); if (h >= 5 && h < 12) return 'Good Morning'; if (h >= 12 && h < 18) return 'Good Afternoon'; return 'Good Evening'; })()}
                 </span>
               </div>
+              {isMobile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button onClick={handleSync} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)' }}>
+                    <MIcon name="sync" size={20} style={isSyncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+                  </button>
+                  <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)' }}>
+                    <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
+                  </button>
+                </div>
+              )}
             </header>
             <main className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
               <ErrorBoundary>
@@ -290,11 +331,11 @@ export default function App() {
           </div>
 
           {/* 우측: 아이콘 헤더 + 보유종목 사이드바 */}
-          {isRightSidebarOpen && (
+          {isRightSidebarOpen && !isMobile && (
             <div style={{
               width: 280, flexShrink: 0, height: '100%',
               borderLeft: '1px solid var(--border-secondary)',
-              background: 'var(--bg-page)',
+              background: 'var(--bg-primary)',
               display: 'flex', flexDirection: 'column',
             }}>
               {/* 아이콘 버튼 영역 */}
@@ -377,9 +418,9 @@ export default function App() {
           )}
 
           {/* 사이드바 닫힌 상태: 열기 버튼만 헤더에 표시 */}
-          {!isRightSidebarOpen && (
+          {!isRightSidebarOpen && !isMobile && (
             <div style={{
-              width: 48, flexShrink: 0, background: 'var(--bg-page)',
+              width: 48, flexShrink: 0, background: 'var(--bg-primary)',
               borderLeft: '1px solid var(--border-secondary)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 14,
             }}>

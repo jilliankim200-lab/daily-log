@@ -90,9 +90,9 @@
   --bg-elevated: #27272D;
   --bg-page: #0D0D10;
 
-  --text-primary: #ECECEC;
-  --text-secondary: #8B8B8E;
-  --text-tertiary: #56565A;
+  --text-primary: #a5a5a5;
+  --text-secondary: #7A7A7E;
+  --text-tertiary: #505054;
   --text-disabled: #3C3C40;
 
   --accent-blue: #4593FC;
@@ -125,6 +125,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
   letter-spacing: -0.02em;
+}
+
+@media (max-width: 768px) {
+  :root, .dark {
+    --text-xs: 15px;
+    --text-sm: 16px;
+    --text-base: 18px;
+    --text-lg: 20px;
+    --text-xl: 23px;
+    --text-2xl: 27px;
+    --text-3xl: 31px;
+    --text-4xl: 37px;
+  }
 }
 
 /* ============================================

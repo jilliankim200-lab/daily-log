@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "../App";
 import { fetchSnapshots, saveSnapshot } from "../api";
 import { holdingValue } from "../types";
-import type { DailySnapshot } from "../types";
+import type { DailySnapshot, OtherAsset } from "../types";
 import { fetchMarketData, selectMarketItems, type MarketIndexData } from "../utils/fetchMarketData";
 import {
   TrendingUp,
@@ -12,7 +12,7 @@ import {
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
 
 export function NewDashboard() {
-  const { accounts, isAmountHidden, otherAssets, prices } = useAppContext();
+  const { accounts, isAmountHidden, otherAssets, prices, isMobile } = useAppContext();
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [savingSnapshot, setSavingSnapshot] = useState(false);
   const [marketData, setMarketData] = useState<MarketIndexData[]>([]);
@@ -343,97 +343,100 @@ export function NewDashboard() {
                   스냅샷 데이터가 없습니다. "오늘 스냅샷 저장" 버튼을 눌러 기록을 시작하세요.
                 </p>
               </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="toss-table">
-                  <thead>
-                    <tr>
-                      <th>날짜</th>
-                      <th style={{ textAlign: 'right' }}>총 자산</th>
-                      <th style={{ textAlign: 'right' }}>자산 증감</th>
-                      <th style={{ textAlign: 'right' }}>증감률</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      // 오늘 현재 자산을 첫 행으로
-                      const todayRow: DailySnapshot = {
-                        date: today,
-                        totalAsset,
-                        wifeAsset: wifeTotal,
-                        husbandAsset: husbandTotal,
-                        assetChange: 0,
-                        changeRate: 0,
-                      };
-                      // 오늘 스냅샷이 저장되어 있으면 현재 실시간 값으로 교체
-                      const allRows = todaySnap
-                        ? [{ ...todaySnap, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal }, ...snapshots.filter(s => s.date !== today).slice(0, 13)]
-                        : [todayRow, ...snapshots.slice(0, 13)];
-                      return allRows;
-                    })().map((snap, i, arr) => {
-                      // 오늘(i===0)은 실시간 값으로 재계산, 과거는 저장된 값 사용
-                      const prev = arr[i + 1];
-                      const change = i === 0
-                        ? (prev ? snap.totalAsset - prev.totalAsset : 0)
-                        : snap.assetChange;
-                      const rate = i === 0
-                        ? (prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0)
-                        : snap.changeRate;
-                      return (
-                        <tr key={snap.date}>
-                          <td style={{ fontWeight: 'var(--font-medium)' }}>{snap.date}</td>
-                          <td className="toss-number" style={{ textAlign: 'right' }}>
-                            {hide(`${fmt(snap.totalAsset)}원`)}
-                          </td>
-                          <td className="toss-number" style={{
-                            textAlign: 'right', fontWeight: 'var(--font-semibold)',
-                            color: change > 0 ? 'var(--color-profit)' : change < 0 ? 'var(--color-loss)' : 'var(--text-primary)',
+            ) : (() => {
+                const todayRow: DailySnapshot = {
+                  date: today, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal,
+                  assetChange: 0, changeRate: 0,
+                };
+                const allRows = todaySnap
+                  ? [{ ...todaySnap, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal }, ...snapshots.filter(s => s.date !== today).slice(0, 13)]
+                  : [todayRow, ...snapshots.slice(0, 13)];
+
+                if (isMobile) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {allRows.map((snap, i, arr) => {
+                        const prev = arr[i + 1];
+                        const change = i === 0 ? (prev ? snap.totalAsset - prev.totalAsset : 0) : snap.assetChange;
+                        const rate = i === 0 ? (prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0) : snap.changeRate;
+                        const isToday = i === 0;
+                        return (
+                          <div key={snap.date} style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 16px', borderBottom: '1px solid var(--border-primary)',
+                            background: isToday ? 'var(--bg-secondary)' : 'transparent',
                           }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                              {change > 0 && <ArrowUpRight style={{ width: 12, height: 12 }} />}
-                              {change < 0 && <ArrowDownRight style={{ width: 12, height: 12 }} />}
-                              {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <span style={{
-                              display: 'inline-flex', padding: '2px 8px', borderRadius: 20,
-                              fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
-                              background: rate > 0 ? 'var(--color-profit-bg)' : rate < 0 ? 'var(--color-loss-bg)' : 'var(--bg-secondary)',
-                              color: rate > 0 ? 'var(--color-profit)' : rate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)',
-                            }}>
-                              {isAmountHidden ? '••••' : `${rate > 0 ? '+' : ''}${rate.toFixed(2)}%`}
-                            </span>
-                          </td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span style={{ fontSize: 'var(--text-sm)', fontWeight: isToday ? 'var(--font-semibold)' : 'var(--font-medium)', color: isToday ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                                {snap.date}{isToday && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent-blue)', fontWeight: 700 }}>TODAY</span>}
+                              </span>
+                              {change !== 0 && (
+                                <span className="toss-number" style={{ fontSize: 11, fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : 'var(--color-loss)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  {change > 0 ? <ArrowUpRight style={{ width: 11, height: 11 }} /> : <ArrowDownRight style={{ width: 11, height: 11 }} />}
+                                  {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+                              <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                {hide(`${fmt(snap.totalAsset)}원`)}
+                              </span>
+                              {rate !== 0 && (
+                                <span style={{ display: 'inline-flex', padding: '1px 7px', borderRadius: 20, fontSize: 11, fontWeight: 'var(--font-semibold)', background: rate > 0 ? 'var(--color-profit-bg)' : 'var(--color-loss-bg)', color: rate > 0 ? 'var(--color-profit)' : 'var(--color-loss)', whiteSpace: 'nowrap' }}>
+                                  {isAmountHidden ? '••••' : `${rate > 0 ? '+' : ''}${rate.toFixed(2)}%`}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="toss-table">
+                      <thead>
+                        <tr>
+                          <th>날짜</th>
+                          <th style={{ textAlign: 'right' }}>총 자산</th>
+                          <th style={{ textAlign: 'right' }}>자산 증감</th>
+                          <th style={{ textAlign: 'right' }}>증감률</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                      </thead>
+                      <tbody>
+                        {allRows.map((snap, i, arr) => {
+                          const prev = arr[i + 1];
+                          const change = i === 0 ? (prev ? snap.totalAsset - prev.totalAsset : 0) : snap.assetChange;
+                          const rate = i === 0 ? (prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0) : snap.changeRate;
+                          return (
+                            <tr key={snap.date}>
+                              <td style={{ fontWeight: 'var(--font-medium)' }}>{snap.date}</td>
+                              <td className="toss-number" style={{ textAlign: 'right' }}>{hide(`${fmt(snap.totalAsset)}원`)}</td>
+                              <td className="toss-number" style={{ textAlign: 'right', fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : change < 0 ? 'var(--color-loss)' : 'var(--text-primary)' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  {change > 0 && <ArrowUpRight style={{ width: 12, height: 12 }} />}
+                                  {change < 0 && <ArrowDownRight style={{ width: 12, height: 12 }} />}
+                                  {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', background: rate > 0 ? 'var(--color-profit-bg)' : rate < 0 ? 'var(--color-loss-bg)' : 'var(--bg-secondary)', color: rate > 0 ? 'var(--color-profit)' : rate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
+                                  {isAmountHidden ? '••••' : `${rate > 0 ? '+' : ''}${rate.toFixed(2)}%`}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
           </div>
       </div>
 
-      {/* 소유자별 요약 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-        <OwnerSummary
-          label="지윤"
-          emoji="👩"
-          accounts={accounts.filter(a => a.owner === 'wife')}
-          total={wifeTotal}
-          grandTotal={totalAsset}
-          isHidden={isAmountHidden}
-        />
-        <OwnerSummary
-          label="오빠"
-          emoji="👨"
-          accounts={accounts.filter(a => a.owner === 'husband')}
-          total={husbandTotal}
-          grandTotal={totalAsset}
-          isHidden={isAmountHidden}
-        />
-      </div>
 
       {/* 총자산 상세 팝업 */}
       {showAssetDetail && (
@@ -476,11 +479,15 @@ export function NewDashboard() {
               <div style={{ display: 'flex', gap: 16, padding: '6px 0', borderBottom: '1px solid var(--border-secondary)' }}>
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)' }}>
                   <span>지윤</span>
-                  <span className="toss-number">{hide(`${fmt(wifeTotal)}원`)}</span>
+                  <span className="toss-number">{hide(`${fmt(wifeHoldings)}원`)}</span>
                 </div>
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--color-profit)' }}>
                   <span>오빠</span>
-                  <span className="toss-number">{hide(`${fmt(husbandTotal)}원`)}</span>
+                  <span className="toss-number">{hide(`${fmt(husbandHoldings)}원`)}</span>
+                </div>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <span>기타</span>
+                  <span className="toss-number">{hide(`${fmt(otherTotal)}원`)}</span>
                 </div>
               </div>
 
@@ -540,6 +547,52 @@ export function NewDashboard() {
 
 /* ── Sub-components ── */
 
+
+function OtherAssetSummary({ otherAssets, grandTotal, isHidden }: {
+  otherAssets: OtherAsset[];
+  grandTotal: number; isHidden: boolean;
+}) {
+  const hide = (v: string) => isHidden ? '••••' : v;
+  const total = otherAssets.reduce((s, a) => s + a.amount, 0);
+  return (
+    <div className="toss-card" style={{ padding: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 20 }}>📦</span>
+          <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>기타</span>
+        </div>
+        <span className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
+          {hide(`${fmt(total)}원`)}
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {otherAssets.map(a => {
+          const pct = grandTotal > 0 ? (a.amount / grandTotal) * 100 : 0;
+          const ownerLabel = a.owner === 'wife' ? '지윤' : a.owner === 'husband' ? '오빠' : '';
+          return (
+            <div key={a.id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)',
+            }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                {a.name}
+                {ownerLabel && <span style={{ fontSize: 10, color: 'var(--text-quaternary)', marginLeft: 4 }}>{ownerLabel}</span>}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
+                  {hide(`${fmt(a.amount)}원`)}
+                </span>
+                <span className="toss-number" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', minWidth: 40, textAlign: 'right' }}>
+                  {isHidden ? '••••' : `${pct.toFixed(1)}%`}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function OwnerSummary({ label, emoji, accounts, total, grandTotal, isHidden }: {
   label: string; emoji: string; accounts: { alias: string; holdings: { avgPrice: number; quantity: number }[] }[];

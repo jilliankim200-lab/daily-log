@@ -411,10 +411,17 @@ html {
   font-size: var(--font-size);
 }
 
-/* Mobile: 16px base font size */
+/* Mobile adjustments */
 @media (max-width: 767px) {
   html {
     font-size: 16px;
+  }
+
+  /* 모바일: 페이지 내부 패딩 축소 */
+  .toss-table th,
+  .toss-table td {
+    padding: 10px 10px;
+    font-size: 13px;
   }
 }
 
