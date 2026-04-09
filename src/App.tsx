@@ -132,6 +132,21 @@ export default function App() {
       await loadPrices(data);
     } catch (err) { console.error(err); }
   };
+  // 2분마다 주가 자동 폴링 (장 시간: KST 09:00~15:35)
+  useEffect(() => {
+    const INTERVAL_MS = 2 * 60 * 1000;
+    const timer = setInterval(() => {
+      const now = new Date();
+      const kstHour = (now.getUTCHours() + 9) % 24;
+      const kstMin = now.getUTCMinutes();
+      const kstTime = kstHour * 100 + kstMin;
+      if (kstTime >= 900 && kstTime <= 1535) {
+        loadPrices();
+      }
+    }, INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [accounts]);
+
   useEffect(() => {
     importHistoricalSnapshots();
     loadSeedDataIfNeeded();
