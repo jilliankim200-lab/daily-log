@@ -20,7 +20,4 @@ jobs:
         run: npm install @supabase/supabase-js
 
       - name: Run daily snapshot
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: node scripts/daily-snapshot.js
