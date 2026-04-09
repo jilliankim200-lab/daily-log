@@ -1,14 +1,9 @@
 // 매일 자산 스냅샷 저장 (GitHub Actions용)
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gvalfmtmslnykmwegwfi.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2YWxmbXRtc2xueWttd2Vnd2ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4NTc2MTQsImV4cCI6MjA3ODQzMzYxNH0.kLOgm2ag31ZW3qD-AmVsp-yK2aCZcvIeU-Xn6D-wElw';
 const TABLE = 'kv_store_cee564ea';
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('SUPABASE_URL, SUPABASE_KEY 환경변수가 필요합니다.');
-  process.exit(1);
-}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
