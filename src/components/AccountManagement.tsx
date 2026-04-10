@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { MIcon } from "./MIcon";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 
@@ -73,12 +73,12 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1>{accountType}</h1>
-        <Button 
+        <Button
           className="gap-2 bg-[--color-primary] hover:bg-[--color-primary-dark] text-white border-0 shadow-sm"
           onClick={onAddAsset}
           style={{ fontSize: '14px', fontWeight: '600', lineHeight: '16.8px' }}
         >
-          <Plus className="w-4 h-4" />
+          <MIcon name="add" size={16} />
           자산 추가
         </Button>
       </div>
@@ -95,9 +95,9 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
                 </div>
                 <button className="text-[--color-gray-600] hover:text-[--color-gray-900] transition-colors">
                   {expandedAccount === account.id ? (
-                    <ChevronUp className="w-5 h-5" />
+                    <MIcon name="expand_less" size={20} />
                   ) : (
-                    <ChevronDown className="w-5 h-5" />
+                    <MIcon name="expand_more" size={20} />
                   )}
                 </button>
               </div>

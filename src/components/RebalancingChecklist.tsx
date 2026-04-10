@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card } from "./ui/card";
-import { CheckCircle2, Circle, Calendar, TrendingUp, AlertCircle, Target, DollarSign, Eye, HelpCircle, X } from "lucide-react";
+import { MIcon } from "./MIcon";
 import { RebalancingHelpModal } from "./RebalancingHelpModal";
 
 export function RebalancingChecklist() {
@@ -62,9 +62,9 @@ export function RebalancingChecklist() {
       className="flex-shrink-0 transition-all duration-200 hover:scale-110"
     >
       {checked ? (
-        <CheckCircle2 className="w-5 h-5 text-[#0064ff] dark:text-blue-400" />
+        <MIcon name="check_circle" size={20} style={{ color: '#0064ff' }} />
       ) : (
-        <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600" />
+        <MIcon name="radio_button_unchecked" size={20} style={{ color: '#d1d5db' }} />
       )}
     </button>
   );
@@ -100,7 +100,7 @@ export function RebalancingChecklist() {
             className="p-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
             aria-label="도움말"
           >
-            <HelpCircle className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+            <MIcon name="help" size={20} style={{ color: '#3b82f6' }} />
           </button>
         </div>
         <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">월 1회 · 같은 날 · 같은 차트 · 종가 기준</p>
@@ -110,7 +110,7 @@ export function RebalancingChecklist() {
           <Card className="p-5 bg-white dark:bg-[#1e293b] border-0 dark:border dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-                <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <MIcon name="visibility" size={20} style={{ color: '#2563eb' }} />
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900 dark:text-white">① 시장 상태 확인</h2>
@@ -157,7 +157,7 @@ export function RebalancingChecklist() {
           <Card className="p-5 bg-white dark:bg-[#1e293b] border-0 dark:border dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <MIcon name="trending_up" size={20} style={{ color: '#9333ea' }} />
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900 dark:text-white">② 리스크 모드 결정</h2>
@@ -205,7 +205,7 @@ export function RebalancingChecklist() {
           <Card className="p-5 bg-white dark:bg-[#1e293b] border-0 dark:border dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center">
-                <Target className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                <MIcon name="my_location" size={20} style={{ color: '#db2777' }} />
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900 dark:text-white">③ 비중 조정 규칙</h2>
@@ -286,7 +286,7 @@ export function RebalancingChecklist() {
           <Card className="p-5 bg-white dark:bg-[#1e293b] border-0 dark:border dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <MIcon name="error" size={20} style={{ color: '#ea580c' }} />
               </div>
               <h2 className="font-semibold text-gray-900 dark:text-white">④ 수익 보호 규칙</h2>
             </div>
@@ -311,7 +311,7 @@ export function RebalancingChecklist() {
           <Card className="p-5 bg-white dark:bg-[#1e293b] border-0 dark:border dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <MIcon name="attach_money" size={20} style={{ color: '#16a34a' }} />
               </div>
               <h2 className="font-semibold text-gray-900 dark:text-white">⑤ 커버드콜 분배금 재투자</h2>
             </div>
@@ -345,7 +345,7 @@ export function RebalancingChecklist() {
           <Card className="p-5 bg-white dark:bg-[#1e293b] border-0 dark:border dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <MIcon name="calendar_today" size={20} style={{ color: '#4f46e5' }} />
               </div>
               <h2 className="font-semibold text-gray-900 dark:text-white">⑥ 최종 점검</h2>
             </div>

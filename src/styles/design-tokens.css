@@ -11,20 +11,25 @@
   --bg-tertiary: #EAEBEE;
   --bg-elevated: #FFFFFF;
   --bg-page: #F4F5F7;
+  --bg-tooltip: #FFFFFF;
+  --border-tooltip: #C8CDD4;
+  --shadow-tooltip: 0 4px 20px rgba(0,0,0,0.14);
 
   /* 텍스트 */
   --text-primary: #191F28;
   --text-secondary: #425870;
-  --text-tertiary: #68809a;
+  --text-tertiary: #283849;
+  --text-quaternary: #a0aab8;
   --text-disabled: #D1D6DB;
 
   /* 강조 */
   --accent-blue: #3182F6;
   --accent-blue-hover: #1B64DA;
   --accent-blue-bg: #E8F3FF;
+  --accent-blue-fg: #FFFFFF;
 
   /* 수익/손실 */
-  --color-profit: #F04452;
+  --color-profit: #f07178;
   --color-profit-bg: #FFF0F0;
   --color-loss: #3182F6;
   --color-loss-bg: #E8F3FF;
@@ -38,6 +43,21 @@
   --color-success: #30C85E;
   --color-warning: #FF9500;
   --color-error: #F04452;
+
+  /* 뱃지 배경 투명도 (라이트모드: 진하게) */
+  --badge-mix: 18%;
+
+  /* 자산 분류 색상 (라이트모드: 진한 색) */
+  --asset-stock:    #1D4ED8;
+  --asset-bond:     #15803D;
+  --asset-covered:  #0369A1;
+  --asset-gold:     #B45309;
+  --asset-other:    #4B5563;
+
+  /* 차트 MA 색상 (라이트모드) */
+  --chart-ma5:  #B45309;
+  --chart-ma20: #15803D;
+  --chart-ma60: #1D4ED8;
 
   /* 폰트 */
   --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -84,33 +104,63 @@
 
 /* ── 다크 모드 ── */
 .dark {
-  --bg-primary: #17171C;
-  --bg-secondary: #212126;
-  --bg-tertiary: #2C2C33;
-  --bg-elevated: #27272D;
-  --bg-page: #0D0D10;
+  /* 배경 — 살짝 navy 틴트 */
+  --bg-primary: #1A1A24;
+  --bg-secondary: #22222E;
+  --bg-tertiary: #2C2C3A;
+  --bg-elevated: #282834;
+  --bg-page: #0E0E16;
+  --bg-tooltip: #3C3E52;
+  --border-tooltip: #5A5C72;
+  --shadow-tooltip: 0 4px 24px rgba(0,0,0,0.6);
 
-  --text-primary: #a5a5a5;
-  --text-secondary: #7A7A7E;
-  --text-tertiary: #505054;
-  --text-disabled: #3C3C40;
+  /* 텍스트 — 팔레트 채도/명도에 맞춘 blue-gray */
+  --text-primary: #C0C2CC;
+  --text-secondary: #7C7F8E;
+  --text-tertiary: #8b8c94;
+  --text-quaternary: #3E404E;
+  --text-disabled: #3C3E4A;
 
-  --accent-blue: #4593FC;
-  --accent-blue-hover: #5BA3FF;
-  --accent-blue-bg: rgba(69, 147, 252, 0.12);
+  /* 강조 — Material Oceanic cyan */
+  --accent-blue: #89DDFF;
+  --accent-blue-hover: #A3E8FF;
+  --accent-blue-bg: rgba(137, 221, 255, 0.10);
+  --accent-blue-fg: #0D0E16;
 
-  --color-profit: #F04452;
-  --color-profit-bg: rgba(240, 68, 82, 0.12);
-  --color-loss: #4593FC;
-  --color-loss-bg: rgba(69, 147, 252, 0.12);
-  --color-neutral: #56565A;
+  /* 수익/손실 — Material Oceanic palette */
+  --color-profit: #F07178;
+  --color-profit-bg: rgba(240, 113, 120, 0.12);
+  --color-loss: #82AAFF;
+  --color-loss-bg: rgba(130, 170, 255, 0.12);
+  --color-neutral: #5E6170;
 
-  --border-primary: #2C2C33;
-  --border-secondary: #212126;
+  /* 성공/경고 */
+  --color-success: #C3E88D;
+  --color-warning: #FFCB6B;
+  --color-error: #F07178;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  /* 보더 */
+  --border-primary: #2C2C3A;
+  --border-secondary: #22222E;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.45);
+
+  /* 뱃지 배경 투명도 (다크모드: 연하게) */
+  --badge-mix: 10%;
+
+  /* 자산 분류 색상 (다크모드: 밝은 색) */
+  --asset-stock:    #82AAFF;
+  --asset-bond:     #C3E88D;
+  --asset-covered:  #89DDFF;
+  --asset-gold:     #F78C6C;
+  --asset-other:    #8899AA;
+
+  /* 차트 MA 색상 (다크모드) */
+  --chart-ma5:  #FFD700;
+  --chart-ma20: #C3E88D;
+  --chart-ma60: #82AAFF;
 }
 
 /* ============================================
@@ -209,7 +259,7 @@ body {
 }
 .toss-btn-primary {
   background: var(--accent-blue);
-  color: #FFFFFF;
+  color: var(--accent-blue-fg);
   padding: 10px 20px;
   font-size: var(--text-sm);
 }
@@ -256,8 +306,8 @@ body {
   background: var(--bg-secondary);
 }
 .toss-tab-active {
-  color: var(--text-primary);
-  background: var(--bg-tertiary);
+  color: var(--accent-blue-fg);
+  background: var(--accent-blue);
   font-weight: var(--font-bold);
 }
 
@@ -332,4 +382,14 @@ body {
 .toss-select:focus {
   border-color: var(--accent-blue);
   background-color: var(--bg-primary);
+}
+
+/* ── 시그널 뱃지 — 다크모드에서 배경 제거, 연한 보더만 ── */
+.dark .signal-badge-buy  { background: transparent !important; border-color: rgba(52, 199, 89, 0.25) !important; }
+.dark .signal-badge-sell { background: transparent !important; border-color: rgba(255, 69, 58, 0.25) !important; }
+.dark .signal-badge-hold { background: transparent !important; border-color: rgba(142, 142, 147, 0.15) !important; }
+
+/* 기간 필터 스크롤 행 — 웹킷 스크롤바 숨김 */
+.period-scroll-row::-webkit-scrollbar {
+  display: none;
 }

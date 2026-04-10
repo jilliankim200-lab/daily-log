@@ -1,10 +1,6 @@
-// 네이버 증권 API를 통해 현재가 조회 (Vite proxy 경유)
+// Cloudflare Worker를 통해 현재가 조회 (프로덕션/개발 모두 동일)
 
-export interface StockPrice {
-  ticker: string;
-  currentPrice: number;
-  name: string;
-}
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 const CACHE_KEY = 'stock_prices_cache';
 const CACHE_TTL = 5 * 60 * 1000; // 5분 캐시
@@ -28,7 +24,6 @@ function setCache(prices: Record<string, number>) {
   localStorage.setItem(CACHE_KEY, JSON.stringify({ prices, timestamp: Date.now() }));
 }
 
-// 6자리 한국 주식/ETF 티커 (숫자 또는 영문+숫자 혼합)
 function isValidKrTicker(ticker: string): boolean {
   return /^[0-9A-Z]{6}$/i.test(ticker);
 }
@@ -46,26 +41,17 @@ export async function fetchCurrentPrices(tickers: string[]): Promise<Record<stri
 
   const result: Record<string, number> = cache?.prices || {};
 
-  // 개별 요청 (병렬, 최대 10개씩 배치)
-  const batchSize = 10;
-  for (let i = 0; i < validTickers.length; i += batchSize) {
-    const batch = validTickers.slice(i, i + batchSize);
-    const promises = batch.map(async (ticker) => {
-      try {
-        const res = await fetch(`/api/stock/${ticker}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const item = data.datas?.[0];
-        if (item?.closePriceRaw) {
-          result[ticker] = parseInt(item.closePriceRaw, 10);
-          const rawRate = parseFloat(item.fluctuationsRatioRaw || '0');
-          const isFalling = item.compareToPreviousPrice?.name === 'FALLING';
-          result[`${ticker}_rate`] = isFalling ? -Math.abs(rawRate) : rawRate;
-        }
-      } catch { /* skip */ }
-    });
-    await Promise.all(promises);
-  }
+  try {
+    // Worker의 일괄 조회 엔드포인트 사용 (배치 50개씩)
+    const batchSize = 50;
+    for (let i = 0; i < validTickers.length; i += batchSize) {
+      const batch = validTickers.slice(i, i + batchSize);
+      const res = await fetch(`${WORKER_URL}/stock-prices?tickers=${batch.join(',')}`);
+      if (!res.ok) continue;
+      const data: Record<string, number> = await res.json();
+      Object.assign(result, data);
+    }
+  } catch { /* skip */ }
 
   setCache(result);
   return result;

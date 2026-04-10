@@ -1,4 +1,4 @@
-import { Menu, RefreshCw, Eye, EyeOff, Sun, Moon } from "lucide-react";
+import { MIcon } from "./MIcon";
 import { Button } from "./ui/button";
 import { ExchangeRate } from "./ExchangeRate";
 import { MarketIndices } from "./MarketIndices";
@@ -47,7 +47,7 @@ export function Header({ userName = "사용자", onMenuClick, lastUpdated, onRef
           onClick={onMenuClick}
           className="lg:hidden hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
         >
-          <Menu className="w-5 h-5 text-[--color-text-body]" />
+          <MIcon name="menu" size={20} />
         </Button>
       </div>
 
@@ -72,7 +72,7 @@ export function Header({ userName = "사용자", onMenuClick, lastUpdated, onRef
             style={{ fontSize: '13px', fontWeight: '600' }}
           >
             <div className="absolute inset-0 bg-white/20 rounded-[4px] blur-sm"></div>
-            <RefreshCw className={`w-[16px] h-[16px] sm:mr-[4px] relative z-10 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <MIcon name="sync" size={16} style={isRefreshing ? { animation: 'spin 1s linear infinite' } : undefined} />
             <span className="hidden sm:inline relative z-10">업데이트</span>
           </Button>
         )}
@@ -86,9 +86,9 @@ export function Header({ userName = "사용자", onMenuClick, lastUpdated, onRef
             className="hover:bg-white/50 dark:hover:bg-white/10 transition-colors px-[8px] py-[4px] rounded-[4px] border border-white/20 dark:border-white/10"
           >
             {isDarkMode ? (
-              <Sun className="w-[16px] h-[16px] text-[--color-text-body]" />
+              <MIcon name="light_mode" size={16} />
             ) : (
-              <Moon className="w-[16px] h-[16px] text-[--color-text-body]" />
+              <MIcon name="dark_mode" size={16} />
             )}
           </Button>
         )}
@@ -102,9 +102,9 @@ export function Header({ userName = "사용자", onMenuClick, lastUpdated, onRef
             className="hover:bg-white/50 dark:hover:bg-white/10 transition-colors px-[8px] py-[4px] rounded-[4px] border border-white/20 dark:border-white/10"
           >
             {isAmountHidden ? (
-              <EyeOff className="w-[16px] h-[16px] text-[--color-text-body]" />
+              <MIcon name="visibility_off" size={16} />
             ) : (
-              <Eye className="w-[16px] h-[16px] text-[--color-text-body]" />
+              <MIcon name="visibility" size={16} />
             )}
           </Button>
         )}

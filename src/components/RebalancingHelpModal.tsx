@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, HelpCircle } from "lucide-react";
+import { MIcon } from "./MIcon";
 import { RiskModeHelpModal } from "./RiskModeHelpModal";
 
 interface RebalancingHelpModalProps {
@@ -120,7 +120,7 @@ export function RebalancingHelpModal({ isOpen, onClose }: RebalancingHelpModalPr
               onClick={onClose}
               className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/20 rounded-lg"
             >
-              <X className="w-5 h-5" />
+              <MIcon name="close" size={20} />
             </button>
           </div>
         </div>
@@ -174,7 +174,7 @@ export function RebalancingHelpModal({ isOpen, onClose }: RebalancingHelpModalPr
                 className="p-1 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
                 aria-label="리스크 모드 상세 도움말"
               >
-                <HelpCircle className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                <MIcon name="help" size={16} style={{ color: '#a855f7' }} />
               </button>
             </div>
             

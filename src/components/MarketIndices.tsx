@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MarketIndicesModal } from './MarketIndicesModal';
+
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 interface IndexData {
   name: string;
@@ -30,36 +30,18 @@ export function MarketIndices() {
       setError(null);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-cee564ea/market-indices`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          signal: controller.signal
-        }
-      );
 
+      const response = await fetch(`${WORKER_URL}/market-indices`, { signal: controller.signal });
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const indicesData = await response.json();
-      console.log('Market indices data:', indicesData);
       setData(indicesData);
     } catch (err) {
-      // Silently handle errors - don't spam console
       if (err instanceof Error && err.name === 'AbortError') {
-        // Request timed out - use cached data if available
-        console.log('Market indices request timed out - using cached data');
-      } else if (err instanceof Error && err.message.includes('Failed to fetch')) {
-        // Network error - server may be unavailable
-        console.log('Network error fetching market indices - server may be starting up');
+        console.log('Market indices request timed out');
       }
-      // Keep existing data if fetch fails, don't clear it
     } finally {
       setLoading(false);
     }
@@ -67,7 +49,6 @@ export function MarketIndices() {
 
   useEffect(() => {
     fetchMarketIndices();
-    // Refresh every 60 seconds
     const interval = setInterval(fetchMarketIndices, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -100,9 +81,9 @@ export function MarketIndices() {
           {label}
         </span>
         <span className="text-[10px] font-semibold text-[--color-text-body] dark:text-white whitespace-nowrap">
-          {indexData.currentPrice.toLocaleString(undefined, { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
+          {indexData.currentPrice.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
           })}
         </span>
         <span className={`text-[10px] font-semibold ${changeColor} flex items-center gap-0.5 whitespace-nowrap`}>

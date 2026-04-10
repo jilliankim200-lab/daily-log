@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X } from "lucide-react";
+import { MIcon } from "./MIcon";
 
 interface RiskModeHelpModalProps {
   isOpen: boolean;
@@ -96,7 +96,7 @@ export function RiskModeHelpModal({ isOpen, onClose }: RiskModeHelpModalProps) {
               onClick={onClose}
               className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/20 rounded-lg"
             >
-              <X className="w-5 h-5" />
+              <MIcon name="close" size={20} />
             </button>
           </div>
         </div>

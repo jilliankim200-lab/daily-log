@@ -1,4 +1,4 @@
-import { TrendingUp, AlertCircle, CheckCircle, XCircle, Wallet, Shield, Target, Calendar, Type, FileText, Coins } from "lucide-react";
+import { MIcon } from "./MIcon";
 import { useState, useEffect } from "react";
 import { CashFlowModal } from "./CashFlowModal";
 
@@ -74,7 +74,7 @@ export function RetirementPlan({ isAmountHidden = false }: RetirementPlanProps) 
         
         {/* Text Size Buttons */}
         <div className="flex items-center gap-2 bg-white dark:bg-[#2a2d3e] rounded-xl p-2 border border-gray-200 dark:border-[#1e2939]">
-          <Type className="w-4 h-4 text-gray-500 dark:text-[#99a1af]" />
+          <MIcon name="title" size={16} style={{ color: '#6b7280' }} />
           <button
             onClick={() => setTextSize('small')}
             className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
@@ -123,26 +123,26 @@ export function RetirementPlan({ isAmountHidden = false }: RetirementPlanProps) 
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 md:p-8 border-2 border-emerald-200 dark:border-emerald-800/30">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+              <MIcon name="shield" size={20} style={{ color: 'white' }} />
             </div>
             <h3 className={`${getTextClass('14')} font-bold text-gray-800 dark:text-[#d1d5dc]`}>🔥 결론부터 한 줄</h3>
           </div>
           
           <div className="space-y-3 mb-6">
             <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+              <MIcon name="calendar_today" size={20} style={{ color: '#059669', marginTop: 2, flexShrink: 0 }} />
               <p className={`${getTextClass('13')} text-gray-800 dark:text-[#d1d5dc]`}>
                 <span className="font-bold">51~55세:</span> 과세계좌 + ISA로 버티고
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+              <MIcon name="calendar_today" size={20} style={{ color: '#059669', marginTop: 2, flexShrink: 0 }} />
               <p className={`${getTextClass('13')} text-gray-800 dark:text-[#d1d5dc]`}>
                 <span className="font-bold">55~65세:</span> ISA + 연금저축 일부 인출
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+              <MIcon name="calendar_today" size={20} style={{ color: '#059669', marginTop: 2, flexShrink: 0 }} />
               <p className={`${getTextClass('13')} text-gray-800 dark:text-[#d1d5dc]`}>
                 <span className="font-bold">65세 이후:</span> 국민연금 + 연금계좌 정규 인출
               </p>
@@ -153,15 +153,15 @@ export function RetirementPlan({ isAmountHidden = false }: RetirementPlanProps) 
             <p className={`${getTextClass('13')} font-bold text-gray-800 dark:text-[#d1d5dc] mb-4`}>이 순서를 지키면</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                <MIcon name="check_circle" size={20} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span className={`${getTextClass('13')} text-gray-800 dark:text-[#d1d5dc]`}>건보 폭탄 ❌</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                <MIcon name="check_circle" size={20} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span className={`${getTextClass('13')} text-gray-800 dark:text-[#d1d5dc]`}>세금 폭탄 ❌</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                <MIcon name="check_circle" size={20} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span className={`${getTextClass('13')} text-gray-800 dark:text-[#d1d5dc]`}>현금 부족 ❌</span>
               </div>
             </div>
@@ -174,7 +174,7 @@ export function RetirementPlan({ isAmountHidden = false }: RetirementPlanProps) 
             onClick={() => setShowCashFlowModal(true)}
             className="group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 py-4 rounded-2xl font-bold text-[16px] shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3"
           >
-            <FileText className="w-6 h-6" />
+            <MIcon name="description" size={24} />
             현금흐름표
             <span className="text-[12px] opacity-90">(51~90세 상세 시뮬레이션)</span>
           </button>

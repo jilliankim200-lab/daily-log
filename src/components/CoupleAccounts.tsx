@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Plus, Trash2, Edit3, Save, X, ChevronDown, ChevronUp,
-  RefreshCw, Building2, Briefcase, PiggyBank, Wallet,
-  Calculator, Banknote, Delete
-} from "lucide-react";
+import { MIcon } from './MIcon';
 import { useAppContext } from "../App";
 import { saveAccounts } from "../api";
 import type { Account, Holding, OtherAsset } from "../types";
@@ -21,10 +17,9 @@ function fmt(n: number) {
 }
 
 function AccountTypeIcon({ type }: { type: string }) {
-  const cls = "w-4 h-4";
-  if (type.includes('연금') || type.includes('IRP') || type.includes('퇴직')) return <PiggyBank className={cls} />;
-  if (type.includes('ISA')) return <Briefcase className={cls} />;
-  return <Building2 className={cls} />;
+  if (type.includes('연금') || type.includes('IRP') || type.includes('퇴직')) return <MIcon name="savings" size={16} />;
+  if (type.includes('ISA')) return <MIcon name="work" size={16} />;
+  return <MIcon name="apartment" size={16} />;
 }
 
 /* ── 종목 추가/수정 폼 ── */
@@ -70,10 +65,10 @@ function HoldingForm({
       </Field>
       <div className="flex gap-1.5">
         <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
-          <Save className="w-3.5 h-3.5" />{holding ? '수정' : '추가'}
+          <MIcon name="check" size={14} />{holding ? '수정' : '추가'}
         </button>
         <button onClick={onCancel} className="toss-btn toss-btn-ghost" style={{ padding: '8px 10px' }}>
-          <X className="w-3.5 h-3.5" />
+          <MIcon name="close" size={14} />
         </button>
       </div>
     </div>
@@ -108,10 +103,10 @@ function FundForm({
       </Field>
       <div className="flex gap-1.5">
         <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
-          <Save className="w-3.5 h-3.5" />{fund ? '수정' : '추가'}
+          <MIcon name="check" size={14} />{fund ? '수정' : '추가'}
         </button>
         <button onClick={onCancel} className="toss-btn toss-btn-ghost" style={{ padding: '8px 10px' }}>
-          <X className="w-3.5 h-3.5" />
+          <MIcon name="close" size={14} />
         </button>
       </div>
     </div>
@@ -233,11 +228,11 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
         {/* 헤더 */}
         <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Calculator style={{ width: 18, height: 18, color: 'var(--accent-blue)' }} />
+            <MIcon name="calculate" size={18} style={{ color: 'var(--accent-blue)' }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>계산기</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}>
-            <X style={{ width: 18, height: 18 }} />
+            <MIcon name="close" size={18} />
           </button>
         </div>
 
@@ -268,7 +263,7 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
         <div style={{ padding: '8px 16px 16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           <button onClick={handleClear} style={btnStyle('var(--bg-secondary)', 'var(--color-loss)')}>C</button>
           <button onClick={handleBackspace} style={btnStyle('var(--bg-secondary)')}>
-            <Delete style={{ width: 18, height: 18 }} />
+            <MIcon name="backspace" size={18} />
           </button>
           <button onClick={() => handleOp('÷')} style={btnStyle('var(--bg-secondary)', 'var(--accent-blue)')}>÷</button>
           <button onClick={() => handleOp('×')} style={btnStyle('var(--bg-secondary)', 'var(--accent-blue)')}>×</button>
@@ -280,7 +275,7 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
           <button onClick={() => handleOp('+')} style={btnStyle('var(--bg-secondary)', 'var(--accent-blue)')}>+</button>
 
           {['1','2','3'].map(n => <button key={n} onClick={() => handleNum(n)} style={btnStyle()}>{n}</button>)}
-          <button onClick={handleEqual} style={{ ...btnStyle('var(--accent-blue)', '#fff'), gridRow: 'span 2' }}>=</button>
+          <button onClick={handleEqual} style={{ ...btnStyle('var(--accent-blue)', 'var(--accent-blue-fg)'), gridRow: 'span 2' }}>=</button>
 
           <button onClick={() => handleNum('0')} style={{ ...btnStyle(), gridColumn: 'span 2' }}>0</button>
           <button onClick={() => { if (!display.includes('.')) setDisplay(display + '.'); }} style={btnStyle()}>.</button>
@@ -292,7 +287,7 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
             onClick={() => onApply(Math.round(parseFloat(display) || 0))}
             style={{
               width: '100%', padding: '12px 0', fontSize: 15, fontWeight: 700,
-              background: 'var(--accent-blue)', color: '#fff', border: 'none',
+              background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)', border: 'none',
               borderRadius: 10, cursor: 'pointer',
             }}
           >
@@ -386,7 +381,7 @@ function AccountCard({
               <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{account.alias}</span>
               <span className="toss-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11 }}>{account.accountType}</span>
             </div>
-            <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0 }} />
+            <MIcon name="expand_more" size={16} style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0 }} />
           </div>
           {/* 하단: 금액 + 수익 */}
           <div style={{ paddingLeft: 40 }}>
@@ -442,16 +437,16 @@ function AccountCard({
                 <button onClick={() => setEditing(true)} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-tertiary)' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
-                  <Edit3 className="w-3.5 h-3.5" />
+                  <MIcon name="edit" size={14} />
                 </button>
                 <button onClick={onDelete} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-tertiary)' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-profit-bg)'; e.currentTarget.style.color = 'var(--color-profit)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <MIcon name="delete" size={14} />
                 </button>
               </div>
             )}
-            <ChevronDown className="w-4 h-4 transition-transform" style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }} />
+            <MIcon name="expand_more" size={16} style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }} />
           </div>
         </div>
       )}
@@ -466,7 +461,7 @@ function AccountCard({
             background: 'var(--bg-secondary)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Banknote style={{ width: 16, height: 16, color: 'var(--text-tertiary)' }} />
+              <MIcon name="payments" size={16} style={{ color: 'var(--text-tertiary)' }} />
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>현금</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -482,10 +477,10 @@ function AccountCard({
                     onKeyDown={e => { if (e.key === 'Enter') saveCash(); if (e.key === 'Escape') setEditingCash(false); }}
                   />
                   <button onClick={saveCash} className="toss-btn toss-btn-primary" style={{ padding: '6px 10px', fontSize: 12 }}>
-                    <Save style={{ width: 12, height: 12 }} />
+                    <MIcon name="check" size={12} />
                   </button>
                   <button onClick={() => setEditingCash(false)} className="toss-btn toss-btn-ghost" style={{ padding: '6px 8px' }}>
-                    <X style={{ width: 12, height: 12 }} />
+                    <MIcon name="close" size={12} />
                   </button>
                 </div>
               ) : (
@@ -497,14 +492,14 @@ function AccountCard({
                     onClick={e => { e.stopPropagation(); setCashInput(cash.toString()); setEditingCash(true); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}
                   >
-                    <Edit3 style={{ width: 12, height: 12 }} />
+                    <MIcon name="edit" size={12} />
                   </button>
                   <button
                     onClick={e => { e.stopPropagation(); setShowCalc(true); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}
                     title="계산기"
                   >
-                    <Calculator style={{ width: 14, height: 14 }} />
+                    <MIcon name="calculate" size={14} />
                   </button>
                 </>
               )}
@@ -614,12 +609,12 @@ function AccountCard({
                             <button onClick={() => setEditingHoldingId(h.id)} className="p-1 rounded transition-colors" style={{ color: 'var(--text-tertiary)' }}
                               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
                               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                              <Edit3 className="w-3 h-3" />
+                              <MIcon name="edit" size={12} />
                             </button>
                             <button onClick={() => deleteHolding(h.id)} className="p-1 rounded transition-colors" style={{ color: 'var(--text-tertiary)' }}
                               onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-profit)'; }}
                               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
-                              <Trash2 className="w-3 h-3" />
+                              <MIcon name="delete" size={12} />
                             </button>
                           </div>
                         </td>
@@ -681,12 +676,12 @@ function AccountCard({
                           <button onClick={() => setEditingHoldingId(h.id)} className="p-1 rounded transition-colors" style={{ color: 'var(--text-tertiary)' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                            <Edit3 className="w-3 h-3" />
+                            <MIcon name="edit" size={12} />
                           </button>
                           <button onClick={() => deleteHolding(h.id)} className="p-1 rounded transition-colors" style={{ color: 'var(--text-tertiary)' }}
                             onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-profit)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}>
-                            <Trash2 className="w-3 h-3" />
+                            <MIcon name="delete" size={12} />
                           </button>
                         </div>
                       </td>
@@ -712,7 +707,7 @@ function AccountCard({
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
                 >
-                  <Plus className="w-3.5 h-3.5" /> 종목 추가
+                  <MIcon name="add" size={14} /> 종목 추가
                 </button>
                 <button
                   onClick={() => setAddingFund(true)}
@@ -721,7 +716,7 @@ function AccountCard({
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
                 >
-                  <Plus className="w-3.5 h-3.5" /> 펀드 추가
+                  <MIcon name="add" size={14} /> 펀드 추가
                 </button>
               </div>
             )}
@@ -776,7 +771,7 @@ function AddAccountForm({
             if (!alias.trim()) return;
             onSave({ id: generateId(), owner, ownerName, institution: inst, accountType: type, alias: alias.trim(), holdings: [] });
           }} className="toss-btn toss-btn-primary" style={{ padding: '10px 18px', fontSize: 13 }}>
-            <Save className="w-3.5 h-3.5" /> 저장
+            <MIcon name="check" size={14} /> 저장
           </button>
           <button onClick={onCancel} className="toss-btn toss-btn-secondary" style={{ padding: '10px 14px', fontSize: 13 }}>취소</button>
         </div>
@@ -825,7 +820,7 @@ function OwnerSection({
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
         >
-          <Plus className="w-4 h-4" /> 새 계좌 추가
+          <MIcon name="add" size={16} /> 새 계좌 추가
         </button>
       )}
     </div>
@@ -874,14 +869,14 @@ export function CoupleAccounts() {
       {/* 헤더 */}
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>부부 계좌</h1>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>계좌종목등록</h1>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>계좌와 보유종목을 관리합니다</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {saveStatus !== 'idle' && (
             <span style={{ fontSize: 'var(--text-xs)', color: saveStatus === 'error' ? 'var(--color-error)' : saveStatus === 'saved' ? 'var(--color-success)' : 'var(--text-tertiary)' }}
               className="flex items-center gap-1">
-              {saveStatus === 'saving' && <><RefreshCw className="w-3 h-3 animate-spin" /> 저장 중...</>}
+              {saveStatus === 'saving' && <><MIcon name="sync" size={12} style={{ animation: 'spin 1s linear infinite' }} /> 저장 중...</>}
               {saveStatus === 'saved' && '저장 완료'}
               {saveStatus === 'error' && '저장 실패'}
             </span>
@@ -892,8 +887,8 @@ export function CoupleAccounts() {
             className="toss-btn toss-btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', padding: '6px 12px' }}
           >
-            <RefreshCw style={{ width: 14, height: 14, ...(priceLoading ? { animation: 'spin 1s linear infinite' } : {}) }} />
-            {priceLoading ? '조회 중...' : '현재가 새로고침'}
+            <MIcon name="sync" size={14} style={priceLoading ? { animation: 'spin 1s linear infinite' } : undefined} />
+            {!isMobile && (priceLoading ? '조회 중...' : '현재가 새로고침')}
           </button>
         </div>
       </div>
@@ -903,22 +898,22 @@ export function CoupleAccounts() {
         <div className="toss-card" style={{ marginBottom: 24, overflow: 'hidden' }}>
           {[
             { label: '부부 합산', value: totalAll, sub: `${accounts.length}개 계좌 + 기타 ${otherAssets.length}건`, accent: true },
-            { label: '👩 지윤', value: wifeTotal, sub: `${wifeAccounts.length}개 계좌` },
-            { label: '👨 오빠', value: husbandTotal, sub: `${husbandAccounts.length}개 계좌` },
-            { label: '📦 기타', value: otherTotal, sub: `${otherAssets.length}건` },
+            { label: '지윤', value: wifeTotal, sub: `${wifeAccounts.length}개 계좌` },
+            { label: '오빠', value: husbandTotal, sub: `${husbandAccounts.length}개 계좌` },
+            { label: '기타', value: otherTotal, sub: `${otherAssets.length}건` },
           ].map((item, i, arr) => (
             <div key={item.label} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '14px 16px',
               borderBottom: i < arr.length - 1 ? '1px solid var(--border-secondary)' : 'none',
-              background: item.accent ? 'var(--accent-blue)' : 'transparent',
             }}>
               <div>
-                <span style={{ fontSize: 13, color: item.accent ? 'rgba(255,255,255,0.75)' : 'var(--text-tertiary)' }}>{item.label}</span>
-                <span style={{ fontSize: 11, color: item.accent ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary)', marginLeft: 6 }}>{item.sub}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{item.label}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{item.sub}</span>
               </div>
               <span className="toss-number" style={{
-                fontSize: 16, fontWeight: 600, color: item.accent ? '#fff' : 'var(--text-primary)',
+                fontSize: 16, fontWeight: 600,
+                color: item.accent ? 'var(--accent-blue)' : 'var(--text-primary)',
                 whiteSpace: 'nowrap',
               }}>
                 {isAmountHidden ? '••••' : `${fmt(item.value)}원`}
@@ -929,9 +924,9 @@ export function CoupleAccounts() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
           <SummaryCard label="부부 합산" value={totalAll} sub={`${accounts.length}개 계좌 + 기타 ${otherAssets.length}건`} isAmountHidden={isAmountHidden} accent />
-          <SummaryCard label="👩 지윤" value={wifeTotal} sub={`${wifeAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
-          <SummaryCard label="👨 오빠" value={husbandTotal} sub={`${husbandAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
-          <SummaryCard label="📦 기타" value={otherTotal} sub={`${otherAssets.length}건`} isAmountHidden={isAmountHidden} />
+          <SummaryCard label="지윤" icon="face" value={wifeTotal} sub={`${wifeAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
+          <SummaryCard label="오빠" icon="person" value={husbandTotal} sub={`${husbandAccounts.length}개 계좌`} isAmountHidden={isAmountHidden} />
+          <SummaryCard label="기타" icon="inventory_2" value={otherTotal} sub={`${otherAssets.length}건`} isAmountHidden={isAmountHidden} />
         </div>
       )}
 
@@ -998,11 +993,11 @@ function OtherAssetsSection({
     if (confirm('이 자산을 삭제하시겠습니까?')) onUpdate(assets.filter(a => a.id !== id));
   };
 
-  const renderGroup = (label: string, emoji: string, items: OtherAsset[], groupTotal: number, owner: 'wife' | 'husband') => (
+  const renderGroup = (label: string, icon: string, items: OtherAsset[], groupTotal: number, owner: 'wife' | 'husband') => (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '0 4px' }}>
-        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
-          {emoji} {label}
+        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <MIcon name={icon} size={16} /> {label}
         </span>
         <span className="toss-number" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 'var(--font-semibold)' }}>
           {isAmountHidden ? '••••' : `${fmt(groupTotal)}원`}
@@ -1026,10 +1021,10 @@ function OtherAssetsSection({
                   {total > 0 ? ((item.amount / total) * 100).toFixed(1) : 0}%
                 </span>
                 <button onClick={() => setEditingId(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}>
-                  <Edit3 style={{ width: 14, height: 14 }} />
+                  <MIcon name="edit" size={14} />
                 </button>
                 <button onClick={() => handleDelete(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}>
-                  <Trash2 style={{ width: 14, height: 14 }} />
+                  <MIcon name="delete" size={14} />
                 </button>
               </div>
             </div>
@@ -1055,8 +1050,8 @@ function OtherAssetsSection({
         </span>
       </div>
 
-      {renderGroup('지윤', '👩', wifeAssets, wifeTotal, 'wife')}
-      {renderGroup('오빠', '👨', husbandAssets, husbandTotal, 'husband')}
+      {renderGroup('지윤', 'face', wifeAssets, wifeTotal, 'wife')}
+      {renderGroup('오빠', 'person', husbandAssets, husbandTotal, 'husband')}
 
       {adding ? (
         <OtherAssetForm owner="wife" onSave={handleSave} onCancel={() => setAdding(false)} />
@@ -1071,7 +1066,7 @@ function OtherAssetsSection({
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
         >
-          <Plus style={{ width: 16, height: 16 }} /> 기타 자산 추가
+          <MIcon name="add" size={16} /> 기타 자산 추가
         </button>
       )}
     </div>
@@ -1113,29 +1108,29 @@ function OtherAssetForm({
       </Field>
       <div style={{ display: 'flex', gap: 6 }}>
         <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: 13 }}>
-          <Save style={{ width: 14, height: 14 }} />{asset ? '수정' : '추가'}
+          <MIcon name="check" size={14} />{asset ? '수정' : '추가'}
         </button>
         <button onClick={onCancel} className="toss-btn toss-btn-ghost" style={{ padding: '8px 10px' }}>
-          <X style={{ width: 14, height: 14 }} />
+          <MIcon name="close" size={14} />
         </button>
       </div>
     </div>
   );
 }
 
-function SummaryCard({ label, value, sub, isAmountHidden, accent }: {
-  label: string; value: number; sub: string; isAmountHidden: boolean; accent?: boolean;
+function SummaryCard({ label, value, sub, isAmountHidden, accent, icon }: {
+  label: string; value: number; sub: string; isAmountHidden: boolean; accent?: boolean; icon?: string;
 }) {
   return (
-    <div className="toss-card" style={{
-      padding: '20px',
-      ...(accent ? { background: 'var(--accent-blue)', border: 'none' } : {}),
-    }}>
-      <p style={{ fontSize: 'var(--text-xs)', color: accent ? 'rgba(255,255,255,0.7)' : 'var(--text-tertiary)', fontWeight: 500, marginBottom: 6 }}>{label}</p>
-      <p className="toss-number" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: accent ? '#fff' : 'var(--text-primary)' }}>
+    <div className="toss-card" style={{ padding: '20px', ...(accent ? { background: 'var(--accent-blue)', border: 'none' } : {}) }}>
+      <p style={{ fontSize: 'var(--text-xs)', color: accent ? 'color-mix(in srgb, var(--accent-blue-fg) 70%, transparent)' : 'var(--text-tertiary)', fontWeight: 500, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+        {icon && <span className="material-symbols-rounded" style={{ fontSize: 14 }}>{icon}</span>}
+        {label}
+      </p>
+      <p className="toss-number" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: accent ? 'var(--accent-blue-fg)' : 'var(--text-primary)' }}>
         {isAmountHidden ? '••••' : `${fmt(value)}원`}
       </p>
-      <p style={{ fontSize: 'var(--text-xs)', color: accent ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary)', marginTop: 4 }}>{sub}</p>
+      <p style={{ fontSize: 'var(--text-xs)', color: accent ? 'color-mix(in srgb, var(--accent-blue-fg) 70%, transparent)' : 'var(--text-tertiary)', marginTop: 4 }}>{sub}</p>
     </div>
   );
 }

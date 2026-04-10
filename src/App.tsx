@@ -5,6 +5,12 @@ import { AssetChange } from "./components/AssetChange";
 import { Rebalancing } from "./components/Rebalancing";
 import { Holdings } from "./components/Holdings";
 import { Dividend } from "./components/Dividend";
+import { Contribution } from "./components/Contribution";
+import { FinancialReview } from "./components/FinancialReview";
+import { HouseholdBudget } from "./components/HouseholdBudget";
+import { RebalancingGuide } from "./components/RebalancingGuide";
+import { OptimalGuide } from "./components/OptimalGuide";
+import { ChartPage } from "./components/ChartPage";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { fetchAccounts, fetchOtherAssets, saveOtherAssets } from "./api";
@@ -15,15 +21,7 @@ import { importHistoricalSnapshots } from "./utils/importSnapshots";
 import { fetchGoldPricePerDon } from "./utils/fetchGoldPrice";
 import "./styles/custom-scrollbar.css";
 // lucide-react 아이콘은 Material Icons로 대체
-
-// Material Icons 헬퍼
-function MIcon({ name, size = 20, style }: { name: string; size?: number; style?: React.CSSProperties }) {
-  return (
-    <span className="material-symbols-rounded" style={{
-      fontSize: size, lineHeight: 1, ...style,
-    }}>{name}</span>
-  );
-}
+import { MIcon } from "./components/MIcon";
 
 // Context
 interface AppContextType {
@@ -49,11 +47,17 @@ export const useAppContext = () => useContext(AppContext);
 
 const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드", materialIcon: "dashboard" },
-  { id: "couple-accounts", label: "부부 계좌", materialIcon: "group" },
-  { id: "holdings", label: "보유종목", materialIcon: "bar_chart" },
+  { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
+  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars" },
+  { id: "chart", label: "차트", materialIcon: "candlestick_chart" },
+  { id: "rebalancing-guide", label: "리밸런싱 가이드", materialIcon: "auto_fix_high" },
+  { id: "holdings", label: "매수매도알림", materialIcon: "bar_chart" },
   { id: "asset-change", label: "자산증감", materialIcon: "show_chart" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
   { id: "dividend", label: "배당", materialIcon: "paid" },
+  { id: "contribution", label: "납입", materialIcon: "savings" },
+  { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
+  { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
 ];
 
 const FONT_SIZES = [
@@ -69,7 +73,7 @@ export default function App() {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [isAmountHidden, setIsAmountHidden] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
@@ -90,14 +94,17 @@ export default function App() {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
-    const shouldBeDark = saved !== 'light'; // 기본값 다크
-    setIsDarkMode(shouldBeDark);
-    if (shouldBeDark) {
-      document.documentElement.classList.add('dark');
-      if (!saved) localStorage.setItem('theme', 'dark');
+    let shouldBeDark: boolean;
+    if (saved === 'dark' || saved === 'light') {
+      // 사용자가 수동으로 설정한 경우 그 값 사용
+      shouldBeDark = saved === 'dark';
     } else {
-      document.documentElement.classList.remove('dark');
+      // 미설정 시 시간 기반 자동: 18시~06시는 다크, 나머지는 라이트
+      const h = new Date().getHours();
+      shouldBeDark = h >= 18 || h < 6;
     }
+    setIsDarkMode(shouldBeDark);
+    document.documentElement.classList.toggle('dark', shouldBeDark);
   }, []);
 
   useEffect(() => {
@@ -203,6 +210,12 @@ export default function App() {
       case "asset-change": return <AssetChange />;
       case "rebalancing": return <Rebalancing />;
       case "dividend": return <Dividend />;
+      case "contribution": return <Contribution />;
+      case "financial-review": return <FinancialReview />;
+      case "household-budget": return <HouseholdBudget />;
+      case "rebalancing-guide": return <RebalancingGuide />;
+      case "optimal-guide": return <OptimalGuide />;
+      case "chart": return <ChartPage />;
     }
   };
 
@@ -245,7 +258,7 @@ export default function App() {
                 width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'var(--accent-blue)',
               }}>
-                <MIcon name="diamond" size={16} style={{ color: '#fff' }} />
+                <MIcon name="diamond" size={16} style={{ color: 'var(--accent-blue-fg)' }} />
               </div>
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Finote</span>
             </div>

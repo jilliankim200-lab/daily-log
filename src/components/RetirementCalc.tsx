@@ -10,16 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import {
-  Calculator,
-  TrendingUp,
-  TrendingDown,
-  Target,
-  AlertTriangle,
-  CheckCircle,
-  Wallet,
-  Calendar,
-} from "lucide-react";
+import { MIcon } from "./MIcon";
 
 function formatKRW(value: number, hidden: boolean): string {
   if (hidden) return "••••";
@@ -290,7 +281,7 @@ export function RetirementCalc() {
             marginBottom: 6,
           }}
         >
-          <Calculator size={24} style={{ color: "var(--accent-blue)" }} />
+          <MIcon name="calculate" size={24} style={{ color: "var(--accent-blue)" }} />
           <h1
             style={{
               fontSize: "var(--text-2xl)",
@@ -325,7 +316,7 @@ export function RetirementCalc() {
                 marginBottom: 10,
               }}
             >
-              <TrendingUp size={18} style={{ color: "var(--accent-blue)" }} />
+              <MIcon name="trending_up" size={18} style={{ color: "var(--accent-blue)" }} />
               <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
                 은퇴 시점 예상 자산
               </span>
@@ -360,7 +351,7 @@ export function RetirementCalc() {
                 marginBottom: 10,
               }}
             >
-              <Calendar size={18} style={{ color: results.depletionAge ? "var(--color-profit)" : "var(--color-loss)" }} />
+              <MIcon name="calendar_today" size={18} style={{ color: results.depletionAge ? "var(--color-profit)" : "var(--color-loss)" }} />
               <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
                 자산 소진 시점
               </span>
@@ -402,9 +393,9 @@ export function RetirementCalc() {
               }}
             >
               {results.isGoalMet ? (
-                <CheckCircle size={18} style={{ color: "var(--color-loss)" }} />
+                <MIcon name="check_circle" size={18} style={{ color: "var(--color-loss)" }} />
               ) : (
-                <AlertTriangle size={18} style={{ color: "var(--color-profit)" }} />
+                <MIcon name="warning" size={18} style={{ color: "var(--color-profit)" }} />
               )}
               <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
                 목표 달성 여부
@@ -484,10 +475,7 @@ export function RetirementCalc() {
             {/* Current assets */}
             <div style={inputGroupStyle}>
               <label style={labelStyle}>
-                <Wallet
-                  size={14}
-                  style={{ marginRight: 4, verticalAlign: "middle" }}
-                />
+                <MIcon name="account_balance_wallet" size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
                 현재 총 자산 (원)
               </label>
               <input
@@ -545,10 +533,7 @@ export function RetirementCalc() {
             {/* Annual return with slider */}
             <div style={inputGroupStyle}>
               <label style={labelStyle}>
-                <TrendingUp
-                  size={14}
-                  style={{ marginRight: 4, verticalAlign: "middle" }}
-                />
+                <MIcon name="trending_up" size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
                 예상 연 수익률 (%)
               </label>
               <input
@@ -590,10 +575,7 @@ export function RetirementCalc() {
             {/* Monthly expense with slider */}
             <div style={inputGroupStyle}>
               <label style={labelStyle}>
-                <TrendingDown
-                  size={14}
-                  style={{ marginRight: 4, verticalAlign: "middle" }}
-                />
+                <MIcon name="trending_down" size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
                 은퇴 후 월 생활비 (원)
               </label>
               <input

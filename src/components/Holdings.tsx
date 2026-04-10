@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../App';
 import { fetchCurrentPrices } from '../utils/fetchPrices';
-import { RefreshCw, TrendingDown, TrendingUp, Minus, Info, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { MIcon } from './MIcon';
 import type { Account, Holding } from '../types';
 
 interface AccountDetail {
@@ -71,24 +71,24 @@ function getSignal(avgPrice: number, currentPrice: number | undefined): 'buy' | 
   return 'hold';
 }
 
-function SignalBadge({ signal }: { signal: 'buy' | 'sell' | 'hold' | 'none' }) {
+function SignalBadge({ signal, noIcon }: { signal: 'buy' | 'sell' | 'hold' | 'none'; noIcon?: boolean }) {
   if (signal === 'none') return <span style={{ color: 'var(--text-quaternary)', fontSize: 12 }}>—</span>;
 
   const config = {
-    buy: { label: '매수', bg: 'rgba(52, 199, 89, 0.15)', color: '#34c759', icon: TrendingDown },
-    sell: { label: '매도', bg: 'rgba(255, 69, 58, 0.15)', color: '#ff453a', icon: TrendingUp },
-    hold: { label: '보유', bg: 'rgba(142, 142, 147, 0.12)', color: 'var(--text-tertiary)', icon: Minus },
+    buy:  { label: '매수', color: 'var(--color-loss)',    icon: 'trending_up'   },
+    sell: { label: '매도', color: 'var(--color-profit)',  icon: 'trending_down' },
+    hold: { label: '보유', color: 'var(--text-tertiary)', icon: 'remove'        },
   };
   const c = config[signal];
-  const Icon = c.icon;
 
   return (
-    <span style={{
+    <span className={`signal-badge signal-badge-${signal}`} style={{
       display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
-      padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-      background: c.bg, color: c.color,
+      padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+      background: `color-mix(in srgb, ${c.color} 12%, transparent)`,
+      color: c.color,
     }}>
-      <Icon style={{ width: 12, height: 12 }} />
+      {!noIcon && <MIcon name={c.icon} size={12} />}
       {c.label}
     </span>
   );
@@ -106,7 +106,7 @@ function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice
         onClick={e => { e.stopPropagation(); setOpen(!open); }}
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-quaternary)', display: 'inline-flex', alignItems: 'center' }}
       >
-        <Info style={{ width: 14, height: 14 }} />
+        <MIcon name="info" size={14} />
       </button>
       {open && (
         <>
@@ -120,7 +120,7 @@ function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>계좌별 상세</span>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-tertiary)' }}>
-                <X style={{ width: 12, height: 12 }} />
+                <MIcon name="close" size={12} />
               </button>
             </div>
             {!isFund && (
@@ -129,10 +129,10 @@ function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice
                   const signal = getSignal(d.avgPrice, currentPrice);
                   const pnlRate = currentPrice && d.avgPrice > 0 ? ((currentPrice - d.avgPrice) / d.avgPrice) * 100 : null;
                   const signalConfig = {
-                    buy: { label: '매수', color: '#34c759' },
-                    sell: { label: '매도', color: '#ff453a' },
+                    buy:  { label: '매수', color: 'var(--color-loss)'    },
+                    sell: { label: '매도', color: 'var(--color-profit)'  },
                     hold: { label: '보유', color: 'var(--text-tertiary)' },
-                    none: { label: '—', color: 'var(--text-quaternary)' },
+                    none: { label: '—',   color: 'var(--text-quaternary)' },
                   }[signal];
                   return (
                     <div key={i} style={{
@@ -256,10 +256,10 @@ function OwnerSection({
             const label = f === 'all' ? `전체 ${allHoldings.length}` : f === 'buy' ? `매수 ${buyCount}` : `매도 ${sellCount}`;
             const isActive = signalFilter === f;
             const colors = f === 'buy'
-              ? { bg: 'rgba(52,199,89,0.15)', color: '#34c759', activeBg: '#34c759' }
+              ? { bg: 'color-mix(in srgb, var(--color-loss) 12%, transparent)', color: 'var(--color-loss)', activeBg: 'var(--color-loss)', activeFg: '#fff' }
               : f === 'sell'
-              ? { bg: 'rgba(255,69,58,0.15)', color: '#ff453a', activeBg: '#ff453a' }
-              : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', activeBg: 'var(--text-secondary)' };
+              ? { bg: 'color-mix(in srgb, var(--color-profit) 12%, transparent)', color: 'var(--color-profit)', activeBg: 'var(--color-profit)', activeFg: '#fff' }
+              : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', activeBg: 'var(--accent-blue)', activeFg: 'var(--accent-blue-fg)' };
             return (
               <button
                 key={f}
@@ -267,7 +267,7 @@ function OwnerSection({
                 style={{
                   padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
                   background: isActive ? colors.activeBg : colors.bg,
-                  color: isActive ? '#fff' : colors.color,
+                  color: isActive ? colors.activeFg : colors.color,
                   transition: 'all 0.15s',
                 }}
               >
@@ -331,25 +331,25 @@ function OwnerSection({
               <div key={`${h.ticker}-${h.name}-${i}`} style={{
                 padding: '14px 16px', borderBottom: '1px solid var(--border-primary)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                      <SignalBadge signal={signal} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  {/* 좌: 뱃지 → 종목명 → 티커 수직 배열 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <SignalBadge signal={signal} noIcon />
                       {sellAccounts.length > 0 && (
-                        <span style={{ fontSize: 10, color: '#ff453a', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 10, color: 'var(--color-profit)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {sellAccounts.join('·')}
                         </span>
                       )}
                     </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
-                        <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-quaternary)', marginTop: 2 }}>{h.ticker}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                      <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
                     </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-quaternary)' }}>{h.ticker}</div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  {/* 우: 금액 + 수익률 */}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div className="toss-number" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                       {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
                     </div>
@@ -392,8 +392,8 @@ function OwnerSection({
                       {col}
                       {sortKey === col && (
                         sortDir === 'desc'
-                          ? <ChevronDown style={{ width: 12, height: 12 }} />
-                          : <ChevronUp style={{ width: 12, height: 12 }} />
+                          ? <MIcon name="expand_more" size={12} />
+                          : <MIcon name="expand_less" size={12} />
                       )}
                     </span>
                   </th>
@@ -451,7 +451,7 @@ function OwnerSection({
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                       <SignalBadge signal={signal} />
                       {sellAccounts.length > 0 && (
-                        <span style={{ fontSize: 10, color: '#ff453a', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 10, color: 'var(--color-profit)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {sellAccounts.join('·')}
                         </span>
                       )}
@@ -530,7 +530,7 @@ export function Holdings() {
   const husbandAccounts = accounts.filter(a => a.owner === 'husband');
 
   return (
-    <div style={{ padding: isMobile ? 12 : 24 }}>
+    <div style={{ padding: isMobile ? '16px' : '24px' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -538,7 +538,7 @@ export function Holdings() {
       }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            보유종목
+            매수매도알림
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-tertiary)', marginTop: 6 }}>
             매입가 대비 3% 이상 하락 시 매수 신호, 10% 이상 상승 시 매도 신호
@@ -547,15 +547,11 @@ export function Holdings() {
         <button
           onClick={loadPrices}
           disabled={loading}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: 'var(--accent-blue)', color: '#fff', fontSize: 13, fontWeight: 600,
-            opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s',
-          }}
+          className="toss-btn toss-btn-secondary"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', padding: '6px 12px', opacity: loading ? 0.6 : 1 }}
         >
-          <RefreshCw style={{ width: 14, height: 14, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          현재가 새로고침
+          <MIcon name="sync" size={14} style={loading ? { animation: 'spin 1s linear infinite' } : undefined} />
+          {!isMobile && (loading ? '조회 중...' : '현재가 새로고침')}
         </button>
       </div>
 

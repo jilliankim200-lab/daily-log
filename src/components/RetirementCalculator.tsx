@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calculator, TrendingUp, PiggyBank, Target, Info } from "lucide-react";
+import { MIcon } from "./MIcon";
 
 interface RetirementCalculatorProps {
   isAmountHidden?: boolean;
@@ -147,7 +147,7 @@ export function RetirementCalculator({ isAmountHidden = false }: RetirementCalcu
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <Calculator className="w-5 h-5 text-white" />
+            <MIcon name="calculate" size={20} style={{ color: 'white' }} />
           </div>
           <div>
             <h2 className="text-[20px] text-black dark:text-white">은퇴 계획 계산기</h2>
@@ -162,7 +162,7 @@ export function RetirementCalculator({ isAmountHidden = false }: RetirementCalcu
           {/* 은퇴정보 */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-4">
-              <Info className="w-5 h-5 text-blue-500" />
+              <MIcon name="info" size={20} style={{ color: '#3b82f6' }} />
               <h3 className="text-lg text-black dark:text-white">은퇴정보</h3>
             </div>
             
@@ -203,7 +203,7 @@ export function RetirementCalculator({ isAmountHidden = false }: RetirementCalcu
           {/* 은퇴생활비 */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-4">
-              <PiggyBank className="w-5 h-5 text-green-500" />
+              <MIcon name="savings" size={20} style={{ color: '#22c55e' }} />
               <h3 className="text-lg text-black dark:text-white">은퇴생활비</h3>
             </div>
             
@@ -247,7 +247,7 @@ export function RetirementCalculator({ isAmountHidden = false }: RetirementCalcu
           {/* 은퇴자금마련 */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-5 h-5 text-purple-500" />
+              <MIcon name="trending_up" size={20} style={{ color: '#a855f7' }} />
               <h3 className="text-lg text-black dark:text-white">은퇴자금마련</h3>
             </div>
             
@@ -309,7 +309,7 @@ export function RetirementCalculator({ isAmountHidden = false }: RetirementCalcu
           {/* 예상투자결과 */}
           <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 shadow-lg text-white">
             <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5" />
+              <MIcon name="my_location" size={20} />
               <h3 className="text-lg">예상투자결과</h3>
             </div>
             

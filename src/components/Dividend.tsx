@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "../App";
-import { DollarSign, Plus, Trash2, Edit3, Check, X, Info, Trophy, Briefcase, ExternalLink, RefreshCw } from "lucide-react";
-import { createClient } from '@supabase/supabase-js';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { MIcon } from './MIcon';
+import { kvSet } from '../api';
 
-const supabase = createClient(`https://${projectId}.supabase.co`, publicAnonKey);
-const KV_TABLE = 'kv_store_cee564ea';
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 // ─── 타입 ───
 interface DividendStock {
@@ -51,13 +49,10 @@ function categorizeETF(name: string): string {
 // ─── Supabase에서 ETF 순위 로드 ───
 async function fetchETFRanking(): Promise<RankingETF[] | null> {
   try {
-    const { data, error } = await supabase
-      .from(KV_TABLE)
-      .select('value')
-      .eq('key', 'etf_ranking')
-      .maybeSingle();
-    if (error || !data?.value?.data) return null;
-    return data.value.data.map((e: any) => ({
+    const res = await fetch(`${WORKER_URL}/kv/etf_ranking`);
+    const value = await res.json();
+    if (!value?.data) return null;
+    return value.data.map((e: any) => ({
       rank: e.rank,
       name: e.name,
       ticker: e.ticker,
@@ -223,13 +218,9 @@ export function Dividend() {
     (async () => {
       setRankingLoading(true);
       try {
-        const { data } = await supabase
-          .from(KV_TABLE)
-          .select('value')
-          .eq('key', 'etf_ranking')
-          .maybeSingle();
-        if (data?.value?.data) {
-          const etfs = data.value.data.map((e: any, idx: number) => ({
+        const value = await fetch(`${WORKER_URL}/kv/etf_ranking`).then(r => r.json());
+        if (value?.data) {
+          const etfs = value.data.map((e: any, idx: number) => ({
             rank: idx + 1,
             name: e.name,
             ticker: e.ticker,
@@ -245,8 +236,8 @@ export function Dividend() {
             priceChangeRate: e.priceChangeRate || 0,
           }));
           setRankingData(etfs);
-          if (data.value.updatedAt) {
-            setRankingUpdatedAt(new Date(data.value.updatedAt).toLocaleDateString('ko-KR'));
+          if (value.updatedAt) {
+            setRankingUpdatedAt(new Date(value.updatedAt).toLocaleDateString('ko-KR'));
           }
         }
       } catch (err) {
@@ -395,20 +386,22 @@ export function Dividend() {
   });
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: isMobile ? '16px' : '24px' }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-        <DollarSign size={24} style={{ color: "var(--accent-blue)" }} />
-        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--text-primary)", margin: 0 }}>배당</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: 0 }}>배당</h1>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>월배당 순위와 내 배당 종목을 관리합니다</p>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border-primary)", marginBottom: 24 }}>
-        <button style={tabStyle(activeTab === "ranking")} onClick={() => setActiveTab("ranking")}>
-          <Trophy size={16} /> 월배당 순위
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+        <button className={`toss-tab ${activeTab === 'ranking' ? 'toss-tab-active' : ''}`} onClick={() => setActiveTab('ranking')}>
+          월배당 순위
         </button>
-        <button style={tabStyle(activeTab === "my")} onClick={() => setActiveTab("my")}>
-          <Briefcase size={16} /> 내 배당종목
+        <button className={`toss-tab ${activeTab === 'my' ? 'toss-tab-active' : ''}`} onClick={() => setActiveTab('my')}>
+          내 배당종목
         </button>
       </div>
 
@@ -420,7 +413,7 @@ export function Dividend() {
             padding: "10px 14px", background: "var(--bg-secondary)", borderRadius: 8,
             fontSize: "var(--text-xs)", color: "var(--text-tertiary)",
           }}>
-            <Info size={14} style={{ flexShrink: 0 }} />
+            <MIcon name="info" size={14} style={{ flexShrink: 0 }} />
             <span>연 분배율 기준 상위 {rankingData.length}개 월배당 ETF (ETF CHECK 기준){rankingUpdatedAt && ` · ${rankingUpdatedAt} 업데이트`}</span>
           </div>
 
@@ -465,7 +458,7 @@ export function Dividend() {
                             target="_blank" rel="noopener noreferrer"
                             style={{ color: "var(--text-primary)", textDecoration: "none", fontWeight: "var(--font-medium)", display: "flex", alignItems: "center", gap: 4 }}>
                             {etf.name}
-                            <ExternalLink size={12} style={{ opacity: 0.4, flexShrink: 0 }} />
+                            <MIcon name="open_in_new" size={12} style={{ opacity: 0.4, flexShrink: 0 }} />
                           </a>
                           <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>
                             {etf.ticker}{etf.issuer ? ` · ${etf.issuer}` : ''}
@@ -731,7 +724,7 @@ export function Dividend() {
               </h2>
               <button className="toss-btn-primary" style={{ fontSize: "var(--text-sm)", padding: "6px 14px", display: "flex", alignItems: "center", gap: 4 }}
                 onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus size={14} /> 종목 추가
+                <MIcon name="add" size={14} /> 종목 추가
               </button>
             </div>
 
@@ -865,13 +858,13 @@ export function Dividend() {
                         <td style={{ padding: "10px 8px", textAlign: "right", whiteSpace: "nowrap" }}>
                           {isEditing ? (
                             <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                              <button onClick={() => handleSaveEdit(stock.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-profit)", padding: 4 }}><Check size={16} /></button>
-                              <button onClick={() => setEditingId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><X size={16} /></button>
+                              <button onClick={() => handleSaveEdit(stock.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-profit)", padding: 4 }}><MIcon name="check" size={16} /></button>
+                              <button onClick={() => setEditingId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><MIcon name="close" size={16} /></button>
                             </div>
                           ) : (
                             <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                              <button onClick={() => handleStartEdit(stock)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><Edit3 size={14} /></button>
-                              <button onClick={() => handleDelete(stock.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><Trash2 size={14} /></button>
+                              <button onClick={() => handleStartEdit(stock)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><MIcon name="edit" size={14} /></button>
+                              <button onClick={() => handleDelete(stock.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><MIcon name="delete" size={14} /></button>
                             </div>
                           )}
                         </td>
@@ -889,7 +882,7 @@ export function Dividend() {
             padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: 8,
             fontSize: "var(--text-xs)", color: "var(--text-tertiary)", lineHeight: 1.6,
           }}>
-            <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+            <MIcon name="info" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
             <span>
               배당금은 예상치이며 실제와 다를 수 있습니다. 주당 배당금은 최근 분배금 기준입니다.
               배당락일은 매월 마지막 영업일 기준이며, 실제 배당락일은 ETF별로 다를 수 있습니다.

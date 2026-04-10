@@ -1,16 +1,9 @@
 import { useMemo } from "react";
 import { useAppContext } from "../App";
 import { holdingValue } from "../types";
+import { MIcon } from "./MIcon";
 
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
-
-function MIcon({ name, size = 20, style }: { name: string; size?: number; style?: React.CSSProperties }) {
-  return (
-    <span className="material-symbols-rounded" style={{
-      fontSize: size, lineHeight: 1, ...style,
-    }}>{name}</span>
-  );
-}
 
 export function RightSidebar() {
   const { accounts, isAmountHidden, prices, navigateTo } = useAppContext();

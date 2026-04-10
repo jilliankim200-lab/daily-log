@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAppContext } from "../App";
 import { fetchSnapshots } from "../api";
 import type { DailySnapshot } from "../types";
@@ -11,7 +11,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import { TrendingUp, TrendingDown, Calendar, ArrowUpDown } from "lucide-react";
+import { MIcon } from "./MIcon";
 
 type PeriodKey = "1w" | "1m" | "3m" | "6m" | "1y" | "all" | "2025" | "2026";
 
@@ -80,11 +80,225 @@ function getChangeColor(value: number): string {
   return "var(--text-secondary)";
 }
 
+function MonthlyReportModal({
+  row, accounts, prices, isAmountHidden, onClose,
+}: {
+  row: {
+    date: string; totalAsset: number; assetChange: number; changeRate: number;
+    lastDividend: number; wifeChange: number; husbandChange: number;
+    wifeTotal: number; husbandTotal: number; startTotal: number;
+  };
+  accounts: import('../types').Account[];
+  prices: Record<string, number>;
+  isAmountHidden: boolean;
+  onClose: () => void;
+}) {
+  const fmt = (v: number) => isAmountHidden ? '••••' : Math.round(Math.abs(v)).toLocaleString('ko-KR');
+  const fmtSigned = (v: number) => {
+    if (isAmountHidden) return '••••';
+    return `${v >= 0 ? '+' : '-'}${Math.round(Math.abs(v)).toLocaleString('ko-KR')}`;
+  };
+  const sign = (v: number) => v >= 0 ? 'var(--color-profit)' : 'var(--color-loss)';
+
+  // 보유종목 손익 분석 (현재 시세 기준)
+  const holdingAnalysis = React.useMemo(() => {
+    const items: {
+      ticker: string; name: string; account: string; owner: string;
+      pnl: number; pnlRate: number; currentPrice: number; avgPrice: number; quantity: number;
+    }[] = [];
+    for (const acc of accounts) {
+      for (const h of acc.holdings) {
+        if (h.isFund) continue;
+        const cp = prices[h.ticker] || h.avgPrice;
+        const pnl = (cp - h.avgPrice) * h.quantity;
+        const pnlRate = h.avgPrice ? (cp - h.avgPrice) / h.avgPrice * 100 : 0;
+        items.push({
+          ticker: h.ticker,
+          name: h.name || h.ticker,
+          account: acc.alias,
+          owner: acc.owner,
+          pnl, pnlRate,
+          currentPrice: cp,
+          avgPrice: h.avgPrice,
+          quantity: h.quantity,
+        });
+      }
+    }
+    return items.sort((a, b) => a.pnl - b.pnl);
+  }, [accounts, prices]);
+
+  const losers = holdingAnalysis.filter(h => h.pnl < 0).slice(0, 5);
+  const gainers = holdingAnalysis.filter(h => h.pnl > 0).slice(-5).reverse();
+
+  // 주요 원인 텍스트 자동 생성
+  const mainCause = () => {
+    const wifePct = row.assetChange !== 0 ? Math.abs(row.wifeChange / row.assetChange * 100) : 50;
+    const dominant = Math.abs(row.wifeChange) > Math.abs(row.husbandChange) ? '지윤' : '오빠';
+    const dominantAmt = Math.abs(row.wifeChange) > Math.abs(row.husbandChange) ? row.wifeChange : row.husbandChange;
+    if (row.assetChange >= 0) {
+      return `이 기간 총 자산이 ${fmt(row.assetChange)}원 증가했습니다. ${dominant} 계좌가 ${fmt(dominantAmt)}원으로 주요 상승을 이끌었습니다.`;
+    } else {
+      const biggestLoser = losers[0];
+      const causeStr = biggestLoser
+        ? ` 현재 기준 손실이 가장 큰 종목은 ${biggestLoser.account}의 ${biggestLoser.name}(${fmtSigned(biggestLoser.pnl)}원)입니다.`
+        : '';
+      return `이 기간 총 자산이 ${fmt(row.assetChange)}원 감소했습니다. ${dominant} 계좌에서 ${fmt(dominantAmt)}원의 손실이 발생했습니다.${causeStr}`;
+    }
+  };
+
+  const [year, month] = row.date.split('-');
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--bg-primary)', border: '1px solid var(--border-primary)',
+          borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '85vh',
+          overflowY: 'auto', padding: 24,
+        }}
+      >
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>월간 증감 리포트</div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {year}년 {month}월
+            </h2>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 22, lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* 총 증감 요약 */}
+        <div style={{
+          background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>총 증감</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontSize: 26, fontWeight: 700, color: sign(row.assetChange), fontVariantNumeric: 'tabular-nums' }}>
+              {fmtSigned(row.assetChange)}원
+            </span>
+            <span style={{ fontSize: 14, color: sign(row.changeRate), fontWeight: 600 }}>
+              {row.changeRate >= 0 ? '+' : ''}{row.changeRate.toFixed(2)}%
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>
+            기말 총 자산 {fmt(row.totalAsset)}원 (기초 {fmt(row.startTotal)}원)
+          </div>
+        </div>
+
+        {/* 소유자별 기여 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+          {[
+            { label: '지윤', change: row.wifeChange, total: row.wifeTotal },
+            { label: '오빠', change: row.husbandChange, total: row.husbandTotal },
+          ].map(({ label, change, total }) => (
+            <div key={label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: sign(change), fontVariantNumeric: 'tabular-nums' }}>
+                {fmtSigned(change)}원
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                기말 {fmt(total)}원
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 자동 분석 텍스트 */}
+        <div style={{
+          background: 'var(--accent-blue-bg)', borderRadius: 10, padding: '12px 14px', marginBottom: 16,
+          fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6,
+        }}>
+          💬 {mainCause()}
+        </div>
+
+        {/* 현재 기준 손실 종목 */}
+        {losers.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+              📉 현재 손실 상위 종목 <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(현재 시세 기준)</span>
+            </div>
+            {losers.map(h => (
+              <div key={`${h.account}-${h.ticker}`} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0', borderBottom: '1px solid var(--border-secondary)',
+              }}>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{h.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{h.account}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-loss)', fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtSigned(h.pnl)}원
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-loss)' }}>
+                    {h.pnlRate.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 현재 기준 수익 종목 */}
+        {gainers.length > 0 && (
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+              📈 현재 수익 상위 종목 <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(현재 시세 기준)</span>
+            </div>
+            {gainers.map(h => (
+              <div key={`${h.account}-${h.ticker}`} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0', borderBottom: '1px solid var(--border-secondary)',
+              }}>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{h.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{h.account}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-profit)', fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtSigned(h.pnl)}원
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-profit)' }}>
+                    +{h.pnlRate.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {row.lastDividend > 0 && (
+          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 13, color: 'var(--accent-blue)' }}>
+            💰 이 달 수령 배당금: {fmt(row.lastDividend)}원
+          </div>
+        )}
+
+        <div style={{ marginTop: 16, fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+          ※ 종목 손익은 현재 시세 기준이며, 과거 월의 실제 원인과 다를 수 있습니다.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AssetChange() {
-  const { accounts, isAmountHidden, isMobile } = useAppContext();
+  const { accounts, prices, isAmountHidden, isMobile } = useAppContext();
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [period, setPeriod] = useState<PeriodKey>("1m");
   const [sortNewest, setSortNewest] = useState(true);
+  const [reportMonth, setReportMonth] = useState<null | {
+    date: string; totalAsset: number; assetChange: number; changeRate: number;
+    lastDividend: number; wifeChange: number; husbandChange: number;
+    wifeTotal: number; husbandTotal: number; startTotal: number;
+  }>(null);
 
   const totalAsset = useMemo(() => {
     return accounts.reduce((sum, account) => {
@@ -166,12 +380,20 @@ export function AssetChange() {
       const changeRate = first.totalAsset !== 0
         ? Math.round((changeAmount / first.totalAsset) * 10000) / 100
         : 0;
+      // 해당 월에서 dividend가 있는 가장 최근 스냅샷 찾기
+      const monthSnaps = asc.filter(s => s.date.startsWith(month));
+      const lastWithDiv = [...monthSnaps].reverse().find(s => s.dividend);
       return {
         date: month,
         totalAsset: last.totalAsset,
         assetChange: changeAmount,
         changeRate,
-        lastDividend: last.dividend || 0,
+        lastDividend: lastWithDiv?.dividend || 0,
+        wifeChange: (last.wifeAsset || 0) - (first.wifeAsset || 0),
+        husbandChange: (last.husbandAsset || 0) - (first.husbandAsset || 0),
+        wifeTotal: last.wifeAsset || 0,
+        husbandTotal: last.husbandAsset || 0,
+        startTotal: first.totalAsset,
       };
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredSnapshots, isYearFilter]);
@@ -211,9 +433,10 @@ export function AssetChange() {
   };
 
   return (
+    <>
     <div
       style={{
-        padding: 24,
+        padding: isMobile ? '16px' : '24px',
       }}
     >
       {/* Page header */}
@@ -269,9 +492,9 @@ export function AssetChange() {
             }}
           >
             {periodSummary.changeRate >= 0 ? (
-              <TrendingUp size={20} style={{ color: "var(--color-profit)" }} />
+              <MIcon name="trending_up" size={20} style={{ color: "var(--color-profit)" }} />
             ) : (
-              <TrendingDown size={20} style={{ color: "var(--color-loss)" }} />
+              <MIcon name="trending_down" size={20} style={{ color: "var(--color-loss)" }} />
             )}
             <span
               className="toss-number"
@@ -308,7 +531,7 @@ export function AssetChange() {
               gap: 8,
             }}
           >
-            <Calendar size={20} style={{ color: "var(--accent-blue)" }} />
+            <MIcon name="calendar_today" size={20} style={{ color: "var(--accent-blue)" }} />
             <span
               className="toss-number"
               style={{
@@ -326,11 +549,17 @@ export function AssetChange() {
 
       {/* Period filter tabs */}
       <div
+        className="period-scroll-row"
         style={{
           display: "flex",
           gap: 8,
           marginBottom: 24,
-          flexWrap: "wrap",
+          overflowX: "auto",
+          flexWrap: "nowrap",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          paddingBottom: 2,
         }}
       >
         {PERIOD_TABS.map((tab) => (
@@ -339,6 +568,7 @@ export function AssetChange() {
             className={period === tab.key ? "toss-tab active" : "toss-tab"}
             onClick={() => setPeriod(tab.key)}
             style={{
+              flexShrink: 0,
               padding: "8px 16px",
               borderRadius: 20,
               fontSize: "var(--text-sm)",
@@ -350,7 +580,7 @@ export function AssetChange() {
                   ? "var(--accent-blue)"
                   : "var(--bg-tertiary)",
               color:
-                period === tab.key ? "#fff" : "var(--text-secondary)",
+                period === tab.key ? "var(--accent-blue-fg)" : "var(--text-secondary)",
               transition: "all 0.15s ease",
             }}
           >
@@ -473,145 +703,126 @@ export function AssetChange() {
               cursor: 'pointer',
             }}
           >
-            <ArrowUpDown size={14} />
+            <MIcon name="swap_vert" size={14} />
             {sortNewest ? '최신순' : '오래된순'}
           </button>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table
-            className="toss-table"
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "var(--text-sm)",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  borderBottom: "1px solid var(--border-primary)",
-                }}
-              >
-                <th
+        {isMobile ? (
+          /* ── 모바일: 카드 리스트 ── */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {(isYearFilter
+              ? (sortNewest ? monthlySummary : [...monthlySummary].reverse())
+              : (sortNewest ? [...filteredSnapshots].reverse() : [...filteredSnapshots])
+            ).map(row => {
+              const date = isYearFilter ? (row as typeof monthlySummary[0]).date.replace('-', '년 ') + '월' : (row as typeof filteredSnapshots[0]).date;
+              const totalAsset = isYearFilter ? (row as typeof monthlySummary[0]).totalAsset : (row as typeof filteredSnapshots[0]).totalAsset;
+              const assetChange = isYearFilter ? (row as typeof monthlySummary[0]).assetChange : (row as typeof filteredSnapshots[0]).assetChange;
+              const changeRate = isYearFilter ? (row as typeof monthlySummary[0]).changeRate : (row as typeof filteredSnapshots[0]).changeRate;
+              const dividend = isYearFilter ? (row as typeof monthlySummary[0]).lastDividend : (row as typeof filteredSnapshots[0]).dividend;
+              const isYearRow = isYearFilter;
+              return (
+                <div
+                  key={(row as any).date}
                   style={{
-                    padding: "10px 12px",
-                    textAlign: "left",
-                    color: "var(--text-tertiary)",
-                    fontWeight: "var(--font-medium)",
-                    fontSize: "var(--text-xs)",
-                    whiteSpace: "nowrap",
+                    background: 'var(--bg-secondary)', borderRadius: 10,
+                    padding: '12px 14px', border: '1px solid var(--border-primary)',
                   }}
                 >
-                  날짜
-                </th>
-                <th
-                  style={{
-                    padding: "10px 12px",
-                    textAlign: "right",
-                    color: "var(--text-tertiary)",
-                    fontWeight: "var(--font-medium)",
-                    fontSize: "var(--text-xs)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  총 자산
-                </th>
-                <th
-                  style={{
-                    padding: "10px 12px",
-                    textAlign: "right",
-                    color: "var(--text-tertiary)",
-                    fontWeight: "var(--font-medium)",
-                    fontSize: "var(--text-xs)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  증감액
-                </th>
-                <th
-                  style={{
-                    padding: "10px 12px",
-                    textAlign: "right",
-                    color: "var(--text-tertiary)",
-                    fontWeight: "var(--font-medium)",
-                    fontSize: "var(--text-xs)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  수익률
-                </th>
-                <th
-                  style={{
-                    padding: "10px 12px",
-                    textAlign: "right",
-                    color: "var(--text-tertiary)",
-                    fontWeight: "var(--font-medium)",
-                    fontSize: "var(--text-xs)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  배당금
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isYearFilter ? (
-                (sortNewest ? monthlySummary : [...monthlySummary].reverse()).map((row, idx) => (
-                  <tr
-                    key={row.date}
-                    style={{
-                      borderBottom: "1px solid var(--border-primary)",
-                      background: idx % 2 === 0 ? "transparent" : "var(--bg-secondary)",
-                    }}
-                  >
-                    <td style={{ padding: "10px 12px", color: "var(--text-primary)", whiteSpace: "nowrap", fontWeight: "var(--font-medium)" }}>
-                      {row.date.replace('-', '년 ')}월
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>
-                      {formatAmount(row.totalAsset, isAmountHidden)}원
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(row.assetChange), fontWeight: "var(--font-medium)" }}>
-                      {row.assetChange > 0 ? "+" : ""}{formatAmount(row.assetChange, isAmountHidden)}원
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(row.changeRate), fontWeight: "var(--font-medium)" }}>
-                      {formatRate(row.changeRate, isAmountHidden)}
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: row.lastDividend ? "var(--accent-blue)" : "var(--text-quaternary)", fontWeight: "var(--font-medium)" }}>
-                      {row.lastDividend ? formatAmount(row.lastDividend, isAmountHidden) + "원" : "—"}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                (sortNewest ? [...filteredSnapshots].reverse() : [...filteredSnapshots]).map((snapshot, idx) => (
-                  <tr
-                    key={snapshot.date}
-                    style={{
-                      borderBottom: "1px solid var(--border-primary)",
-                      background: idx % 2 === 0 ? "transparent" : "var(--bg-secondary)",
-                    }}
-                  >
-                    <td style={{ padding: "10px 12px", color: "var(--text-primary)", whiteSpace: "nowrap" }}>
-                      {snapshot.date}
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>
-                      {formatAmount(snapshot.totalAsset, isAmountHidden)}원
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(snapshot.assetChange), fontWeight: "var(--font-medium)" }}>
-                      {snapshot.assetChange > 0 ? "+" : ""}{formatAmount(snapshot.assetChange, isAmountHidden)}원
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(snapshot.changeRate), fontWeight: "var(--font-medium)" }}>
-                      {formatRate(snapshot.changeRate, isAmountHidden)}
-                    </td>
-                    <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: snapshot.dividend ? "var(--accent-blue)" : "var(--text-quaternary)", fontWeight: "var(--font-medium)" }}>
-                      {snapshot.dividend ? formatAmount(snapshot.dividend, isAmountHidden) + "원" : "—"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {date}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="toss-number" style={{ fontSize: 'var(--text-xs)', color: getChangeColor(changeRate), fontWeight: 700 }}>
+                        {formatRate(changeRate, isAmountHidden)}
+                      </span>
+                      {isYearRow && (
+                        <button
+                          onClick={() => setReportMonth(row as typeof monthlySummary[0])}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 6, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
+                        >
+                          <MIcon name="description" size={15} style={{ color: 'var(--accent-blue)' }} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>총 자산</div>
+                      <div className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {formatAmount(totalAsset, isAmountHidden)}원
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>증감</div>
+                      <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: getChangeColor(assetChange) }}>
+                        {assetChange > 0 ? '+' : ''}{formatAmount(assetChange, isAmountHidden)}원
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* ── PC: 기존 테이블 ── */
+          <div style={{ overflowX: "auto" }}>
+            <table className="toss-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border-primary)" }}>
+                  {['날짜', '총 자산', '증감액', '수익률', '배당금'].map((h, i) => (
+                    <th key={h} style={{ padding: "10px 12px", textAlign: i === 0 ? "left" : "right", color: "var(--text-tertiary)", fontWeight: "var(--font-medium)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isYearFilter ? (
+                  (sortNewest ? monthlySummary : [...monthlySummary].reverse()).map((row, idx) => (
+                    <tr key={row.date} style={{ borderBottom: "1px solid var(--border-primary)", background: idx % 2 === 0 ? "transparent" : "var(--bg-secondary)" }}>
+                      <td style={{ padding: "10px 12px", color: "var(--text-primary)", whiteSpace: "nowrap", fontWeight: "var(--font-medium)" }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {row.date.replace('-', '년 ')}월
+                          <button onClick={() => setReportMonth(row)} title="월간 리포트 보기" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 6, color: 'var(--text-tertiary)', fontSize: 13, lineHeight: 1, transition: 'color 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-blue)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}>
+                            📋
+                          </button>
+                        </span>
+                      </td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{formatAmount(row.totalAsset, isAmountHidden)}원</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(row.assetChange), fontWeight: "var(--font-medium)" }}>{row.assetChange > 0 ? "+" : ""}{formatAmount(row.assetChange, isAmountHidden)}원</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(row.changeRate), fontWeight: "var(--font-medium)" }}>{formatRate(row.changeRate, isAmountHidden)}</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: row.lastDividend ? "var(--accent-blue)" : "var(--text-quaternary)", fontWeight: "var(--font-medium)" }}>{row.lastDividend ? formatAmount(row.lastDividend, isAmountHidden) + "원" : "—"}</td>
+                    </tr>
+                  ))
+                ) : (
+                  (sortNewest ? [...filteredSnapshots].reverse() : [...filteredSnapshots]).map((snapshot, idx) => (
+                    <tr key={snapshot.date} style={{ borderBottom: "1px solid var(--border-primary)", background: idx % 2 === 0 ? "transparent" : "var(--bg-secondary)" }}>
+                      <td style={{ padding: "10px 12px", color: "var(--text-primary)", whiteSpace: "nowrap" }}>{snapshot.date}</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{formatAmount(snapshot.totalAsset, isAmountHidden)}원</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(snapshot.assetChange), fontWeight: "var(--font-medium)" }}>{snapshot.assetChange > 0 ? "+" : ""}{formatAmount(snapshot.assetChange, isAmountHidden)}원</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(snapshot.changeRate), fontWeight: "var(--font-medium)" }}>{formatRate(snapshot.changeRate, isAmountHidden)}</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: snapshot.dividend ? "var(--accent-blue)" : "var(--text-quaternary)", fontWeight: "var(--font-medium)" }}>{snapshot.dividend ? formatAmount(snapshot.dividend, isAmountHidden) + "원" : "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
+    {reportMonth && (
+      <MonthlyReportModal
+        row={reportMonth}
+        accounts={accounts}
+        prices={prices}
+        isAmountHidden={isAmountHidden}
+        onClose={() => setReportMonth(null)}
+      />
+    )}
+    </>
   );
 }

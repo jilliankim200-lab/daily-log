@@ -4,10 +4,7 @@ import { fetchSnapshots } from "../api";
 import { holdingValue } from "../types";
 import type { DailySnapshot, OtherAsset } from "../types";
 import { fetchMarketData, selectMarketItems, type MarketIndexData } from "../utils/fetchMarketData";
-import {
-  TrendingUp,
-  Wallet, ArrowUpRight, ArrowDownRight, Info, X,
-} from "lucide-react";
+import { MIcon } from "./MIcon";
 
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
 
@@ -88,7 +85,7 @@ export function NewDashboard() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
         <div style={{ textAlign: 'center' }}>
-          <Wallet style={{ width: 48, height: 48, margin: '0 auto 16px', color: 'var(--text-disabled)' }} />
+          <MIcon name="account_balance_wallet" size={48} style={{ margin: '0 auto 16px', color: 'var(--text-disabled)', display: 'block' }} />
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', marginBottom: 8 }}>
             계좌 데이터가 없습니다
           </h3>
@@ -101,7 +98,7 @@ export function NewDashboard() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: isMobile ? '16px' : '24px' }}>
       {/* 통합 티커 바: 시장 지표 + 자산 (횡스크롤) */}
       <div style={{
         overflowX: 'auto', overflowY: 'hidden',
@@ -147,7 +144,7 @@ export function NewDashboard() {
               displayValue: hide(item.isTotal ? fmt(item.value) : `${isPositive ? '+' : ''}${fmt(item.value)}`),
               subValue: !item.isTotal && pct !== null ? hide(`${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`) : null,
               color: changeColor,
-              sparkColor: item.isTotal ? 'var(--text-quaternary)' : isPositive ? 'var(--color-profit)' : isNegative ? 'var(--color-loss)' : 'var(--text-quaternary)',
+              sparkColor: item.isTotal ? 'var(--text-tertiary)' : isPositive ? 'var(--color-profit)' : isNegative ? 'var(--color-loss)' : 'var(--text-tertiary)',
               trend: item.isTotal ? 0.3 : isPositive ? 0.5 : isNegative ? -0.5 : 0,
               isMarket: false,
               valueColor: item.isTotal ? 'var(--text-primary)' : changeColor,
@@ -191,7 +188,7 @@ export function NewDashboard() {
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
                     {item.label}
                     {(item as any).isTotal && (
-                      <Info size={13} style={{ cursor: 'pointer', opacity: 0.5 }} onClick={() => setShowAssetDetail(true)} />
+                      <MIcon name="info" size={13} style={{ cursor: 'pointer', opacity: 0.5 }} onClick={() => setShowAssetDetail(true)} />
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -221,7 +218,7 @@ export function NewDashboard() {
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <TrendingUp style={{ width: 14, height: 14, color: 'var(--text-primary)' }} />
+                  <MIcon name="trending_up" size={14} style={{ color: 'var(--text-primary)' }} />
                 </div>
                 <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
                   자산 증감 상세 내역
@@ -267,7 +264,7 @@ export function NewDashboard() {
                               </span>
                               {change !== 0 && (
                                 <span className="toss-number" style={{ fontSize: 11, fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : 'var(--color-loss)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  {change > 0 ? <ArrowUpRight style={{ width: 11, height: 11 }} /> : <ArrowDownRight style={{ width: 11, height: 11 }} />}
+                                  {change > 0 ? <MIcon name="arrow_outward" size={11} /> : <MIcon name="south_east" size={11} />}
                                   {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
                                 </span>
                               )}
@@ -311,8 +308,8 @@ export function NewDashboard() {
                               <td className="toss-number" style={{ textAlign: 'right' }}>{hide(`${fmt(snap.totalAsset)}원`)}</td>
                               <td className="toss-number" style={{ textAlign: 'right', fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : change < 0 ? 'var(--color-loss)' : 'var(--text-primary)' }}>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  {change > 0 && <ArrowUpRight style={{ width: 12, height: 12 }} />}
-                                  {change < 0 && <ArrowDownRight style={{ width: 12, height: 12 }} />}
+                                  {change > 0 && <MIcon name="arrow_outward" size={12} />}
+                                  {change < 0 && <MIcon name="south_east" size={12} />}
                                   {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
                                 </span>
                               </td>
@@ -353,7 +350,7 @@ export function NewDashboard() {
               <button onClick={() => setShowAssetDetail(false)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-tertiary)',
               }}>
-                <X size={16} />
+                <MIcon name="close" size={16} />
               </button>
             </div>
 

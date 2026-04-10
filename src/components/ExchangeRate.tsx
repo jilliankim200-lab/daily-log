@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Loader2 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { MIcon } from './MIcon';
+
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 interface ExchangeRateData {
   usd: number;
@@ -20,34 +21,18 @@ export function ExchangeRate() {
       setLoading(true);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-cee564ea/exchange-rate-data`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          signal: controller.signal
-        }
-      );
 
+      const response = await fetch(`${WORKER_URL}/exchange-rates`, { signal: controller.signal });
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch exchange rates: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Failed to fetch exchange rates: ${response.statusText}`);
 
       const data = await response.json();
-      console.log('Fetched exchange rates:', data);
       setRates({ usd: data.usd || 0, jpy: data.jpy || 0 });
     } catch (err) {
-      // Silently handle errors - don't spam console
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log('Exchange rate request timed out - using cached data');
-      } else if (err instanceof Error && err.message.includes('Failed to fetch')) {
-        console.log('Network error fetching exchange rates - server may be starting up');
+        console.log('Exchange rate request timed out');
       }
-      // Keep existing data if fetch fails
     } finally {
       setLoading(false);
     }
@@ -56,7 +41,7 @@ export function ExchangeRate() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 px-4 py-2 bg-white border border-[--color-gray-200] rounded-lg shadow-sm">
-        <Loader2 className="w-4 h-4 animate-spin text-[--color-gray-600]" />
+        <MIcon name="progress_activity" size={16} style={{ color: 'var(--color-gray-600)', animation: 'spin 1s linear infinite' }} />
         <span style={{ fontSize: '14px', color: '#86868b' }}>환율 로딩 중...</span>
       </div>
     );
@@ -64,7 +49,7 @@ export function ExchangeRate() {
 
   return (
     <div className="flex items-center gap-3 px-4 py-2">
-      <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+      <MIcon name="trending_up" size={16} style={{ color: 'rgb(37 99 235)' }} />
       <div className="flex items-center gap-4">
         <div className="flex items-baseline gap-1">
           <span className="text-[13px] font-semibold text-blue-600 dark:text-blue-400">USD</span>

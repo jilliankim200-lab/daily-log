@@ -1,5 +1,4 @@
 import type { DailySnapshot } from '../types';
-import { kvSet } from '../api';
 
 // Historical asset data: [date, dividend, totalAsset, assetChange]
 // dividend=0 means no data, assetChange=0 means no change or no data
@@ -304,12 +303,5 @@ export async function importHistoricalSnapshots(): Promise<void> {
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(merged));
   localStorage.setItem(IMPORT_FLAG, 'true');
 
-  // Also sync to Supabase
-  try {
-    await kvSet('snapshots', merged);
-    console.log(`Imported & synced ${historicalSnapshots.length} historical snapshots to Supabase (${merged.length} total)`);
-  } catch (err) {
-    console.error('Supabase 스냅샷 동기화 실패 (RLS 정책 확인 필요):', err);
-    console.log(`Imported ${historicalSnapshots.length} historical snapshots to localStorage only (${merged.length} total)`);
-  }
+  console.log(`Imported ${historicalSnapshots.length} historical snapshots to localStorage (${merged.length} total)`);
 }

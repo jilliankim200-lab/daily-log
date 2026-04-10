@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Lock } from 'lucide-react';
+import { MIcon } from './MIcon';
 
 interface PasswordModalProps {
   open: boolean;
@@ -65,7 +65,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
               width: 36, height: 36, borderRadius: 10,
               background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Lock style={{ width: 18, height: 18, color: '#fff' }} />
+              <MIcon name="lock" size={18} style={{ color: '#fff' }} />
             </div>
             <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
               금액 보기
@@ -78,7 +78,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
               color: 'var(--text-tertiary)', borderRadius: 8,
             }}
           >
-            <X style={{ width: 20, height: 20 }} />
+            <MIcon name="close" size={20} />
           </button>
         </div>
 
@@ -141,7 +141,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
                 type="submit"
                 style={{
                   flex: 1, padding: '12px 0', fontSize: 15, fontWeight: 600,
-                  background: 'var(--accent-blue)', color: '#fff',
+                  background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)',
                   border: 'none', borderRadius: 10, cursor: 'pointer',
                   transition: 'background 0.15s',
                 }}

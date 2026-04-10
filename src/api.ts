@@ -9,7 +9,7 @@ const SNAPSHOT_KEY = 'asset_snapshots';
 const OTHER_ASSETS_KEY = 'asset_others';
 
 // ── KV 헬퍼 ──
-async function kvGet<T>(key: string): Promise<T | null> {
+export async function kvGet<T>(key: string): Promise<T | null> {
   const res = await fetch(`${WORKER_URL}/kv/${key}`);
   if (!res.ok) throw new Error(`kvGet failed: ${res.status}`);
   const data = await res.json();

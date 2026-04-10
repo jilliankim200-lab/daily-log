@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
 [triggers]
-crons = ["0 7 * * *"]  # 매일 KST 16:00 (UTC 07:00) - 장 마감 30분 후
+crons = ["0 3 * * *"]  # 매일 KST 12:00 정오 (UTC 03:00)
 
 [[kv_namespaces]]
 binding = "KV"

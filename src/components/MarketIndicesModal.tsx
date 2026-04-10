@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, TrendingUp, TrendingDown } from "lucide-react";
+import { MIcon } from "./MIcon";
 
 interface IndexData {
   name: string;
@@ -112,7 +112,7 @@ export function MarketIndicesModal({ isOpen, onClose, data }: MarketIndicesModal
             })}
           </p>
           <div className={`flex items-center gap-1 ${changeColor} text-sm font-semibold`}>
-            {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+            {isPositive ? <MIcon name="trending_up" size={16} /> : <MIcon name="trending_down" size={16} />}
             <span>
               {isPositive ? '+' : ''}{indexData.change.toFixed(2)} ({isPositive ? '+' : ''}{indexData.changePercent.toFixed(2)}%)
             </span>
@@ -152,7 +152,7 @@ export function MarketIndicesModal({ isOpen, onClose, data }: MarketIndicesModal
               onClick={onClose}
               className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/20 rounded-lg"
             >
-              <X className="w-5 h-5" />
+              <MIcon name="close" size={20} />
             </button>
           </div>
         </div>
