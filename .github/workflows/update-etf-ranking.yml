@@ -9,67 +9,89 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
       - name: Fetch ETF ranking and store to KV
         env:
           WORKER_URL: https://asset-dashboard-api.jilliankim200.workers.dev
         run: |
           python3 << 'PYEOF'
-          import urllib.request, json, os, sys
+          import json, os, sys
           from datetime import datetime, timezone, timedelta
+          from playwright.sync_api import sync_playwright
 
           WORKER_URL = os.environ['WORKER_URL']
-          API_BASE = 'https://search-etf.com/backend/api/v2/get_monthly_etf.php'
-          HEADERS = {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'application/json',
-              'Referer': 'https://search-etf.com/month_dividend.php',
-          }
+          API_URL = 'https://search-etf.com/backend/api/v2/get_monthly_etf.php'
 
           all_data = []
-          page = 1
 
-          while page <= 10:
-              url = f'{API_BASE}?page={page}&limit=50&sortBy=dividend_rate&sortOrder=desc'
-              req = urllib.request.Request(url, headers=HEADERS)
-              try:
-                  with urllib.request.urlopen(req, timeout=15) as resp:
-                      raw = resp.read().decode('utf-8')
-                      print(f'HTTP {resp.status}, 응답 앞 200자: {raw[:200]}')
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              context = browser.new_context(
+                  user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+              )
+              page = context.new_page()
+
+              # 메인 페이지 먼저 방문 → 봇 보호 쿠키 획득
+              print('메인 페이지 방문 중...')
+              page.goto('https://search-etf.com/month_dividend.php', wait_until='networkidle', timeout=30000)
+              print('메인 페이지 로드 완료')
+
+              page_num = 1
+              while page_num <= 10:
+                  url = f'{API_URL}?page={page_num}&limit=50&sortBy=dividend_rate&sortOrder=desc'
+                  print(f'페이지 {page_num} 수집 중...')
+
+                  response = page.request.get(
+                      url,
+                      headers={
+                          'Accept': 'application/json',
+                          'Referer': 'https://search-etf.com/month_dividend.php',
+                      }
+                  )
+
+                  raw = response.text()
+                  try:
                       body = json.loads(raw)
-              except Exception as e:
-                  print(f'페이지 {page} 요청 실패: {e}')
-                  break
+                  except Exception as e:
+                      print(f'JSON 파싱 실패: {e}, 응답: {raw[:300]}')
+                      break
 
-              if not body.get('success'):
-                  print(f'페이지 {page} 응답 실패')
-                  break
+                  if not body.get('success'):
+                      print(f'응답 실패: {body}')
+                      break
 
-              items = body.get('data', [])
-              if not items:
-                  break
+                  items = body.get('data', [])
+                  if not items:
+                      break
 
-              for e in items:
-                  all_data.append({
-                      'rank': len(all_data) + 1,
-                      'name': e.get('stock_name', ''),
-                      'ticker': e.get('stock_code', ''),
-                      'price': e.get('current_price') or e.get('price') or 0,
-                      'priceChange': e.get('price_change') or e.get('prdy_vrss') or 0,
-                      'priceChangeRate': e.get('price_change_rate') or 0,
-                      'recentDividend': e.get('latest_dividend') or 0,
-                      'annualYield': e.get('dividend_rate_1year') or e.get('dividend_rate') or 0,
-                      'singleDividendRate': e.get('single_dividend_rate') or 0,
-                      'actualDividendDate': e.get('actual_dividend_date') or '',
-                      'dividendTiming': e.get('dividend_timing') or '',
-                      'retirementOk': e.get('retirement_pension_investment_limit') == '100%',
-                      'personalPension': str(e.get('personal_pension_verification', '')).lower() == 'true',
-                  })
+                  for e in items:
+                      all_data.append({
+                          'rank': len(all_data) + 1,
+                          'name': e.get('stock_name', ''),
+                          'ticker': e.get('stock_code', ''),
+                          'price': e.get('current_price') or e.get('price') or 0,
+                          'priceChange': e.get('price_change') or e.get('prdy_vrss') or 0,
+                          'priceChangeRate': e.get('price_change_rate') or 0,
+                          'recentDividend': e.get('latest_dividend') or 0,
+                          'annualYield': e.get('dividend_rate_1year') or e.get('dividend_rate') or 0,
+                          'singleDividendRate': e.get('single_dividend_rate') or 0,
+                          'actualDividendDate': e.get('actual_dividend_date') or '',
+                          'dividendTiming': e.get('dividend_timing') or '',
+                          'retirementOk': e.get('retirement_pension_investment_limit') == '100%',
+                          'personalPension': str(e.get('personal_pension_verification', '')).lower() == 'true',
+                      })
 
-              print(f'페이지 {page}: {len(items)}개 수집 (누계 {len(all_data)}개)')
+                  print(f'페이지 {page_num}: {len(items)}개 수집 (누계 {len(all_data)}개)')
 
-              if not body.get('pagination', {}).get('has_more'):
-                  break
-              page += 1
+                  if not body.get('pagination', {}).get('has_more'):
+                      break
+                  page_num += 1
+
+              browser.close()
 
           if not all_data:
               print('데이터 없음, 종료')
@@ -81,6 +103,7 @@ jobs:
 
           payload = json.dumps({'data': all_data, 'updatedAt': updated_at}, ensure_ascii=False)
 
+          import urllib.request
           put_req = urllib.request.Request(
               f'{WORKER_URL}/kv/etf_ranking',
               data=payload.encode('utf-8'),
