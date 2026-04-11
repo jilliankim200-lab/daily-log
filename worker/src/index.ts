@@ -317,6 +317,61 @@ async function sendDailyAlert(env: Env, items: SellItem[], signalChanges: Signal
   }
 }
 
+// ── 주간 ETF 랭킹 업데이트 ──
+async function fetchAndStoreEtfRanking(env: Env): Promise<string> {
+  try {
+    const allData: any[] = [];
+    let page = 1;
+    const limit = 50;
+
+    // 전체 데이터 페이징 (최대 200개)
+    while (allData.length < 200) {
+      const res = await fetch(
+        `https://search-etf.com/backend/api/v2/get_monthly_etf.php?page=${page}&limit=${limit}&sortBy=dividend_rate&sortOrder=desc`,
+        { headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'Referer': 'https://search-etf.com/month_dividend.php',
+          'Origin': 'https://search-etf.com',
+        }}
+      );
+      if (!res.ok) break;
+      const body: any = await res.json();
+      const items: any[] = body.data || [];
+      if (items.length === 0) break;
+
+      for (const e of items) {
+        allData.push({
+          rank: allData.length + 1,
+          name: e.stock_name,
+          ticker: e.stock_code,
+          price: e.current_price ?? e.price ?? 0,
+          priceChange: e.price_change ?? e.prdy_vrss ?? 0,
+          priceChangeRate: e.price_change_rate ?? 0,
+          recentDividend: e.latest_dividend ?? 0,
+          annualYield: e.dividend_rate_1year ?? e.dividend_rate ?? 0,
+          singleDividendRate: e.single_dividend_rate ?? 0,
+          actualDividendDate: e.actual_dividend_date ?? '',
+          dividendTiming: e.dividend_timing ?? '',
+          retirementOk: e.retirement_pension_investment_limit === '100%',
+          personalPension: e.personal_pension_verification === 'true',
+        });
+      }
+
+      if (!body.pagination?.has_more) break;
+      page++;
+    }
+
+    const updatedAt = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    await env.KV.put('etf_ranking', JSON.stringify({ data: allData, updatedAt }));
+    return `etf_ranking updated: ${allData.length}개, ${updatedAt}`;
+  } catch (err) {
+    console.error('fetchAndStoreEtfRanking error:', err);
+    return `etf_ranking error: ${String(err)}`;
+  }
+}
+
 // ── 일일 스냅샷 저장 + 매도 알림 ──
 async function runDailySnapshot(env: Env) {
   const kv = env.KV;
@@ -421,6 +476,12 @@ export default {
     // POST /snapshot (수동 트리거)
     if (request.method === 'POST' && url.pathname === '/snapshot') {
       const result = await runDailySnapshot(env);
+      return json({ ok: true, result });
+    }
+
+    // POST /etf-ranking/refresh (수동 ETF 랭킹 업데이트)
+    if (request.method === 'POST' && url.pathname === '/etf-ranking/refresh') {
+      const result = await fetchAndStoreEtfRanking(env);
       return json({ ok: true, result });
     }
 
@@ -537,7 +598,7 @@ export default {
     return json({ error: 'not found' }, 404);
   },
 
-  // ── Cron 트리거 (매일 UTC 07:00 = KST 16:00) ──
+  // ── Cron 트리거 (매일 UTC 03:00 → 일일 스냅샷) ──
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runDailySnapshot(env));
   },

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAppContext } from "../App";
 import * as echarts from "echarts";
 import { MIcon } from "./MIcon";
+import { kvGet, kvSet } from "../api";
 
 type AssetClass = "주식" | "채권" | "금" | "커버드콜" | "기타";
 
@@ -305,9 +306,16 @@ export function Rebalancing() {
   const [selectedClass, setSelectedClass] = useState<AssetClass | null>(null);
   const [holdingViewMode, setHoldingViewMode] = useState<'byClass' | 'byAccount'>('byClass');
 
+  // KV에서 targets 로드 (마운트 시 1회)
   useEffect(() => {
-    saveTargets(targets);
-  }, [targets]);
+    kvGet<TargetAllocation>('rebalancing_targets').then(val => {
+      if (val) {
+        setTargets(val);
+        setTempTargets(val);
+        saveTargets(val); // localStorage 동기화
+      }
+    }).catch(() => {});
+  }, []);
 
   // Classify all holdings
   const classifiedHoldings = useMemo<ClassifiedHolding[]>(() => {
@@ -420,8 +428,11 @@ export function Rebalancing() {
   const totalTargetPct = Object.values(tempTargets).reduce((a, b) => a + b, 0);
 
   const handleSaveTargets = () => {
+    // 이전 값 백업 후 저장
+    kvSet('rebalancing_targets_prev', targets).catch(() => {});
     setTargets({ ...tempTargets });
     saveTargets(tempTargets);
+    kvSet('rebalancing_targets', tempTargets).catch(() => {});
     setEditingTargets(false);
   };
 

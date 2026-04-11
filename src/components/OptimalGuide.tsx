@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAppContext } from '../App';
+import { kvGet } from '../api';
 import { MIcon } from './MIcon';
 import type { Account, Holding } from '../types';
 import { fetchStockSignals, getSellSignal, getBuySignal } from '../utils/fetchStockSignals';
@@ -436,6 +437,28 @@ function BadgeRangeModal({ onClose }: { onClose: () => void }) {
 type TargetAllocation = { 주식: number; 채권: number; 커버드콜: number; 금: number; 기타: number };
 const DEFAULT_TARGETS: TargetAllocation = { 주식: 60, 채권: 20, 커버드콜: 10, 금: 5, 기타: 5 };
 
+// 목표 비중 기반 buys 계산 헬퍼
+function computeBuys(
+  keeps: AccountPlan['keeps'],
+  freedCash: number,
+  tgts: TargetAllocation,
+  prices: Record<string, number>
+): BuyItem[] {
+  if (keeps.length === 0 || freedCash <= 0) return [];
+  const classTotals: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
+  for (const k of keeps) classTotals[k.cls] += k.val;
+  const presentClasses = (Object.keys(classTotals) as AssetClass[]).filter(cls => classTotals[cls] > 0);
+  const totalTargetWeight = presentClasses.reduce((s, cls) => s + (tgts[cls] || 0), 0);
+  return keeps.map(k => {
+    const clsTarget = totalTargetWeight > 0 ? (tgts[k.cls] || 0) / totalTargetWeight : 0;
+    const intraClsWeight = classTotals[k.cls] > 0 ? k.val / classTotals[k.cls] : 0;
+    const addAmount = Math.round(clsTarget * intraClsWeight * freedCash / 10000) * 10000;
+    const price = k.h.isFund ? null : ((k.h.ticker && prices[k.h.ticker]) ? prices[k.h.ticker] : (k.h.avgPrice || null));
+    const shares = (price && price > 0 && !k.h.isFund) ? Math.floor(addAmount / price) : null;
+    return { h: k.h, cls: k.cls, currentVal: k.val, addAmount, shares, price };
+  });
+}
+
 function loadTargetsFromStorage(): TargetAllocation {
   try {
     const raw = localStorage.getItem('rebalancing_targets');
@@ -452,17 +475,18 @@ export function OptimalGuide() {
   const [showRangeGuide, setShowRangeGuide] = useState(false);
   const [signalFilter, setSignalFilter] = useState<SignalFilter>(null);
   const [targets, setTargets] = useState<TargetAllocation>(loadTargetsFromStorage);
+  const [prevTargets, setPrevTargets] = useState<TargetAllocation | null>(null);
+  const [showDivDetail, setShowDivDetail] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1450);
 
-  // rebalancing_targets 변경 감지 (다른 탭/컴포넌트에서 변경 시 반영)
+  // KV에서 targets + prevTargets 로드 (마운트 시 1회)
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'rebalancing_targets' && e.newValue) {
-        try { setTargets(JSON.parse(e.newValue)); } catch {}
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    kvGet<TargetAllocation>('rebalancing_targets').then(val => {
+      if (val) setTargets(val);
+    }).catch(() => {});
+    kvGet<TargetAllocation>('rebalancing_targets_prev').then(val => {
+      if (val) setPrevTargets(val);
+    }).catch(() => {});
   }, []);
 
   // 환율 fetch
@@ -473,23 +497,49 @@ export function OptimalGuide() {
       .catch(() => {});
   }, []);
 
-  // 커버드콜 월 배당금 추정 — dividend_stocks 전체 합산 (배당 페이지 관리 데이터)
+  // 커버드콜 월 배당금 추정 — 목표 비중 기반 스케일링
   const coveredCallMonthlyDiv = useMemo(() => {
     try {
-      const raw = localStorage.getItem('dividend_stocks');
+      // 1. 현재 커버드콜 보유 금액
+      const currentCCVal = accounts.reduce((sum, acc) =>
+        sum + acc.holdings.filter(h => classify(h.name) === '커버드콜')
+          .reduce((s, h) => s + hVal(h, prices), 0), 0);
+      if (currentCCVal <= 0) return 0;
+
+      // 2. dividend_rates_sync에서 배당률 로드, 수량은 accounts에서
+      const raw = localStorage.getItem('dividend_rates_sync') || localStorage.getItem('dividend_stocks');
       if (!raw) return 0;
-      const stocks: { ticker: string; quantity: number; dividendPerShare: number }[] = JSON.parse(raw);
-      let total = 0;
-      for (const s of stocks) {
-        if (!s.quantity || s.quantity <= 0) continue;
-        const baseTicker = s.ticker.replace(/_H$/, '').toUpperCase();
-        const isUsd = /^[A-Z]{2,5}$/.test(baseTicker);
-        const base = s.dividendPerShare * s.quantity;
-        total += isUsd ? base * 0.85 * exchangeRate : base;
+      const ratesRaw: { ticker: string; quantity?: number; dividendPerShare: number }[] = JSON.parse(raw);
+      // ticker → dividendPerShare 맵 구성
+      const rateMap: Record<string, number> = {};
+      for (const r of ratesRaw) {
+        const t = r.ticker.replace(/_H$/, '').toUpperCase();
+        rateMap[t] = r.dividendPerShare;
       }
-      return Math.round(total);
+      let currentDiv = 0;
+      for (const acc of accounts) {
+        for (const h of acc.holdings) {
+          if (!h.ticker) continue;
+          const t = h.ticker.replace(/_H$/, '').toUpperCase();
+          const rate = rateMap[t];
+          if (!rate || !h.quantity) continue;
+          const isUsd = /^[A-Z]{2,5}$/.test(t);
+          const base = rate * h.quantity;
+          currentDiv += isUsd ? base * 0.85 * exchangeRate : base;
+        }
+      }
+      if (currentDiv <= 0) return 0;
+
+      // 3. 전체 자산 × 목표 커버드콜 비중 = 목표 커버드콜 금액
+      const totalAssets = accounts.reduce((sum, acc) =>
+        sum + (acc.cash || 0) + acc.holdings.reduce((s, h) => s + hVal(h, prices), 0), 0);
+      const targetCCVal = totalAssets * (targets['커버드콜'] || 0) / 100;
+
+      // 4. 현재 수익률로 목표 금액 배당 추정
+      const monthlyYield = currentDiv / currentCCVal;
+      return Math.round(targetCCVal * monthlyYield);
     } catch { return 0; }
-  }, [exchangeRate]);
+  }, [accounts, prices, targets, exchangeRate]);
 
   const { accountPlans, totalSells, retirementIssues } = useMemo(() => {
     // 동일 소유자 내 중복 감지
@@ -545,28 +595,8 @@ export function OptimalGuide() {
       const sellTotal = sells.reduce((s, r) => s + r.val, 0);
       const freedCash = sellTotal + cash;
 
-      // 재투자: 목표 비중 기반 배분 + 주수 계산
-      // 각 자산군별 현재 keep 금액 합계
-      const classTotals: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
-      for (const k of keeps) classTotals[k.cls] += k.val;
-
-      // keep 중인 자산군의 목표 비중 합계 (없는 자산군 제외)
-      const presentClasses = (Object.keys(classTotals) as AssetClass[]).filter(cls => classTotals[cls] > 0);
-      const totalTargetWeight = presentClasses.reduce((s, cls) => s + (targets[cls] || 0), 0);
-
-      const keepTotal = keeps.reduce((s, k) => s + k.val, 0);
-      const buys: BuyItem[] = keepTotal > 0 && freedCash > 0
-        ? keeps.map(k => {
-          // 자산군 목표 비중 → 같은 자산군 내 현재 보유 비율로 분배
-          const clsTarget = totalTargetWeight > 0 ? (targets[k.cls] || 0) / totalTargetWeight : 0;
-          const intraClsWeight = classTotals[k.cls] > 0 ? k.val / classTotals[k.cls] : 0;
-          const weight = clsTarget * intraClsWeight;
-          const addAmount = Math.round(weight * freedCash / 10000) * 10000;
-          const price = k.h.isFund ? null : ((k.h.ticker && prices[k.h.ticker]) ? prices[k.h.ticker] : (k.h.avgPrice || null));
-          const shares = (price && price > 0 && !k.h.isFund) ? Math.floor(addAmount / price) : null;
-          return { h: k.h, cls: k.cls, currentVal: k.val, addAmount, shares, price };
-        })
-        : [];
+      // 재투자: 목표 비중 기반 배분
+      const buys = computeBuys(keeps, freedCash, targets, prices);
 
       // 안전자산 (매도 후 기준)
       const projectedTotal = keeps.reduce((s, k) => s + k.val, 0); // 현금은 재투자되므로 제외
@@ -596,6 +626,24 @@ export function OptimalGuide() {
 
     return { accountPlans, totalSells, retirementIssues };
   }, [accounts, prices, targets]);
+
+  // 이전 vs 현재 targets 비교 — 커버드콜 매수금액 변화 계산
+  const divChangePlans = useMemo(() => {
+    if (!prevTargets) return [];
+    const result: { accLabel: string; name: string; before: number; after: number }[] = [];
+    for (const plan of accountPlans) {
+      const prevBuys = computeBuys(plan.keeps, plan.freedCash, prevTargets, prices);
+      for (const k of plan.keeps) {
+        if (k.cls !== '커버드콜') continue;
+        const after = plan.buys.find(b => b.h.id === k.h.id)?.addAmount ?? 0;
+        const before = prevBuys.find(b => b.h.id === k.h.id)?.addAmount ?? 0;
+        if (before !== after) {
+          result.push({ accLabel: accLabel(plan.acc), name: k.h.name, before, after });
+        }
+      }
+    }
+    return result;
+  }, [accountPlans, prevTargets, prices]);
 
   // 전체 티커 수집 후 신호 fetch
   useEffect(() => {
@@ -703,8 +751,13 @@ export function OptimalGuide() {
               <span style={{ fontSize: 11, color: ASSET_COLORS[cls], fontWeight: 600 }}>{cls}</span>
               <span style={{ fontSize: 12, color: ASSET_COLORS[cls], fontWeight: 700 }}>{pct}%</span>
               {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && (
-                <span style={{ fontSize: 10, color: ASSET_COLORS[cls], opacity: 0.75, marginLeft: 2 }}>
+                <span
+                  onClick={e => { e.stopPropagation(); if (divChangePlans.length > 0) setShowDivDetail(true); }}
+                  style={{ fontSize: 10, color: ASSET_COLORS[cls], opacity: 0.85, marginLeft: 2,
+                    cursor: divChangePlans.length > 0 ? 'pointer' : 'default',
+                    textDecoration: divChangePlans.length > 0 ? 'underline dotted' : 'none' }}>
                   월 배당 {fmtKrw(coveredCallMonthlyDiv)}
+                  {divChangePlans.length > 0 && ' ▾'}
                 </span>
               )}
             </div>
@@ -757,6 +810,44 @@ export function OptimalGuide() {
         </button>
       </div>
       {showRangeGuide && <BadgeRangeModal onClose={() => setShowRangeGuide(false)} />}
+
+      {/* 커버드콜 매수 변화 팝업 */}
+      {showDivDetail && divChangePlans.length > 0 && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setShowDivDetail(false)}>
+          <div style={{ background: 'var(--bg-primary)', borderRadius: 16, padding: '20px 20px', width: '100%', maxWidth: 680,
+            maxHeight: '80vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>커버드콜 비중 변경 영향</div>
+              <button onClick={() => setShowDivDetail(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 18 }}>✕</button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 14 }}>
+              {prevTargets && `커버드콜 ${prevTargets['커버드콜']}% → ${targets['커버드콜']}% · 계좌별 추가매수금액 변화`}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {divChangePlans.map((row, i) => {
+                const diff = row.after - row.before;
+                const isIncrease = diff > 0;
+                return (
+                  <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.accLabel}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.4,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{row.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{fmtKrw(row.before)} → {fmtKrw(row.after)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: isIncrease ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                      {isIncrease ? '+' : ''}{fmtKrw(diff)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 12, color: 'var(--text-tertiary)' }}>
+              목표 비중 기준 월 배당 예상: <span style={{ fontWeight: 700, color: 'var(--asset-covered)' }}>{fmtKrw(coveredCallMonthlyDiv)}</span>
+            </div>
+          </div>
+        </div>
+      )}
       {signalsLoading && (
         <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
           <MIcon name="sync" size={14} style={{ color: 'var(--text-tertiary)' }} />
