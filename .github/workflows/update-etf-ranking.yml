@@ -45,15 +45,17 @@ jobs:
                   url = f'{API_URL}?page={page_num}&limit=50&sortBy=dividend_rate&sortOrder=desc'
                   print(f'페이지 {page_num} 수집 중...')
 
-                  response = page.request.get(
-                      url,
-                      headers={
-                          'Accept': 'application/json',
-                          'Referer': 'https://search-etf.com/month_dividend.php',
-                      }
-                  )
+                  # 브라우저 컨텍스트(쿠키 포함)에서 fetch 호출
+                  raw = page.evaluate(f"""async () => {{
+                      const res = await fetch('{url}', {{
+                          headers: {{
+                              'Accept': 'application/json',
+                              'Referer': 'https://search-etf.com/month_dividend.php'
+                          }}
+                      }});
+                      return await res.text();
+                  }}""")
 
-                  raw = response.text()
                   try:
                       body = json.loads(raw)
                   except Exception as e:
