@@ -103,7 +103,7 @@ jobs:
 
           payload = json.dumps({'data': all_data, 'updatedAt': updated_at}, ensure_ascii=False)
 
-          import urllib.request
+          import urllib.request, urllib.error
           put_req = urllib.request.Request(
               f'{WORKER_URL}/kv/etf_ranking',
               data=payload.encode('utf-8'),
@@ -111,10 +111,14 @@ jobs:
               method='PUT'
           )
           try:
-              with urllib.request.urlopen(put_req, timeout=15) as resp:
+              with urllib.request.urlopen(put_req, timeout=30) as resp:
                   result = json.loads(resp.read())
                   print(f'KV 저장 성공: {len(all_data)}개, {updated_at}')
                   print(f'응답: {result}')
+          except urllib.error.HTTPError as e:
+              print(f'KV 저장 실패: HTTP {e.code} {e.reason}')
+              print(f'응답 본문: {e.read().decode("utf-8")[:500]}')
+              sys.exit(1)
           except Exception as e:
               print(f'KV 저장 실패: {e}')
               sys.exit(1)
