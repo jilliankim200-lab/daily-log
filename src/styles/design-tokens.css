@@ -43,6 +43,7 @@
   --color-success: #30C85E;
   --color-warning: #FF9500;
   --color-error: #F04452;
+  --color-gold: #B8860B;
 
   /* 뱃지 배경 투명도 (라이트모드: 진하게) */
   --badge-mix: 18%;
@@ -138,6 +139,7 @@
   --color-success: #C3E88D;
   --color-warning: #FFCB6B;
   --color-error: #F07178;
+  --color-gold: #FFD700;
 
   /* 보더 */
   --border-primary: #2C2C3A;

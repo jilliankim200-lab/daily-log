@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAppContext } from '../App';
-import { kvGet } from '../api';
+import { kvGet, saveAccounts } from '../api';
 import { MIcon } from './MIcon';
 import type { Account, Holding } from '../types';
 import { fetchStockSignals, getSellSignal, getBuySignal } from '../utils/fetchStockSignals';
@@ -73,6 +73,7 @@ interface SellItem {
   cls: AssetClass;
   ret: number | null;
   reason: string;
+  reasonDetail: string;
 }
 
 interface BuyItem {
@@ -87,7 +88,7 @@ interface BuyItem {
 interface AccountPlan {
   acc: Account;
   sells: SellItem[];
-  keeps: { h: Holding; val: number; cls: AssetClass; ret: number | null; isHighReturn: boolean }[];
+  keeps: { h: Holding; val: number; cls: AssetClass; ret: number | null; isHighReturn: boolean; keepReason: string }[];
   buys: BuyItem[];
   freedCash: number;       // 매도 현금 + 기존 현금
   currentSafePct: number;
@@ -188,8 +189,425 @@ function StepHeader({ step, label, sub, color }: { step: number; label: string; 
   );
 }
 
+// ── 계좌 세율 ──────────────────────────────────────────────────
+function accTaxRate(acc: Account): number {
+  const t = acc.accountType;
+  if (t.includes('IRP') || t.includes('퇴직연금')) return 0.055;   // 연금소득세 5.5%
+  if (t.includes('연금저축')) return 0.055;
+  if (t.includes('ISA')) return 0.099;                              // 9.9%
+  return 0.154;                                                     // 일반 배당소득세 15.4%
+}
+
+const WORKER_URL_OG = 'https://asset-dashboard-api.jilliankim200.workers.dev';
+
+// ── 시뮬레이션 비교 패널 ──────────────────────────────────────────
+function ComparisonPanel({ accounts, prices, plans, targets }: {
+  accounts: Account[]; prices: Record<string, number>;
+  plans: AccountPlan[]; targets: TargetAllocation;
+}) {
+  type BacktestItem = { name: string; ticker: string; cls: AssetClass; weight: number; ret: number };
+  const [backtest, setBacktest] = useState<{
+    loading: boolean;
+    items: BacktestItem[];
+    currentRet: number; targetRet: number;
+    currentAmount: number; targetAmount: number;
+    totalAssets: number;
+  } | null>(null);
+
+  const metrics = useMemo(() => {
+    // Before: 현재 상태
+    const beforeByClass: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
+    let totalHoldings = 0;
+    let totalAssets = 0;
+    for (const acc of accounts) {
+      totalHoldings += acc.holdings.length;
+      totalAssets += (acc.cash || 0);
+      for (const h of acc.holdings) {
+        const v = hVal(h, prices);
+        beforeByClass[classify(h.name)] += v;
+        totalAssets += v;
+      }
+    }
+    const duplicates = plans.reduce((s, p) => s + p.sells.length, 0);
+
+    // 퇴직 안전자산 (현재)
+    let beforeSafePct = 0;
+    let beforeSafeCount = 0;
+    for (const p of plans) {
+      if (isRetirementAcc(p.acc)) { beforeSafeCount++; beforeSafePct += p.currentSafePct; }
+    }
+    if (beforeSafeCount > 0) beforeSafePct /= beforeSafeCount;
+
+    // After: 가이드 실행 후
+    const afterByClass: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
+    let afterHoldings = 0;
+    for (const p of plans) {
+      afterHoldings += p.keeps.length;
+      for (const k of p.keeps) {
+        const buyAdd = p.buys.find(b => b.h.id === k.h.id)?.addAmount ?? 0;
+        afterByClass[k.cls] += k.val + buyAdd;
+      }
+    }
+
+    let afterSafePct = 0;
+    let afterSafeCount = 0;
+    for (const p of plans) {
+      if (isRetirementAcc(p.acc)) { afterSafeCount++; afterSafePct += p.projectedSafePct; }
+    }
+    if (afterSafeCount > 0) afterSafePct /= afterSafeCount;
+
+    // ── 1. 절세 효과 ──
+    // 중복 매도 대상 종목의 배당에 대한 세율 차이 절감
+    const AVG_DIVIDEND_YIELD = 0.03; // 보수적 3%
+    let taxSavings = 0;
+    for (const p of plans) {
+      const accRate = accTaxRate(p.acc);
+      for (const s of p.sells) {
+        // 이 종목이 유지되는 계좌(winner)의 세율 찾기
+        let winnerRate = accRate;
+        for (const op of plans) {
+          if (op.keeps.some(k => (k.h.ticker || k.h.name) === (s.h.ticker || s.h.name))) {
+            winnerRate = accTaxRate(op.acc);
+            break;
+          }
+        }
+        if (accRate > winnerRate) {
+          taxSavings += s.val * AVG_DIVIDEND_YIELD * (accRate - winnerRate);
+        }
+      }
+    }
+
+    // ── 2. 비중 준수율 ──
+    const classes: AssetClass[] = ['주식', '채권', '커버드콜', '금', '기타'];
+    const beforeDrift = classes.reduce((s, cls) => {
+      const pct = totalAssets > 0 ? beforeByClass[cls] / totalAssets * 100 : 0;
+      return s + Math.abs(pct - targets[cls]);
+    }, 0);
+    const afterTotal = Object.values(afterByClass).reduce((a, b) => a + b, 0);
+    const afterDrift = classes.reduce((s, cls) => {
+      const pct = afterTotal > 0 ? afterByClass[cls] / afterTotal * 100 : 0;
+      return s + Math.abs(pct - targets[cls]);
+    }, 0);
+    // 100점 만점 (drift 0 = 100점, drift 100 = 0점)
+    const beforeScore = Math.max(0, Math.round(100 - beforeDrift * 2));
+    const afterScore = Math.max(0, Math.round(100 - afterDrift * 2));
+
+    return {
+      totalHoldings, afterHoldings, duplicates, totalAssets,
+      beforeByClass, afterByClass, beforeSafePct, afterSafePct,
+      hasSafe: beforeSafeCount > 0, taxSavings,
+      beforeScore, afterScore, beforeDrift, afterDrift,
+    };
+  }, [accounts, prices, plans, targets]);
+
+  // ── 3. 백테스트 (전체 보유종목) ──
+  const runBacktest = async () => {
+    setBacktest({ loading: true, items: [], currentRet: 0, targetRet: 0, currentAmount: 0, targetAmount: 0, totalAssets: 0 });
+    try {
+      // 전체 보유종목 수집 (ticker 기준 합산)
+      const holdingMap = new Map<string, { name: string; ticker: string; cls: AssetClass; val: number }>();
+      for (const acc of accounts) {
+        for (const h of acc.holdings) {
+          if (!h.ticker) continue;
+          const key = h.ticker;
+          const existing = holdingMap.get(key);
+          if (existing) {
+            existing.val += hVal(h, prices);
+          } else {
+            holdingMap.set(key, { name: h.name, ticker: h.ticker, cls: classify(h.name), val: hVal(h, prices) });
+          }
+        }
+      }
+      const holdings = [...holdingMap.values()];
+      const totalAssets = holdings.reduce((s, h) => s + h.val, 0);
+      if (totalAssets <= 0) { setBacktest(null); return; }
+
+      // 전 종목 1년 일별 종가 fetch
+      const chartData: Record<string, { date: string; price: number }[]> = {};
+      const batchSize = 5;
+      for (let i = 0; i < holdings.length; i += batchSize) {
+        const batch = holdings.slice(i, i + batchSize);
+        await Promise.all(batch.map(async h => {
+          try {
+            const res = await fetch(`${WORKER_URL_OG}/stock-chart/${h.ticker}?days=250`);
+            if (res.ok) chartData[h.ticker] = await res.json();
+          } catch {}
+        }));
+      }
+
+      // 종목별 1년 수익률 계산
+      const items: BacktestItem[] = [];
+      const classReturns: Record<AssetClass, { totalVal: number; weightedRet: number }> = {
+        주식: { totalVal: 0, weightedRet: 0 }, 채권: { totalVal: 0, weightedRet: 0 },
+        커버드콜: { totalVal: 0, weightedRet: 0 }, 금: { totalVal: 0, weightedRet: 0 },
+        기타: { totalVal: 0, weightedRet: 0 },
+      };
+
+      for (const h of holdings) {
+        const data = chartData[h.ticker];
+        let ret = 0;
+        if (data && data.length >= 2) {
+          const first = data[0].price;
+          const last = data[data.length - 1].price;
+          ret = first > 0 ? (last - first) / first : 0;
+        }
+        const weight = h.val / totalAssets;
+        items.push({ name: h.name, ticker: h.ticker, cls: h.cls, weight, ret });
+        classReturns[h.cls].totalVal += h.val;
+        classReturns[h.cls].weightedRet += h.val * ret;
+      }
+
+      // 현재 비중 수익률 = 종목별 (비중 × 수익률) 합산
+      const currentRet = items.reduce((s, it) => s + it.weight * it.ret, 0);
+
+      // 목표 비중 수익률 = 클래스별 (목표비중 × 클래스 평균수익률) 합산
+      const classes: AssetClass[] = ['주식', '채권', '커버드콜', '금', '기타'];
+      let targetRet = 0;
+      for (const cls of classes) {
+        const cr = classReturns[cls];
+        const clsAvgRet = cr.totalVal > 0 ? cr.weightedRet / cr.totalVal : 0;
+        targetRet += (targets[cls] / 100) * clsAvgRet;
+      }
+
+      items.sort((a, b) => b.weight - a.weight);
+
+      setBacktest({
+        loading: false, items,
+        currentRet: Math.round(currentRet * 1000) / 10,
+        targetRet: Math.round(targetRet * 1000) / 10,
+        currentAmount: Math.round(totalAssets * currentRet),
+        targetAmount: Math.round(totalAssets * targetRet),
+        totalAssets,
+      });
+    } catch (err) {
+      console.error('백테스트 실패:', err);
+      setBacktest(null);
+    }
+  };
+
+  const m = metrics;
+  const classes: AssetClass[] = ['주식', '채권', '커버드콜', '금', '기타'];
+
+  return (
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '16px 18px', marginBottom: 18,
+      border: '1px solid var(--border-primary)' }}>
+      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <MIcon name="compare_arrows" size={16} style={{ color: 'var(--accent-blue)' }} />
+        시뮬레이션 비교
+      </div>
+
+      {/* 종목 수 / 중복 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, marginBottom: 14, alignItems: 'center' }}>
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '10px 14px' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>현재</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{m.totalHoldings}개 종목</div>
+          <div style={{ fontSize: 11, color: 'var(--color-loss)', fontWeight: 600 }}>중복 {m.duplicates}개</div>
+        </div>
+        <MIcon name="arrow_forward" size={20} style={{ color: 'var(--text-tertiary)' }} />
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '10px 14px' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>실행 후</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-profit)' }}>{m.afterHoldings}개 종목</div>
+          <div style={{ fontSize: 11, color: 'var(--color-profit)', fontWeight: 600 }}>중복 0개</div>
+        </div>
+      </div>
+
+      {/* 자산 클래스 비중 비교 */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>자산 클래스 비중 변화</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '4px 12px', fontSize: 11, marginBottom: 14 }}>
+        <span style={{ fontWeight: 600, color: 'var(--text-tertiary)' }}></span>
+        <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>현재</span>
+        <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>실행 후</span>
+        <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>목표</span>
+        {classes.map(cls => {
+          const bPct = m.totalAssets > 0 ? m.beforeByClass[cls] / m.totalAssets * 100 : 0;
+          const aPct = m.totalAssets > 0 ? m.afterByClass[cls] / m.totalAssets * 100 : 0;
+          const tPct = targets[cls];
+          const improved = Math.abs(aPct - tPct) < Math.abs(bPct - tPct);
+          return (
+            <React.Fragment key={cls}>
+              <span style={{ fontWeight: 600, color: ASSET_COLORS[cls] }}>{cls}</span>
+              <span style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>{bPct.toFixed(1)}%</span>
+              <span style={{ textAlign: 'right', fontWeight: 600, color: improved ? 'var(--color-profit)' : 'var(--text-secondary)' }}>{aPct.toFixed(1)}%</span>
+              <span style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>{tPct}%</span>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* 퇴직 안전자산 */}
+      {m.hasSafe && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>퇴직 안전자산</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: m.beforeSafePct < 30 ? 'var(--color-loss)' : 'var(--color-profit)' }}>{m.beforeSafePct.toFixed(1)}%</div>
+          </div>
+          <MIcon name="arrow_forward" size={16} style={{ color: 'var(--text-tertiary)' }} />
+          <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>퇴직 안전자산</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: m.afterSafePct >= 30 && m.afterSafePct <= 35 ? 'var(--color-profit)' : 'var(--color-warning)' }}>{m.afterSafePct.toFixed(1)}%</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 1. 절세 효과 ── */}
+      <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <MIcon name="savings" size={15} style={{ color: 'var(--color-profit)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>절세 효과</span>
+          <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>배당수익률 3% 기준 추정</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: m.taxSavings > 0 ? 'var(--color-profit)' : 'var(--text-secondary)' }}>
+            {m.taxSavings > 0 ? `연 ${fmtKrw(Math.round(m.taxSavings))}` : '절세 대상 없음'}
+          </span>
+          {m.taxSavings > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>절감 (세율 차이 × 중복 매도 금액)</span>
+          )}
+        </div>
+        {m.taxSavings > 0 && (
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.6 }}>
+            일반(15.4%) → 연금/IRP(5.5%) 이동 시 배당세 약 10%p 절감<br />
+            일반(15.4%) → ISA(9.9%) 이동 시 약 5.5%p 절감
+          </div>
+        )}
+      </div>
+
+      {/* ── 2. 비중 준수율 ── */}
+      <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+          <MIcon name="target" size={15} style={{ color: 'var(--accent-blue)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>목표 비중 준수율</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: m.beforeScore >= 80 ? 'var(--color-profit)' : m.beforeScore >= 60 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
+              {m.beforeScore}<span style={{ fontSize: 14 }}>점</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>현재</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>편차 {m.beforeDrift.toFixed(1)}%p</div>
+          </div>
+          <MIcon name="arrow_forward" size={20} style={{ color: 'var(--text-tertiary)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: m.afterScore >= 80 ? 'var(--color-profit)' : m.afterScore >= 60 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
+              {m.afterScore}<span style={{ fontSize: 14 }}>점</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>실행 후</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>편차 {m.afterDrift.toFixed(1)}%p</div>
+          </div>
+        </div>
+        {m.afterScore > m.beforeScore && (
+          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--color-profit)', fontWeight: 600 }}>
+            +{m.afterScore - m.beforeScore}점 개선
+          </div>
+        )}
+      </div>
+
+      {/* ── 3. 백테스트 ── */}
+      <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <MIcon name="query_stats" size={15} style={{ color: 'var(--color-warning)' }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>과거 1년 백테스트</span>
+          <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>보유 종목 전체 시세 기반</span>
+        </div>
+        {!backtest ? (
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8, lineHeight: 1.6 }}>
+              보유 중인 <strong style={{ color: 'var(--text-secondary)' }}>모든 종목</strong>의 지난 1년 실제 시세를 가져와서,
+              "지금 비중 그대로 두었을 때" vs "목표 비중대로 리밸런싱했을 때" 수익을 비교합니다.
+            </div>
+            <button onClick={runBacktest}
+              style={{ fontSize: 12, padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+                border: '1px solid var(--accent-blue)', background: 'color-mix(in srgb, var(--accent-blue) 10%, transparent)',
+                color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <MIcon name="play_arrow" size={14} style={{ color: 'var(--accent-blue)' }} />
+              백테스트 실행
+            </button>
+          </div>
+        ) : backtest.loading ? (
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <MIcon name="sync" size={14} style={{ color: 'var(--text-tertiary)' }} />
+            전체 보유종목 1년 시세 분석 중...
+          </div>
+        ) : (
+          <div>
+            {/* 요약: 수익률 + 금액 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 10px', textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 4 }}>현재 비중 유지</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: backtest.currentRet >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                  {backtest.currentRet >= 0 ? '+' : ''}{backtest.currentRet}%
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                  {backtest.currentAmount >= 0 ? '+' : ''}{fmtKrw(backtest.currentAmount)}
+                </div>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>vs</span>
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 10px', textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 4 }}>목표 비중 리밸런싱</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: backtest.targetRet >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                  {backtest.targetRet >= 0 ? '+' : ''}{backtest.targetRet}%
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                  {backtest.targetAmount >= 0 ? '+' : ''}{fmtKrw(backtest.targetAmount)}
+                </div>
+              </div>
+            </div>
+
+            {/* 해석 */}
+            {(() => {
+              const diff = backtest.targetAmount - backtest.currentAmount;
+              const better = diff > 0 ? '목표 비중' : '현재 비중';
+              const absDiff = Math.abs(diff);
+              return (
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+                  {diff !== 0 ? (
+                    <>
+                      1년 전에 총 자산 <strong>{fmtKrw(backtest.totalAssets)}</strong>을{' '}
+                      <strong style={{ color: diff > 0 ? 'var(--color-profit)' : 'var(--text-primary)' }}>{better}</strong>으로 투자했다면,{' '}
+                      <strong style={{ color: 'var(--color-profit)' }}>{fmtKrw(absDiff)}</strong> 더 벌었을 것입니다.
+                    </>
+                  ) : (
+                    <>두 전략의 1년 수익이 동일합니다.</>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* 종목별 상세 */}
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>종목별 1년 수익률</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '3px 10px', fontSize: 11 }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)' }}>종목</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>비중</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>분류</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>1년 수익률</span>
+              {backtest.items.map(it => (
+                <React.Fragment key={it.ticker}>
+                  <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</span>
+                  <span style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>{(it.weight * 100).toFixed(1)}%</span>
+                  <span style={{ textAlign: 'right', color: ASSET_COLORS[it.cls], fontWeight: 600 }}>{it.cls}</span>
+                  <span style={{ textAlign: 'right', fontWeight: 600, color: it.ret >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                    {it.ret >= 0 ? '+' : ''}{(it.ret * 100).toFixed(1)}%
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-quaternary)', lineHeight: 1.5 }}>
+              과거 수익률이 미래를 보장하지 않습니다. 배당금·수수료·환율 미반영.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── 계좌 카드 ──────────────────────────────────────────────────
-function AccountCard({ plan, isMobile, signals, signalFilter }: { plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; signalFilter: SignalFilter }) {
+function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy }: {
+  plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; signalFilter: SignalFilter;
+  execMode?: boolean; checkedSells?: Set<string>; checkedBuys?: Set<string>;
+  onToggleSell?: (key: string) => void; onToggleBuy?: (key: string) => void;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const { acc, sells, keeps, buys, freedCash, projectedSafePct, safeStatus, totalVal, safeAdjust } = plan;
 
@@ -269,8 +687,9 @@ function AccountCard({ plan, isMobile, signals, signalFilter }: { plan: AccountP
                 return (
                   <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
                     opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
-                    <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? '#FFD700' : 'var(--color-profit)'}
+                    <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
                       name={k.h.name} cls={k.cls} ret={k.ret} amount={k.val} />
+                    {k.keepReason && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
                   </div>
                 );
               })}
@@ -290,11 +709,25 @@ function AccountCard({ plan, isMobile, signals, signalFilter }: { plan: AccountP
                   return (
                     <div key={s.h.id} style={{ borderBottom: i < sells.length - 1 ? '1px solid var(--border-secondary)' : 'none',
                       opacity: matched ? 1 : 0.2, transition: 'opacity 0.15s' }}>
-                      <Row badge="전량매도" badgeColor="var(--color-loss)" name={s.h.name} cls={s.cls}
-                        ret={s.ret} amount={s.val}
-                        note={s.h.isFund ? undefined : s.h.quantity ? `${s.h.quantity}주` : undefined}
-                        dim={!matched}
-                        extra={<TimingBadge timing={timing} />} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {execMode && (
+                          <button onClick={() => onToggleSell?.(`${acc.id}__${s.h.id}`)}
+                            style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
+                              border: `2px solid ${checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'var(--color-loss)' : 'var(--text-tertiary)'}`,
+                              background: checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'color-mix(in srgb, var(--color-loss) 20%, transparent)' : 'var(--bg-elevated)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            {checkedSells?.has(`${acc.id}__${s.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-loss)' }} />}
+                          </button>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Row badge="전량매도" badgeColor="var(--color-loss)" name={s.h.name} cls={s.cls}
+                            ret={s.ret} amount={s.val}
+                            note={s.h.isFund ? undefined : s.h.quantity ? `${s.h.quantity}주` : undefined}
+                            dim={!matched}
+                            extra={<TimingBadge timing={timing} />} />
+                        </div>
+                      </div>
+                      {s.reasonDetail && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{s.reasonDetail}</div>}
                     </div>
                   );
                 })}
@@ -334,12 +767,27 @@ function AccountCard({ plan, isMobile, signals, signalFilter }: { plan: AccountP
                     const sig = k.h.ticker ? signals[k.h.ticker] : undefined;
                     const timing = sig ? getBuySignal(sig) : noSignal();
                     const matched = isRowMatch(k.h.ticker, 'buy');
+                    const hasBuy = buy && buy.addAmount > 0;
                     return (
                       <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
                         opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
-                        <Row badge={k.isHighReturn ? '★유지' : '추가매수'} badgeColor={k.isHighReturn ? '#FFD700' : 'var(--color-profit)'}
-                          name={k.h.name} cls={k.cls} ret={k.ret} amount={k.val}
-                          extra={<>{addBadge}<TimingBadge timing={timing} /></>} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {execMode && hasBuy && (
+                            <button onClick={() => onToggleBuy?.(`${acc.id}__${k.h.id}`)}
+                              style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
+                                border: `2px solid ${checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'var(--color-profit)' : 'var(--text-tertiary)'}`,
+                                background: checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'color-mix(in srgb, var(--color-profit) 20%, transparent)' : 'var(--bg-elevated)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                              {checkedBuys?.has(`${acc.id}__${k.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-profit)' }} />}
+                            </button>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <Row badge={k.isHighReturn ? '★유지' : '추가매수'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
+                              name={k.h.name} cls={k.cls} ret={k.ret} amount={k.val}
+                              extra={<>{addBadge}<TimingBadge timing={timing} /></>} />
+                          </div>
+                        </div>
+                        {k.keepReason && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
                       </div>
                     );
                   })}
@@ -459,6 +907,109 @@ function computeBuys(
   });
 }
 
+function computeAllPlans(
+  accounts: Account[], prices: Record<string, number>,
+  targets: TargetAllocation, overrideKeeps: Set<string>
+): { accountPlans: AccountPlan[]; totalSells: number; retirementIssues: number } {
+  const holdingMap = new Map<string, { h: Holding; acc: Account; val: number; ret: number | null }[]>();
+  for (const acc of accounts) {
+    for (const h of acc.holdings) {
+      const key = `${acc.owner}__${h.ticker || h.name}`;
+      if (!holdingMap.has(key)) holdingMap.set(key, []);
+      holdingMap.get(key)!.push({ h, acc, val: hVal(h, prices), ret: calcReturn(h, prices) });
+    }
+  }
+
+  const sellSet = new Set<string>();
+  const reasonMap = new Map<string, { reason: string; reasonDetail: string }>();
+  const keepReasonMap = new Map<string, string>();
+
+  for (const [, group] of holdingMap) {
+    if (group.length <= 1) {
+      keepReasonMap.set(`${group[0].acc.id}__${group[0].h.id}`, '유일 보유');
+      continue;
+    }
+    const sorted = [...group].sort((a, b) => {
+      const pa = accPriority(a.acc), pb = accPriority(b.acc);
+      return pa !== pb ? pb - pa : b.val - a.val;
+    });
+    const winner = sorted[0];
+    const wp = accPriority(winner.acc);
+    keepReasonMap.set(`${winner.acc.id}__${winner.h.id}`,
+      `절세 우선순위 최고 — ${winner.acc.accountType}(${wp})`);
+
+    for (const item of sorted.slice(1)) {
+      const key = `${item.acc.id}__${item.h.id}`;
+      const isHighReturn = item.ret !== null && item.ret >= 40;
+      if (isHighReturn) {
+        keepReasonMap.set(key, `수익률 +${item.ret!.toFixed(1)}% — 40%↑ 보호 규칙`);
+        continue;
+      }
+      if (overrideKeeps.has(key)) {
+        keepReasonMap.set(key, '수동 유지 선택');
+        continue;
+      }
+      sellSet.add(key);
+      const tp = accPriority(item.acc);
+      reasonMap.set(key, {
+        reason: '다른 절세 계좌에 동일 종목',
+        reasonDetail: `${accLabel(winner.acc)}(우선순위 ${wp})에 동일 종목 → ${accLabel(item.acc)}(우선순위 ${tp})에서 매도`
+      });
+    }
+  }
+
+  const accountPlans: AccountPlan[] = accounts.map(acc => {
+    const cash = acc.cash || 0;
+    const totalVal = acc.holdings.reduce((s, h) => s + hVal(h, prices), 0) + cash;
+    const sells: SellItem[] = [];
+    const keeps: AccountPlan['keeps'] = [];
+
+    for (const h of acc.holdings) {
+      const val = hVal(h, prices);
+      const ret = calcReturn(h, prices);
+      const cls = classify(h.name);
+      const key = `${acc.id}__${h.id}`;
+
+      if (sellSet.has(key)) {
+        const r = reasonMap.get(key) || { reason: '다른 절세 계좌에 동일 종목', reasonDetail: '' };
+        sells.push({ h, val, cls, ret, reason: r.reason, reasonDetail: r.reasonDetail });
+      } else {
+        const isHighReturn = ret !== null && ret >= 40;
+        keeps.push({ h, val, cls, ret, isHighReturn, keepReason: keepReasonMap.get(key) || '' });
+      }
+    }
+
+    const sellTotal = sells.reduce((s, r) => s + r.val, 0);
+    const freedCash = sellTotal + cash;
+    const buys = computeBuys(keeps, freedCash, targets, prices);
+
+    const projectedTotal = keeps.reduce((s, k) => s + k.val, 0);
+    const projectedSafe = keeps.reduce((s, k) => isSafeAsset(k.cls) ? s + k.val : s, 0);
+    const projectedSafePct = projectedTotal > 0 ? projectedSafe / projectedTotal * 100 : 0;
+    const currentSafe = acc.holdings.reduce((s, h) => isSafeAsset(classify(h.name)) ? s + hVal(h, prices) : s, cash);
+    const currentSafePct = totalVal > 0 ? currentSafe / totalVal * 100 : 0;
+
+    const isRet = isRetirementAcc(acc);
+    const safeStatus: AccountPlan['safeStatus'] = !isRet ? 'na'
+      : projectedSafePct < 30 ? 'under'
+      : projectedSafePct >= 35 ? 'over'
+      : 'good';
+
+    let safeAdjust: AccountPlan['safeAdjust'] = null;
+    if (isRet && safeStatus === 'under') {
+      safeAdjust = { action: '채권/금 추가 매수', amount: projectedTotal * 0.30 - projectedSafe };
+    } else if (isRet && safeStatus === 'over') {
+      safeAdjust = { action: '주식 추가 or 채권 매도', amount: projectedSafe - projectedTotal * 0.35 };
+    }
+
+    return { acc, sells, keeps, buys, freedCash, currentSafePct, projectedSafePct, safeStatus, safeAdjust, totalVal };
+  });
+
+  const totalSells = accountPlans.reduce((s, p) => s + p.sells.length, 0);
+  const retirementIssues = accountPlans.filter(p => p.safeStatus === 'under' || p.safeStatus === 'over').length;
+  return { accountPlans, totalSells, retirementIssues };
+}
+
 function loadTargetsFromStorage(): TargetAllocation {
   try {
     const raw = localStorage.getItem('rebalancing_targets');
@@ -469,7 +1020,7 @@ function loadTargetsFromStorage(): TargetAllocation {
 
 
 export function OptimalGuide() {
-  const { accounts, prices, isMobile, navigateTo } = useAppContext();
+  const { accounts, prices, isMobile, navigateTo, reloadAccounts } = useAppContext();
   const [signals, setSignals] = useState<Record<string, StockSignal>>({});
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [showRangeGuide, setShowRangeGuide] = useState(false);
@@ -478,6 +1029,11 @@ export function OptimalGuide() {
   const [prevTargets, setPrevTargets] = useState<TargetAllocation | null>(null);
   const [showDivDetail, setShowDivDetail] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1450);
+  const [showComparison, setShowComparison] = useState(false);
+  const [execMode, setExecMode] = useState(false);
+  const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
+  const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
 
   // KV에서 targets + prevTargets 로드 (마운트 시 1회)
   useEffect(() => {
@@ -541,91 +1097,66 @@ export function OptimalGuide() {
     } catch { return 0; }
   }, [accounts, prices, targets, exchangeRate]);
 
-  const { accountPlans, totalSells, retirementIssues } = useMemo(() => {
-    // 동일 소유자 내 중복 감지
-    const holdingMap = new Map<string, { h: Holding; acc: Account; val: number; ret: number | null }[]>();
-    for (const acc of accounts) {
-      for (const h of acc.holdings) {
-        const key = `${acc.owner}__${h.ticker || h.name}`;
-        if (!holdingMap.has(key)) holdingMap.set(key, []);
-        holdingMap.get(key)!.push({ h, acc, val: hVal(h, prices), ret: calcReturn(h, prices) });
+  const { accountPlans, totalSells, retirementIssues } = useMemo(() =>
+    computeAllPlans(accounts, prices, targets, new Set()), [accounts, prices, targets]);
+
+  const toggleCheck = (set: Set<string>, setFn: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
+    setFn(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  };
+
+  const checkedCount = checkedSells.size + checkedBuys.size;
+
+  const handleExecSave = async () => {
+    if (checkedCount === 0) return;
+    setSaving(true);
+    try {
+      const updated = structuredClone(accounts);
+      // 1. 매도 처리: 체크된 종목 제거 + 현금에 매도금액 추가
+      for (const key of checkedSells) {
+        const [accId, holdingId] = key.split('__');
+        const acc = updated.find(a => a.id === accId);
+        if (!acc) continue;
+        const idx = acc.holdings.findIndex(h => h.id === holdingId);
+        if (idx === -1) continue;
+        const h = acc.holdings[idx];
+        const sellVal = hVal(h, prices);
+        acc.holdings.splice(idx, 1);
+        acc.cash = (acc.cash || 0) + sellVal;
       }
-    }
-
-    // 종목별 winner (절세 우선순위)
-    const sellSet = new Set<string>(); // `${accId}__${holdingId}` → 매도 대상
-
-    for (const [, group] of holdingMap) {
-      if (group.length <= 1) continue;
-      const sorted = [...group].sort((a, b) => {
-        const pa = accPriority(a.acc), pb = accPriority(b.acc);
-        return pa !== pb ? pb - pa : b.val - a.val;
-      });
-      const winner = sorted[0];
-      for (const item of sorted.slice(1)) {
-        const isHighReturn = item.ret !== null && item.ret >= 40;
-        if (!isHighReturn) {
-          sellSet.add(`${item.acc.id}__${item.h.id}`);
+      // 2. 추가매수 처리: 체크된 종목의 수량 증가 + 현금 차감
+      for (const key of checkedBuys) {
+        const [accId, holdingId] = key.split('__');
+        const acc = updated.find(a => a.id === accId);
+        if (!acc) continue;
+        const h = acc.holdings.find(hh => hh.id === holdingId);
+        if (!h) continue;
+        // 해당 plan에서 buy 정보 찾기
+        const plan = accountPlans.find(p => p.acc.id === accId);
+        if (!plan) continue;
+        const buy = plan.buys.find(b => b.h.id === holdingId);
+        if (!buy || buy.addAmount <= 0) continue;
+        if (h.isFund) {
+          h.amount = (h.amount || 0) + buy.addAmount;
+        } else if (buy.shares && buy.shares > 0 && buy.price) {
+          h.quantity += buy.shares;
+          // 평단가 재계산
+          const oldCost = h.avgPrice * (h.quantity - buy.shares);
+          const newCost = buy.price * buy.shares;
+          h.avgPrice = Math.round((oldCost + newCost) / h.quantity);
         }
+        acc.cash = Math.max(0, (acc.cash || 0) - buy.addAmount);
       }
+      await saveAccounts(updated);
+      await reloadAccounts();
+      setExecMode(false);
+      setCheckedSells(new Set());
+      setCheckedBuys(new Set());
+    } catch (err) {
+      console.error('실행 저장 실패:', err);
+    } finally {
+      setSaving(false);
     }
-
-    // 계좌별 플랜 계산
-    const accountPlans: AccountPlan[] = accounts.map(acc => {
-      const cash = acc.cash || 0;
-      const totalVal = acc.holdings.reduce((s, h) => s + hVal(h, prices), 0) + cash;
-
-      const sells: SellItem[] = [];
-      const keeps: AccountPlan['keeps'] = [];
-
-      for (const h of acc.holdings) {
-        const val = hVal(h, prices);
-        const ret = calcReturn(h, prices);
-        const cls = classify(h.name);
-        const isHighReturn = ret !== null && ret >= 40;
-
-        if (sellSet.has(`${acc.id}__${h.id}`)) {
-          sells.push({ h, val, cls, ret, reason: '다른 절세 계좌에 동일 종목' });
-        } else {
-          keeps.push({ h, val, cls, ret, isHighReturn });
-        }
-      }
-
-      // 매도 후 여유 현금 (매도금액 + 기존 현금)
-      const sellTotal = sells.reduce((s, r) => s + r.val, 0);
-      const freedCash = sellTotal + cash;
-
-      // 재투자: 목표 비중 기반 배분
-      const buys = computeBuys(keeps, freedCash, targets, prices);
-
-      // 안전자산 (매도 후 기준)
-      const projectedTotal = keeps.reduce((s, k) => s + k.val, 0); // 현금은 재투자되므로 제외
-      const projectedSafe = keeps.reduce((s, k) => isSafeAsset(k.cls) ? s + k.val : s, 0);
-      const projectedSafePct = projectedTotal > 0 ? projectedSafe / projectedTotal * 100 : 0;
-      const currentSafe = acc.holdings.reduce((s, h) => isSafeAsset(classify(h.name)) ? s + hVal(h, prices) : s, cash);
-      const currentSafePct = totalVal > 0 ? currentSafe / totalVal * 100 : 0;
-
-      const isRet = isRetirementAcc(acc);
-      const safeStatus: AccountPlan['safeStatus'] = !isRet ? 'na'
-        : projectedSafePct < 30 ? 'under'
-        : projectedSafePct >= 35 ? 'over'
-        : 'good';
-
-      let safeAdjust: AccountPlan['safeAdjust'] = null;
-      if (isRet && safeStatus === 'under') {
-        safeAdjust = { action: '채권/금 추가 매수', amount: projectedTotal * 0.30 - projectedSafe };
-      } else if (isRet && safeStatus === 'over') {
-        safeAdjust = { action: '주식 추가 or 채권 매도', amount: projectedSafe - projectedTotal * 0.35 };
-      }
-
-      return { acc, sells, keeps, buys, freedCash, currentSafePct, projectedSafePct, safeStatus, safeAdjust, totalVal };
-    });
-
-    const totalSells = accountPlans.reduce((s, p) => s + p.sells.length, 0);
-    const retirementIssues = accountPlans.filter(p => p.safeStatus === 'under' || p.safeStatus === 'over').length;
-
-    return { accountPlans, totalSells, retirementIssues };
-  }, [accounts, prices, targets]);
+  };
 
   // 이전 vs 현재 targets 비교 — 커버드콜 매수금액 변화 계산
   const divChangePlans = useMemo(() => {
@@ -727,6 +1258,39 @@ export function OptimalGuide() {
         ))}
       </div>
 
+      {/* 시뮬레이션 비교 + 실행 */}
+      <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={() => setShowComparison(c => !c)}
+          style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+            border: showComparison ? '1.5px solid var(--accent-blue)' : '1px solid var(--border-primary)',
+            background: showComparison ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
+            color: showComparison ? 'var(--accent-blue)' : 'var(--text-secondary)',
+            display: 'flex', alignItems: 'center', gap: 5 }}>
+          <MIcon name="compare_arrows" size={14} style={{ color: showComparison ? 'var(--accent-blue)' : 'var(--text-tertiary)' }} />
+          시뮬레이션 비교
+        </button>
+        <button onClick={() => { setExecMode(m => !m); setCheckedSells(new Set()); setCheckedBuys(new Set()); }}
+          style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+            border: execMode ? '1.5px solid var(--color-profit)' : '1px solid var(--border-primary)',
+            background: execMode ? 'color-mix(in srgb, var(--color-profit) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
+            color: execMode ? 'var(--color-profit)' : 'var(--text-secondary)',
+            display: 'flex', alignItems: 'center', gap: 5 }}>
+          <MIcon name={execMode ? 'close' : 'play_arrow'} size={14} style={{ color: execMode ? 'var(--color-profit)' : 'var(--text-tertiary)' }} />
+          {execMode ? '실행 취소' : '실행'}
+        </button>
+        {execMode && checkedCount > 0 && (
+          <button onClick={handleExecSave} disabled={saving}
+            style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+              border: 'none', background: 'var(--color-profit)', color: '#fff',
+              display: 'flex', alignItems: 'center', gap: 5, opacity: saving ? 0.6 : 1 }}>
+            <MIcon name="save" size={14} style={{ color: '#fff' }} />
+            {saving ? '저장 중...' : `실행 저장 (${checkedCount}건)`}
+          </button>
+        )}
+      </div>
+
+      {showComparison && <ComparisonPanel accounts={accounts} prices={prices} plans={accountPlans} targets={targets} />}
+
       {/* 목표 비중 카드 */}
       <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -745,9 +1309,9 @@ export function OptimalGuide() {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {(Object.entries(targets) as [AssetClass, number][]).map(([cls, pct]) => (
-            <div key={cls} style={{ display: 'flex', alignItems: 'center', gap: 5,
+            <div key={cls} style={{ display: 'flex', alignItems: 'baseline', gap: 5,
               background: `color-mix(in srgb, ${ASSET_COLORS[cls]} var(--badge-mix), transparent)`,
-              borderRadius: 6, padding: '3px 10px' }}>
+              borderRadius: 6, padding: '4px 10px' }}>
               <span style={{ fontSize: 11, color: ASSET_COLORS[cls], fontWeight: 600 }}>{cls}</span>
               <span style={{ fontSize: 12, color: ASSET_COLORS[cls], fontWeight: 700 }}>{pct}%</span>
               {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && (
@@ -773,7 +1337,7 @@ export function OptimalGuide() {
         <div>① 동일 종목이 여러 계좌에 있으면 <span style={{ color: 'var(--text-secondary)' }}>절세 우선순위 낮은 계좌에서 매도</span></div>
         <div style={{ paddingLeft: 12, color: 'var(--text-tertiary)' }}>IRP &gt; 퇴직연금 &gt; 연금저축 &gt; ISA &gt; 일반/CMA</div>
         <div>② 매도 현금은 <span style={{ color: 'var(--color-profit)' }}>같은 계좌 유지 종목에 목표 비중 기반 재배분</span> (계좌 간 이동 없음)</div>
-        <div>③ <span style={{ color: '#FFD700' }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)</div>
+        <div>③ <span style={{ color: 'var(--color-gold)' }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)</div>
         <div>④ 퇴직/IRP는 매도 후 안전자산(채권+금) 비율이 30~35% 유지되는지 별도 체크</div>
 
         <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginTop: 10, marginBottom: 6 }}>[ 타이밍 신호 기준 — 실제 시세 데이터 ]</div>
@@ -911,7 +1475,10 @@ export function OptimalGuide() {
       )}
 
       {filteredPlans.map(plan => (
-        <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} signalFilter={signalFilter} />
+        <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} signalFilter={signalFilter}
+          execMode={execMode} checkedSells={checkedSells} checkedBuys={checkedBuys}
+          onToggleSell={k => toggleCheck(checkedSells, setCheckedSells, k)}
+          onToggleBuy={k => toggleCheck(checkedBuys, setCheckedBuys, k)} />
       ))}
     </div>
   );
