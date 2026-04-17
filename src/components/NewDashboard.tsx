@@ -40,8 +40,8 @@ export function NewDashboard() {
 
   // 스냅샷은 Cloudflare Worker cron(KST 16:00)이 저장 — 프론트엔드는 저장 안 함
 
-  // 스냅샷 기반 증감 계산
-  const today = new Date().toISOString().slice(0, 10);
+  // 스냅샷 기반 증감 계산 (KST 기준 — toISOString()은 UTC라 KST 새벽 0~9시에 날짜가 비는 버그 방지)
+  const today = (() => { const kst = new Date(Date.now() + 9 * 60 * 60 * 1000); return kst.toISOString().slice(0, 10); })();
   const todaySnap = snapshots.find(s => s.date === today);
   const latestSnap = snapshots[0];
   const prevSnap = snapshots[1];

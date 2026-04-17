@@ -379,7 +379,7 @@ function AccountCard({
             ))}
             {(account.cash || 0) > 0 && (
               <div title={`현금 ${((account.cash! / totalVal) * 100).toFixed(1)}%`}
-                style={{ width: `${(account.cash! / totalVal) * 100}%`, background: '#C3E88D', opacity: 0.5, borderRadius: 2 }} />
+                style={{ width: `${(account.cash! / totalVal) * 100}%`, background: 'var(--color-success)', opacity: 0.5, borderRadius: 2 }} />
             )}
           </div>
           {/* 안전자산 목표 구간 마커 (30% ~ 35%) */}
@@ -586,7 +586,7 @@ export function RebalancingGuide() {
   const similarGroups = useMemo(() => {
     const groups = [
       { label: '나스닥100 계열', keywords: ['나스닥100', '나스닥 100'], color: '#82AAFF' },
-      { label: 'S&P500 계열',   keywords: ['S&P500', 'S&P 500'],       color: '#C3E88D' },
+      { label: 'S&P500 계열',   keywords: ['S&P500', 'S&P 500'],       color: 'var(--color-success)' },
       { label: '미국30년국채',  keywords: ['30년국채', '미국채30'],      color: '#FFCB6B' },
       { label: '단기채 계열',   keywords: ['단기채', '단기채권액티브'],  color: '#89DDFF' },
       { label: '커버드콜 계열', keywords: ['커버드콜'],                  color: '#F78C6C' },
@@ -757,7 +757,7 @@ export function RebalancingGuide() {
                       );
                     })}
                     {(acc.cash || 0) > 0 && (
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: 'color-mix(in srgb, #C3E88D 15%, transparent)', color: '#C3E88D' }}>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)' }}>
                         현금 {((acc.cash! / totalVal) * 100).toFixed(1)}%
                       </span>
                     )}
@@ -871,7 +871,7 @@ export function RebalancingGuide() {
                           background: `color-mix(in srgb, ${ASSET_COLORS[d.cls]} 15%, transparent)`,
                           color: ASSET_COLORS[d.cls],
                         }}>{d.cls}</span>
-                        {isSafe && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: 'color-mix(in srgb, #C3E88D 15%, transparent)', color: '#C3E88D' }}>안전자산</span>}
+                        {isSafe && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)' }}>안전자산</span>}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {d.accounts.map((a, i) => {

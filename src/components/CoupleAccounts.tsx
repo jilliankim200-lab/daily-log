@@ -556,13 +556,13 @@ function AccountCard({
               <thead>
                 <tr>
                   <th>종목명</th>
-                  <th>티커</th>
+                  <th style={{ textAlign: 'right' }}>수익률</th>
                   <th style={{ textAlign: 'right' }}>평단가</th>
                   <th style={{ textAlign: 'right' }}>현재가</th>
                   <th style={{ textAlign: 'right' }}>수량</th>
                   <th style={{ textAlign: 'right' }}>매입금액</th>
                   <th style={{ textAlign: 'right' }}>평가금액</th>
-                  <th style={{ textAlign: 'right' }}>수익률</th>
+                  <th>티커</th>
                   <th style={{ textAlign: 'center', width: 70 }}></th>
                 </tr>
               </thead>
@@ -593,7 +593,7 @@ function AccountCard({
                             <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
                           </span>
                         </td>
-                        <td style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}>-</td>
+                        <td style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>-</td>
                         <td style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>-</td>
                         <td style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>-</td>
                         <td style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>-</td>
@@ -622,24 +622,31 @@ function AccountCard({
                     );
                   }
 
-                  return (
+                  return (() => {
+                    const cp = prices[h.ticker];
+                    const evalAmt = cp ? cp * h.quantity : h.avgPrice * h.quantity;
+                    const pnl = cp ? evalAmt - h.avgPrice * h.quantity : 0;
+                    const pnlRate = cp && h.avgPrice > 0 ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
+                    return (
                     <tr key={h.id}>
                       <td style={{ fontWeight: 'var(--font-medium)' }}>{h.name}</td>
-                      <td style={{ color: 'var(--text-primary)', fontWeight: 'var(--font-medium)' }}>
-                        {h.ticker ? (
-                          <a href={`https://www.tossinvest.com/stocks/A${h.ticker}/order`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onClick={e => e.stopPropagation()}>{h.ticker}</a>
-                        ) : '-'}
+                      {/* 수익률 — 2번째 열 */}
+                      <td className="toss-number" style={{
+                        textAlign: 'right', fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-xs)',
+                        color: pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
+                      }}>
+                        {isAmountHidden ? '••••' : !cp ? '-' : (
+                          <span>
+                            {pnl > 0 ? '+' : ''}{fmt(pnl)}원<br/>
+                            <span style={{ fontSize: 11 }}>({pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(2)}%)</span>
+                          </span>
+                        )}
                       </td>
                       <td className="toss-number" style={{ textAlign: 'right' }}>
                         {isAmountHidden ? '••••' : fmt(h.avgPrice)}
                       </td>
                       <td className="toss-number" style={{ textAlign: 'right' }}>
-                        {(() => {
-                          const cp = prices[h.ticker];
-                          if (isAmountHidden) return '••••';
-                          if (!cp) return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
-                          return fmt(cp);
-                        })()}
+                        {isAmountHidden ? '••••' : cp ? fmt(cp) : <span style={{ color: 'var(--text-tertiary)' }}>-</span>}
                       </td>
                       <td className="toss-number" style={{ textAlign: 'right' }}>
                         {isAmountHidden ? '••••' : fmt(h.quantity)}
@@ -647,30 +654,15 @@ function AccountCard({
                       <td className="toss-number" style={{ textAlign: 'right' }}>
                         {isAmountHidden ? '••••' : `${fmt(h.avgPrice * h.quantity)}원`}
                       </td>
-                      {(() => {
-                        const cp = prices[h.ticker];
-                        const evalAmt = cp ? cp * h.quantity : h.avgPrice * h.quantity;
-                        const pnl = cp ? evalAmt - h.avgPrice * h.quantity : 0;
-                        const pnlRate = cp && h.avgPrice > 0 ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
-                        return (
-                          <>
-                            <td className="toss-number" style={{ textAlign: 'right', fontWeight: 'var(--font-semibold)' }}>
-                              {isAmountHidden ? '••••' : `${fmt(evalAmt)}원`}
-                            </td>
-                            <td className="toss-number" style={{
-                              textAlign: 'right', fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-xs)',
-                              color: pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
-                            }}>
-                              {isAmountHidden ? '••••' : !cp ? '-' : (
-                                <span>
-                                  {pnl > 0 ? '+' : ''}{fmt(pnl)}원<br/>
-                                  <span style={{ fontSize: 11 }}>({pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(2)}%)</span>
-                                </span>
-                              )}
-                            </td>
-                          </>
-                        );
-                      })()}
+                      <td className="toss-number" style={{ textAlign: 'right', fontWeight: 'var(--font-semibold)' }}>
+                        {isAmountHidden ? '••••' : `${fmt(evalAmt)}원`}
+                      </td>
+                      {/* 티커 — 마지막 열 */}
+                      <td style={{ color: 'var(--text-primary)', fontWeight: 'var(--font-medium)' }}>
+                        {h.ticker ? (
+                          <a href={`https://www.tossinvest.com/stocks/A${h.ticker}/order`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }} onClick={e => e.stopPropagation()}>{h.ticker}</a>
+                        ) : '-'}
+                      </td>
                       <td style={{ textAlign: 'center' }}>
                         <div className="flex items-center justify-center gap-0.5">
                           <button onClick={() => setEditingHoldingId(h.id)} className="p-1 rounded transition-colors" style={{ color: 'var(--text-tertiary)' }}
@@ -686,7 +678,8 @@ function AccountCard({
                         </div>
                       </td>
                     </tr>
-                  );
+                    );
+                  })();
                 })}
               </tbody>
             </table>

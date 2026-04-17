@@ -417,10 +417,6 @@ async function runDailySnapshot(env: Env) {
   const prevSignals: SignalSnapshot = prevSignalsRaw ? JSON.parse(prevSignalsRaw) : {};
   const signalChanges = collectSignalChanges(accounts, currentSignals, prevSignals);
 
-  // 매도 신호 체크 및 이메일 발송 (스냅샷과 병렬 실행)
-  const sellItems = collectSellSignals(accounts, prices);
-  const emailPromise = sendDailyAlert(env, sellItems, signalChanges, today);
-
   const wifeAccounts = accounts.filter((a: any) => a.owner === 'wife');
   const husbandAccounts = accounts.filter((a: any) => a.owner === 'husband');
   const totalAsset = calcHoldings(accounts, prices) + otherAssets.reduce((s: number, a: any) => s + a.amount, 0);
@@ -438,10 +434,14 @@ async function runDailySnapshot(env: Env) {
   else existing.push(snap);
   const sorted = existing.filter((s: any) => s && s.date).sort((a: any, b: any) => b.date.localeCompare(a.date)).slice(0, 365);
 
-  await Promise.all([
-    kv.put('snapshots', JSON.stringify(sorted)),
+  // 스냅샷 저장 먼저 — 이메일/신호 실패가 스냅샷을 날리지 않도록 분리
+  await kv.put('snapshots', JSON.stringify(sorted));
+
+  // 이메일·신호 저장은 실패해도 스냅샷에 영향 없음
+  const sellItems = collectSellSignals(accounts, prices);
+  await Promise.allSettled([
     kv.put('signal_snapshot', JSON.stringify(currentSignals)),
-    emailPromise,
+    sendDailyAlert(env, sellItems, signalChanges, today).catch(e => console.error('email failed:', e)),
   ]);
 
   return `saved: ${today} | ${Math.round(totalAsset).toLocaleString()}원 | 매도신호: ${sellItems.length}종목 | 신호변화: ${signalChanges.length}종목`;

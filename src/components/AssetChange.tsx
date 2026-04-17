@@ -28,7 +28,7 @@ const PERIOD_TABS: { key: PeriodKey; label: string; days: number | null }[] = [
 
 function generateMockSnapshots(totalAsset: number): DailySnapshot[] {
   const snapshots: DailySnapshot[] = [];
-  const today = new Date();
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000); // KST 기준
   const days = 90;
   let currentTotal = totalAsset * 0.85;
 
