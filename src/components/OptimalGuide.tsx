@@ -117,11 +117,11 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default',
         background: `color-mix(in srgb, ${timing.color} var(--badge-mix), transparent)`,
         borderRadius: 5, padding: hasRange ? '2px 6px 3px' : '2px 6px' }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: timing.color, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: timing.color, whiteSpace: 'nowrap' }}>
           {timing.label}
         </span>
         {hasRange && (
-          <span style={{ fontSize: 9, fontWeight: 400, color: timing.color, opacity: 0.8, marginTop: 1, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 400, color: timing.color, opacity: 0.8, marginTop: 1, whiteSpace: 'nowrap' }}>
             {fmtP(timing.range![0])}~{fmtP(timing.range![1])}
           </span>
         )}
@@ -129,7 +129,7 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
       {show && (
         <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
           background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
-          borderRadius: 8, padding: '7px 11px', fontSize: 11, color: 'var(--text-primary)',
+          borderRadius: 8, padding: '7px 11px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
           whiteSpace: 'nowrap', boxShadow: 'var(--shadow-tooltip)' }}>
           {timing.desc}
         </div>
@@ -145,27 +145,27 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra }: {
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', opacity: dim ? 0.55 : 1 }}>
-      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600, flexShrink: 0,
+      <span style={{ fontSize: 'var(--text-sm)', padding: '2px 8px', borderRadius: 6, fontWeight: 600, flexShrink: 0,
         minWidth: 44, textAlign: 'center',
         background: `color-mix(in srgb, ${badgeColor} var(--badge-mix), transparent)`, color: badgeColor }}>
         {badge}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 13, color: dim ? 'var(--text-tertiary)' : 'var(--text-primary)', fontWeight: 500,
+        <span style={{ fontSize: 'var(--text-base)', color: dim ? 'var(--text-tertiary)' : 'var(--text-primary)', fontWeight: 500,
           textDecoration: dim ? 'line-through' : 'none' }}>{name}</span>
-        {cls && <span style={{ fontSize: 10, marginLeft: 5, padding: '1px 5px', borderRadius: 4,
+        {cls && <span style={{ fontSize: 'var(--text-xs)', marginLeft: 5, padding: '1px 5px', borderRadius: 4,
           background: `color-mix(in srgb, ${ASSET_COLORS[cls]} var(--badge-mix), transparent)`, color: ASSET_COLORS[cls] }}>{cls}</span>}
       </div>
-      {note && <span style={{ fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>{note}</span>}
+      {note && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', flexShrink: 0 }}>{note}</span>}
       {(ret != null || amount != null) && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, gap: 1 }}>
           {ret != null && (
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
               수익률 <span style={{ fontWeight: 600, color: ret >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>{ret >= 0 ? '+' : ''}{ret.toFixed(1)}%</span>
             </span>
           )}
           {amount != null && (
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
               보유 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtKrw(amount)}</span>
             </span>
           )}
@@ -181,10 +181,10 @@ function StepHeader({ step, label, sub, color }: { step: number; label: string; 
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 }}>
       <div style={{ width: 22, height: 22, borderRadius: '50%', background: `color-mix(in srgb, ${color} 20%, transparent)`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color }}>{step}</span>
+        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color }}>{step}</span>
       </div>
-      <span style={{ fontSize: 13, fontWeight: 700, color }}>{label}</span>
-      {sub && <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>{sub}</span>}
+      <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color }}>{label}</span>
+      {sub && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', fontWeight: 400 }}>{sub}</span>}
     </div>
   );
 }
@@ -391,7 +391,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
   return (
     <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '16px 18px', marginBottom: 18,
       border: '1px solid var(--border-primary)' }}>
-      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
         <MIcon name="compare_arrows" size={16} style={{ color: 'var(--accent-blue)' }} />
         시뮬레이션 비교
       </div>
@@ -399,21 +399,21 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
       {/* 종목 수 / 중복 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, marginBottom: 14, alignItems: 'center' }}>
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '10px 14px' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>현재</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{m.totalHoldings}개 종목</div>
-          <div style={{ fontSize: 11, color: 'var(--color-loss)', fontWeight: 600 }}>중복 {m.duplicates}개</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>현재</div>
+          <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>{m.totalHoldings}개 종목</div>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-loss)', fontWeight: 600 }}>중복 {m.duplicates}개</div>
         </div>
         <MIcon name="arrow_forward" size={20} style={{ color: 'var(--text-tertiary)' }} />
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '10px 14px' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>실행 후</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-profit)' }}>{m.afterHoldings}개 종목</div>
-          <div style={{ fontSize: 11, color: 'var(--color-profit)', fontWeight: 600 }}>중복 0개</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>실행 후</div>
+          <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-profit)' }}>{m.afterHoldings}개 종목</div>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-profit)', fontWeight: 600 }}>중복 0개</div>
         </div>
       </div>
 
       {/* 자산 클래스 비중 비교 */}
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>자산 클래스 비중 변화</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '4px 12px', fontSize: 11, marginBottom: 14 }}>
+      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>자산 클래스 비중 변화</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '4px 12px', fontSize: 'var(--text-sm)', marginBottom: 14 }}>
         <span style={{ fontWeight: 600, color: 'var(--text-tertiary)' }}></span>
         <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>현재</span>
         <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>실행 후</span>
@@ -438,13 +438,13 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
       {m.hasSafe && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center', marginBottom: 14 }}>
           <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>퇴직 안전자산</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: m.beforeSafePct < 30 ? 'var(--color-loss)' : 'var(--color-profit)' }}>{m.beforeSafePct.toFixed(1)}%</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600 }}>퇴직 안전자산</div>
+            <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: m.beforeSafePct < 30 ? 'var(--color-loss)' : 'var(--color-profit)' }}>{m.beforeSafePct.toFixed(1)}%</div>
           </div>
           <MIcon name="arrow_forward" size={16} style={{ color: 'var(--text-tertiary)' }} />
           <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>퇴직 안전자산</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: m.afterSafePct >= 30 && m.afterSafePct <= 35 ? 'var(--color-profit)' : 'var(--color-warning)' }}>{m.afterSafePct.toFixed(1)}%</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600 }}>퇴직 안전자산</div>
+            <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: m.afterSafePct >= 30 && m.afterSafePct <= 35 ? 'var(--color-profit)' : 'var(--color-warning)' }}>{m.afterSafePct.toFixed(1)}%</div>
           </div>
         </div>
       )}
@@ -453,19 +453,19 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
       <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <MIcon name="savings" size={15} style={{ color: 'var(--color-profit)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>절세 효과</span>
-          <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>배당수익률 3% 기준 추정</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>절세 효과</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>배당수익률 3% 기준 추정</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span style={{ fontSize: 20, fontWeight: 800, color: m.taxSavings > 0 ? 'var(--color-profit)' : 'var(--text-secondary)' }}>
+          <span style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: m.taxSavings > 0 ? 'var(--color-profit)' : 'var(--text-secondary)' }}>
             {m.taxSavings > 0 ? `연 ${fmtKrw(Math.round(m.taxSavings))}` : '절세 대상 없음'}
           </span>
           {m.taxSavings > 0 && (
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>절감 (세율 차이 × 중복 매도 금액)</span>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>절감 (세율 차이 × 중복 매도 금액)</span>
           )}
         </div>
         {m.taxSavings > 0 && (
-          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.6 }}>
             일반(15.4%) → 연금/IRP(5.5%) 이동 시 배당세 약 10%p 절감<br />
             일반(15.4%) → ISA(9.9%) 이동 시 약 5.5%p 절감
           </div>
@@ -476,27 +476,27 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
       <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
           <MIcon name="target" size={15} style={{ color: 'var(--accent-blue)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>목표 비중 준수율</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>목표 비중 준수율</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: m.beforeScore >= 80 ? 'var(--color-profit)' : m.beforeScore >= 60 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
-              {m.beforeScore}<span style={{ fontSize: 14 }}>점</span>
+            <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: m.beforeScore >= 80 ? 'var(--color-profit)' : m.beforeScore >= 60 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
+              {m.beforeScore}<span style={{ fontSize: 'var(--text-base)' }}>점</span>
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>현재</div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>편차 {m.beforeDrift.toFixed(1)}%p</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600 }}>현재</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>편차 {m.beforeDrift.toFixed(1)}%p</div>
           </div>
           <MIcon name="arrow_forward" size={20} style={{ color: 'var(--text-tertiary)' }} />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: m.afterScore >= 80 ? 'var(--color-profit)' : m.afterScore >= 60 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
-              {m.afterScore}<span style={{ fontSize: 14 }}>점</span>
+            <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: m.afterScore >= 80 ? 'var(--color-profit)' : m.afterScore >= 60 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
+              {m.afterScore}<span style={{ fontSize: 'var(--text-base)' }}>점</span>
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>실행 후</div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>편차 {m.afterDrift.toFixed(1)}%p</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600 }}>실행 후</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>편차 {m.afterDrift.toFixed(1)}%p</div>
           </div>
         </div>
         {m.afterScore > m.beforeScore && (
-          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--color-profit)', fontWeight: 600 }}>
+          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 'var(--text-sm)', color: 'var(--color-profit)', fontWeight: 600 }}>
             +{m.afterScore - m.beforeScore}점 개선
           </div>
         )}
@@ -506,17 +506,17 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
       <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <MIcon name="query_stats" size={15} style={{ color: 'var(--color-warning)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>과거 1년 백테스트</span>
-          <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>보유 종목 전체 시세 기반</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>과거 1년 백테스트</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>보유 종목 전체 시세 기반</span>
         </div>
         {!backtest ? (
           <div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 8, lineHeight: 1.6 }}>
               보유 중인 <strong style={{ color: 'var(--text-secondary)' }}>모든 종목</strong>의 지난 1년 실제 시세를 가져와서,
               "지금 비중 그대로 두었을 때" vs "목표 비중대로 리밸런싱했을 때" 수익을 비교합니다.
             </div>
             <button onClick={runBacktest}
-              style={{ fontSize: 12, padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+              style={{ fontSize: 'var(--text-sm)', padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
                 border: '1px solid var(--accent-blue)', background: 'color-mix(in srgb, var(--accent-blue) 10%, transparent)',
                 color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <MIcon name="play_arrow" size={14} style={{ color: 'var(--accent-blue)' }} />
@@ -524,7 +524,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
             </button>
           </div>
         ) : backtest.loading ? (
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <MIcon name="sync" size={14} style={{ color: 'var(--text-tertiary)' }} />
             전체 보유종목 1년 시세 분석 중...
           </div>
@@ -533,21 +533,21 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
             {/* 요약: 수익률 + 금액 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'center', marginBottom: 12 }}>
               <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 4 }}>현재 비중 유지</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: backtest.currentRet >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 4 }}>현재 비중 유지</div>
+                <div style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: backtest.currentRet >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
                   {backtest.currentRet >= 0 ? '+' : ''}{backtest.currentRet}%
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 2 }}>
                   {backtest.currentAmount >= 0 ? '+' : ''}{fmtKrw(backtest.currentAmount)}
                 </div>
               </div>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>vs</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', fontWeight: 600 }}>vs</span>
               <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 4 }}>목표 비중 리밸런싱</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: backtest.targetRet >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 4 }}>목표 비중 리밸런싱</div>
+                <div style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: backtest.targetRet >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
                   {backtest.targetRet >= 0 ? '+' : ''}{backtest.targetRet}%
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 2 }}>
                   {backtest.targetAmount >= 0 ? '+' : ''}{fmtKrw(backtest.targetAmount)}
                 </div>
               </div>
@@ -559,7 +559,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
               const better = diff > 0 ? '목표 비중' : '현재 비중';
               const absDiff = Math.abs(diff);
               return (
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 'var(--text-sm)', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
                   {diff !== 0 ? (
                     <>
                       1년 전에 총 자산 <strong>{fmtKrw(backtest.totalAssets)}</strong>을{' '}
@@ -574,8 +574,8 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
             })()}
 
             {/* 종목별 상세 */}
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>종목별 1년 수익률</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '3px 10px', fontSize: 11 }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>종목별 1년 수익률</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '3px 10px', fontSize: 'var(--text-sm)' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-tertiary)' }}>종목</span>
               <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>비중</span>
               <span style={{ fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right' }}>분류</span>
@@ -592,7 +592,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
               ))}
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-quaternary)', lineHeight: 1.5 }}>
+            <div style={{ marginTop: 10, fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', lineHeight: 1.5 }}>
               과거 수익률이 미래를 보장하지 않습니다. 배당금·수수료·환율 미반영.
             </div>
           </div>
@@ -638,18 +638,18 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
         borderBottom: collapsed ? 'none' : '1px solid var(--border-secondary)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{accLabel(acc)}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', borderRadius: 5, padding: '1px 6px' }}>{acc.accountType}</span>
+          <span style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{accLabel(acc)}</span>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', borderRadius: 5, padding: '1px 6px' }}>{acc.accountType}</span>
           {sells.length > 0
-            ? <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, fontWeight: 600, background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)', color: 'var(--color-loss)' }}>매도 {sells.length}개</span>
-            : <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, fontWeight: 600, background: 'color-mix(in srgb, var(--color-profit) 15%, transparent)', color: 'var(--color-profit)' }}>변경 없음</span>
+            ? <span style={{ fontSize: 'var(--text-sm)', padding: '2px 7px', borderRadius: 6, fontWeight: 600, background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)', color: 'var(--color-loss)' }}>매도 {sells.length}개</span>
+            : <span style={{ fontSize: 'var(--text-sm)', padding: '2px 7px', borderRadius: 6, fontWeight: 600, background: 'color-mix(in srgb, var(--color-profit) 15%, transparent)', color: 'var(--color-profit)' }}>변경 없음</span>
           }
-          {isRet && hasIssue && <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, fontWeight: 600, background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)', color: 'var(--color-loss)' }}>
+          {isRet && hasIssue && <span style={{ fontSize: 'var(--text-sm)', padding: '2px 7px', borderRadius: 6, fontWeight: 600, background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)', color: 'var(--color-loss)' }}>
             {safeStatus === 'under' ? '⚠ 안전자산 미달' : '▲ 안전자산 초과'}
           </span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtKrw(totalVal)}</span>
+          <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtKrw(totalVal)}</span>
           <MIcon name={collapsed ? 'expand_more' : 'expand_less'} size={18} style={{ color: 'var(--text-tertiary)' }} />
         </div>
       </div>
@@ -663,12 +663,12 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
               background: safeStatus === 'good' ? 'color-mix(in srgb, var(--color-profit) 8%, var(--bg-tertiary))' : safeStatus === 'over' ? 'color-mix(in srgb, var(--color-warning) 8%, var(--bg-tertiary))' : 'color-mix(in srgb, var(--color-loss) 8%, var(--bg-tertiary))',
               border: `1px solid ${safeStatus === 'good' ? 'color-mix(in srgb, var(--color-profit) 20%, transparent)' : 'color-mix(in srgb, var(--color-loss) 20%, transparent)'}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>매도 후 안전자산 비율</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)' }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>매도 후 안전자산 비율</span>
+                <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)' }}>
                   {projectedSafePct.toFixed(1)}% {safeStatus === 'good' ? '✓ 적정' : safeStatus === 'under' ? '⚠ 미달' : '▲ 초과'}
                 </span>
               </div>
-              {safeAdjust && <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: safeStatus === 'under' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
+              {safeAdjust && <div style={{ marginTop: 4, fontSize: 'var(--text-sm)', fontWeight: 600, color: safeStatus === 'under' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
                 → {safeAdjust.action} 필요: {fmtKrw(safeAdjust.amount)}
               </div>}
               <div style={{ position: 'relative', height: 5, marginTop: 8, background: 'var(--bg-elevated)', borderRadius: 3 }}>
@@ -689,7 +689,7 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                     opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
                     <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
                       name={k.h.name} cls={k.cls} ret={k.ret} amount={k.val} />
-                    {k.keepReason && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
+                    {k.keepReason && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
                   </div>
                 );
               })}
@@ -727,7 +727,7 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                             extra={<TimingBadge timing={timing} />} />
                         </div>
                       </div>
-                      {s.reasonDetail && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{s.reasonDetail}</div>}
+                      {s.reasonDetail && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{s.reasonDetail}</div>}
                     </div>
                   );
                 })}
@@ -746,7 +746,7 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
 
               {noKeeps ? (
                 <div style={{ background: 'color-mix(in srgb, var(--color-warning) 8%, var(--bg-tertiary))', borderRadius: 10, padding: '12px 14px',
-                  border: '1px solid color-mix(in srgb, var(--color-warning) 20%, transparent)', fontSize: 12, color: 'var(--color-warning)', lineHeight: 1.7 }}>
+                  border: '1px solid color-mix(in srgb, var(--color-warning) 20%, transparent)', fontSize: 'var(--text-sm)', color: 'var(--color-warning)', lineHeight: 1.7 }}>
                   <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ 이 계좌에 유지할 종목이 없습니다</div>
                   <div style={{ color: 'var(--text-secondary)' }}>모든 종목이 다른 계좌에도 보유 중입니다. 아래 중 하나를 선택하세요:</div>
                   <div style={{ marginTop: 6, color: 'var(--text-tertiary)' }}>
@@ -759,7 +759,7 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                   {keeps.map((k, i) => {
                     const buy = buys.find(b => b.h.id === k.h.id);
                     const addBadge = buy && buy.addAmount > 0 ? (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-profit)', flexShrink: 0,
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', flexShrink: 0,
                         background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4, fontWeight: 400 }}>
                         +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
                       </span>
@@ -787,7 +787,7 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                               extra={<>{addBadge}<TimingBadge timing={timing} /></>} />
                           </div>
                         </div>
-                        {k.keepReason && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
+                        {k.keepReason && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
                       </div>
                     );
                   })}
@@ -828,27 +828,27 @@ function BadgeRangeModal({ onClose }: { onClose: () => void }) {
         {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 18px', borderBottom: '1px solid var(--border-secondary)' }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>타이밍 뱃지별 범위 기준</span>
+          <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>타이밍 뱃지별 범위 기준</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text-tertiary)', fontSize: 18, lineHeight: 1, padding: '2px 4px' }}>✕</button>
         </div>
         {/* 설명 */}
-        <div style={{ padding: '10px 18px 6px', fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
+        <div style={{ padding: '10px 18px 6px', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
           뱃지 아래 숫자는 해당 신호가 유효한 <strong style={{ color: 'var(--text-secondary)' }}>매도/매수 실행 가격 범위</strong>입니다.
           매도 범위는 현재가·기술적 고점 기준, 매수 범위는 저점·MA 기준으로 산출합니다.
         </div>
         {/* 테이블 */}
         <div style={{ overflowY: 'auto', padding: '4px 18px 18px' }}>
           {/* 매도 */}
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-loss)', margin: '12px 0 6px', letterSpacing: 1 }}>SELL — 매도 신호</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-loss)', margin: '12px 0 6px', letterSpacing: 1 }}>SELL — 매도 신호</div>
           <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-secondary)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', background: 'var(--bg-tertiary)',
-              padding: '6px 12px', fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
+              padding: '6px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
               <span>뱃지</span><span>가격 범위</span><span>설명</span>
             </div>
             {BADGE_RANGE_ROWS.filter(r => r.type === '매도').map((r, i, arr) => (
               <div key={r.badge} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', gap: 8,
-                padding: '8px 12px', fontSize: 11, alignItems: 'start',
+                padding: '8px 12px', fontSize: 'var(--text-sm)', alignItems: 'start',
                 borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none',
                 background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)' }}>
                 <span style={{ fontWeight: 600, color: r.color }}>{r.badge}</span>
@@ -858,15 +858,15 @@ function BadgeRangeModal({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           {/* 매수 */}
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-profit)', margin: '16px 0 6px', letterSpacing: 1 }}>BUY — 매수 신호</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', margin: '16px 0 6px', letterSpacing: 1 }}>BUY — 매수 신호</div>
           <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-secondary)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', background: 'var(--bg-tertiary)',
-              padding: '6px 12px', fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
+              padding: '6px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
               <span>뱃지</span><span>가격 범위</span><span>설명</span>
             </div>
             {BADGE_RANGE_ROWS.filter(r => r.type === '매수').map((r, i) => (
               <div key={r.badge} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', gap: 8,
-                padding: '8px 12px', fontSize: 11, alignItems: 'start',
+                padding: '8px 12px', fontSize: 'var(--text-sm)', alignItems: 'start',
                 borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none',
                 background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)' }}>
                 <span style={{ fontWeight: 600, color: r.color }}>{r.badge}</span>
@@ -926,7 +926,6 @@ function computeAllPlans(
 
   for (const [, group] of holdingMap) {
     if (group.length <= 1) {
-      keepReasonMap.set(`${group[0].acc.id}__${group[0].h.id}`, '유일 보유');
       continue;
     }
     const sorted = [...group].sort((a, b) => {
@@ -1234,7 +1233,7 @@ export function OptimalGuide() {
     <div style={{ padding: p }}>
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>최적 가이드</div>
-        <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+        <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)' }}>
           중복 종목은 하위 계좌에서 매도하고, 그 현금을 같은 계좌 내 유지 종목에 비례 재배분합니다.
         </div>
       </div>
@@ -1251,8 +1250,8 @@ export function OptimalGuide() {
               <MIcon name={c.icon} size={16} style={{ color: c.color }} />
             </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{c.label}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: c.color }}>{c.value}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{c.label}</div>
+              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: c.color }}>{c.value}</div>
             </div>
           </div>
         ))}
@@ -1261,7 +1260,7 @@ export function OptimalGuide() {
       {/* 시뮬레이션 비교 + 실행 */}
       <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <button onClick={() => setShowComparison(c => !c)}
-          style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+          style={{ fontSize: 'var(--text-sm)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
             border: showComparison ? '1.5px solid var(--accent-blue)' : '1px solid var(--border-primary)',
             background: showComparison ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
             color: showComparison ? 'var(--accent-blue)' : 'var(--text-secondary)',
@@ -1270,7 +1269,7 @@ export function OptimalGuide() {
           시뮬레이션 비교
         </button>
         <button onClick={() => { setExecMode(m => !m); setCheckedSells(new Set()); setCheckedBuys(new Set()); }}
-          style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+          style={{ fontSize: 'var(--text-sm)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
             border: execMode ? '1.5px solid var(--color-profit)' : '1px solid var(--border-primary)',
             background: execMode ? 'color-mix(in srgb, var(--color-profit) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
             color: execMode ? 'var(--color-profit)' : 'var(--text-secondary)',
@@ -1280,7 +1279,7 @@ export function OptimalGuide() {
         </button>
         {execMode && checkedCount > 0 && (
           <button onClick={handleExecSave} disabled={saving}
-            style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+            style={{ fontSize: 'var(--text-sm)', padding: '6px 14px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
               border: 'none', background: 'var(--color-profit)', color: '#fff',
               display: 'flex', alignItems: 'center', gap: 5, opacity: saving ? 0.6 : 1 }}>
             <MIcon name="save" size={14} style={{ color: '#fff' }} />
@@ -1294,13 +1293,13 @@ export function OptimalGuide() {
       {/* 목표 비중 카드 */}
       <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-secondary)' }}>
             <MIcon name="tune" size={15} style={{ color: 'var(--text-tertiary)' }} />
             목표 비중 (재투자 배분 기준)
           </div>
           <button
             onClick={() => navigateTo('rebalancing')}
-            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+            style={{ fontSize: 'var(--text-sm)', padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
               border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)',
               color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <MIcon name="edit" size={12} style={{ color: 'var(--accent-blue)' }} />
@@ -1312,12 +1311,12 @@ export function OptimalGuide() {
             <div key={cls} style={{ display: 'flex', alignItems: 'baseline', gap: 5,
               background: `color-mix(in srgb, ${ASSET_COLORS[cls]} var(--badge-mix), transparent)`,
               borderRadius: 6, padding: '4px 10px' }}>
-              <span style={{ fontSize: 11, color: ASSET_COLORS[cls], fontWeight: 600 }}>{cls}</span>
-              <span style={{ fontSize: 12, color: ASSET_COLORS[cls], fontWeight: 700 }}>{pct}%</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: ASSET_COLORS[cls], fontWeight: 600 }}>{cls}</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: ASSET_COLORS[cls], fontWeight: 700 }}>{pct}%</span>
               {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && (
                 <span
                   onClick={e => { e.stopPropagation(); if (divChangePlans.length > 0) setShowDivDetail(true); }}
-                  style={{ fontSize: 10, color: ASSET_COLORS[cls], opacity: 0.85, marginLeft: 2,
+                  style={{ fontSize: 'var(--text-xs)', color: ASSET_COLORS[cls], opacity: 0.85, marginLeft: 2,
                     cursor: divChangePlans.length > 0 ? 'pointer' : 'default',
                     textDecoration: divChangePlans.length > 0 ? 'underline dotted' : 'none' }}>
                   월 배당 {fmtKrw(coveredCallMonthlyDiv)}
@@ -1330,8 +1329,8 @@ export function OptimalGuide() {
       </div>
 
       {/* 원칙 */}
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, fontSize: 12, lineHeight: 1.9, color: 'var(--text-tertiary)' }}>
-        <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, fontSize: 13 }}>적용 원칙</div>
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, fontSize: 'var(--text-sm)', lineHeight: 1.9, color: 'var(--text-tertiary)' }}>
+        <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, fontSize: 'var(--text-base)' }}>적용 원칙</div>
 
         <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>[ 매도/재배분 기준 ]</div>
         <div>① 동일 종목이 여러 계좌에 있으면 <span style={{ color: 'var(--text-secondary)' }}>절세 우선순위 낮은 계좌에서 매도</span></div>
@@ -1360,11 +1359,11 @@ export function OptimalGuide() {
       </div>
 
       {/* 계좌별 플랜 */}
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
         <MIcon name="account_balance_wallet" size={16} style={{ color: 'var(--text-secondary)' }} />
         계좌별 액션 플랜
         <button onClick={() => setShowRangeGuide(true)} style={{
-          marginLeft: 'auto', fontSize: 11, padding: '3px 10px', borderRadius: 6, fontWeight: 600,
+          marginLeft: 'auto', fontSize: 'var(--text-sm)', padding: '3px 10px', borderRadius: 6, fontWeight: 600,
           cursor: 'pointer', border: '1px solid var(--border-primary)',
           background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
           display: 'flex', alignItems: 'center', gap: 4,
@@ -1383,10 +1382,10 @@ export function OptimalGuide() {
             maxHeight: '80vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>커버드콜 비중 변경 영향</div>
+              <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>커버드콜 비중 변경 영향</div>
               <button onClick={() => setShowDivDetail(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 18 }}>✕</button>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 14 }}>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 14 }}>
               {prevTargets && `커버드콜 ${prevTargets['커버드콜']}% → ${targets['커버드콜']}% · 계좌별 추가매수금액 변화`}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -1395,25 +1394,25 @@ export function OptimalGuide() {
                 const isIncrease = diff > 0;
                 return (
                   <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.accLabel}</div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.4,
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.accLabel}</div>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.4,
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{row.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{fmtKrw(row.before)} → {fmtKrw(row.after)}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: isIncrease ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 2 }}>{fmtKrw(row.before)} → {fmtKrw(row.after)}</div>
+                    <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: isIncrease ? 'var(--color-profit)' : 'var(--color-loss)' }}>
                       {isIncrease ? '+' : ''}{fmtKrw(diff)}
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 12, color: 'var(--text-tertiary)' }}>
+            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
               목표 비중 기준 월 배당 예상: <span style={{ fontWeight: 700, color: 'var(--asset-covered)' }}>{fmtKrw(coveredCallMonthlyDiv)}</span>
             </div>
           </div>
         </div>
       )}
       {signalsLoading && (
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
           <MIcon name="sync" size={14} style={{ color: 'var(--text-tertiary)' }} />
           시세 데이터 로딩 중... (MA20/MA60/고저점 계산)
         </div>
@@ -1423,21 +1422,21 @@ export function OptimalGuide() {
       {!signalsLoading && (availableSignals.sell.length > 0 || availableSignals.buy.length > 0) && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>신호 필터</span>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginRight: 2 }}>신호 필터</span>
             <button
               onClick={() => setSignalFilter(null)}
-              style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+              style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
                 background: signalFilter === null ? 'var(--accent-blue)' : 'var(--bg-secondary)',
                 color: signalFilter === null ? 'var(--accent-blue-fg)' : 'var(--text-tertiary)' }}>
               전체
             </button>
             {availableSignals.sell.length > 0 && (
-              <span style={{ fontSize: 10, color: 'var(--text-quaternary)', padding: '0 2px' }}>매도</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매도</span>
             )}
             {availableSignals.sell.map(s => (
               <button key={`sell-${s.label}`}
                 onClick={() => setSignalFilter(signalFilter?.label === s.label && signalFilter?.type === 'sell' ? null : { type: 'sell', label: s.label })}
-                style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
                   background: signalFilter?.type === 'sell' && signalFilter?.label === s.label
                     ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))`
                     : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
@@ -1448,12 +1447,12 @@ export function OptimalGuide() {
               </button>
             ))}
             {availableSignals.buy.length > 0 && (
-              <span style={{ fontSize: 10, color: 'var(--text-quaternary)', padding: '0 2px' }}>매수</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매수</span>
             )}
             {availableSignals.buy.map(s => (
               <button key={`buy-${s.label}`}
                 onClick={() => setSignalFilter(signalFilter?.label === s.label && signalFilter?.type === 'buy' ? null : { type: 'buy', label: s.label })}
-                style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
                   background: signalFilter?.type === 'buy' && signalFilter?.label === s.label
                     ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))`
                     : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
@@ -1465,7 +1464,7 @@ export function OptimalGuide() {
             ))}
           </div>
           {signalFilter && (
-            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <div style={{ marginTop: 6, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
               {filteredPlans.length}개 계좌에 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {signalFilter.type === 'sell' ? '매도' : '매수'} · {signalFilter.label}
               </span> 신호 해당
