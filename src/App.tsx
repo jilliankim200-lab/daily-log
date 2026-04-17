@@ -79,7 +79,7 @@ export default function App() {
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [fontSizeIndex, setFontSizeIndex] = useState(() => {
     const saved = localStorage.getItem('fontSizeIndex');
@@ -340,16 +340,25 @@ export default function App() {
                   {(() => { const h = new Date().getHours(); if (h >= 5 && h < 12) return 'Good Morning'; if (h >= 12 && h < 18) return 'Good Afternoon'; return 'Good Evening'; })()}
                 </span>
               </div>
-              {isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button onClick={handleSync} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)' }}>
-                    <MIcon name="sync" size={20} style={isSyncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={handleSync} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="데이터 새로고침">
+                  <MIcon name="sync" size={20} style={isSyncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+                </button>
+                <button onClick={toggleAmountHidden} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title={isAmountHidden ? '금액 보기' : '금액 숨기기'}>
+                  <MIcon name={isAmountHidden ? "visibility_off" : "visibility"} size={20} />
+                </button>
+                <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title={isDarkMode ? '라이트 모드' : '다크 모드'}>
+                  <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
+                </button>
+                {!isMobile && (
+                  <button onClick={cycleFontSize} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s', position: 'relative' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title={`글자 크기: ${FONT_SIZES[fontSizeIndex].label}`}>
+                    <MIcon name="text_fields" size={20} />
+                    <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8, fontWeight: 700, color: 'var(--text-tertiary)', lineHeight: 1 }}>
+                      {fontSizeIndex === 0 ? 'S' : fontSizeIndex === 1 ? 'M' : fontSizeIndex === 2 ? 'L' : 'XL'}
+                    </span>
                   </button>
-                  <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)' }}>
-                    <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </header>
             <main className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
               <ErrorBoundary>
@@ -358,150 +367,6 @@ export default function App() {
             </main>
           </div>
 
-          {/* 우측: 아이콘 헤더 + 보유종목 사이드바 */}
-          {isRightSidebarOpen && !isMobile && (
-            <div style={{
-              width: 280, flexShrink: 0, height: '100%',
-              borderLeft: '1px solid var(--border-secondary)',
-              background: 'var(--bg-primary)',
-              display: 'flex', flexDirection: 'column',
-            }}>
-              {/* 아이콘 버튼 영역 */}
-              <div style={{
-                height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: 4, flexShrink: 0,
-              }}>
-                <button
-                  onClick={handleSync}
-                  style={{
-                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  title="데이터 새로고침"
-                >
-                  <MIcon name="sync" size={20} style={isSyncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
-                </button>
-                <button
-                  onClick={toggleAmountHidden}
-                  style={{
-                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  title={isAmountHidden ? '금액 보기' : '금액 숨기기'}
-                >
-                  <MIcon name={isAmountHidden ? "visibility_off" : "visibility"} size={20} />
-                </button>
-                <button
-                  onClick={toggleTheme}
-                  style={{
-                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  title={isDarkMode ? '라이트 모드' : '다크 모드'}
-                >
-                  <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
-                </button>
-                <button
-                  onClick={cycleFontSize}
-                  style={{
-                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
-                    position: 'relative',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  title={`글자 크기: ${FONT_SIZES[fontSizeIndex].label}`}
-                >
-                  <MIcon name="text_fields" size={20} />
-                  <span style={{
-                    position: 'absolute', bottom: 2, right: 2,
-                    fontSize: 8, fontWeight: 700, color: 'var(--text-tertiary)',
-                    lineHeight: 1,
-                  }}>
-                    {fontSizeIndex === 0 ? 'S' : fontSizeIndex === 1 ? 'M' : fontSizeIndex === 2 ? 'L' : 'XL'}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setIsRightSidebarOpen(false)}
-                  style={{
-                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  title="보유종목 숨기기"
-                >
-                  <MIcon name="right_panel_open" size={20} />
-                </button>
-              </div>
-              {/* 보유종목 리스트 */}
-              <RightSidebar />
-            </div>
-          )}
-
-          {/* 사이드바 닫힌 상태: 열기 버튼만 헤더에 표시 */}
-          {!isRightSidebarOpen && !isMobile && (
-            <div style={{
-              width: 48, flexShrink: 0, background: 'var(--bg-primary)',
-              borderLeft: '1px solid var(--border-secondary)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 14,
-            }}>
-              <button
-                onClick={handleSync}
-                style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title="데이터 새로고침"
-              >
-                <MIcon name="sync" size={20} style={isSyncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
-              </button>
-              <button
-                onClick={toggleAmountHidden}
-                style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title={isAmountHidden ? '금액 보기' : '금액 숨기기'}
-              >
-                <MIcon name={isAmountHidden ? "visibility_off" : "visibility"} size={20} />
-              </button>
-              <button
-                onClick={toggleTheme}
-                style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title={isDarkMode ? '라이트 모드' : '다크 모드'}
-              >
-                <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
-              </button>
-              <button
-                onClick={cycleFontSize}
-                style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s', position: 'relative' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title={`글자 크기: ${FONT_SIZES[fontSizeIndex].label}`}
-              >
-                <MIcon name="text_fields" size={20} />
-                <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8, fontWeight: 700, color: 'var(--text-tertiary)', lineHeight: 1 }}>
-                  {fontSizeIndex === 0 ? 'S' : fontSizeIndex === 1 ? 'M' : fontSizeIndex === 2 ? 'L' : 'XL'}
-                </span>
-              </button>
-              <button
-                onClick={() => setIsRightSidebarOpen(true)}
-                style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title="보유종목 보기"
-              >
-                <MIcon name="right_panel_close" size={20} />
-              </button>
-            </div>
-          )}
         </div>
 
         <PasswordModal
