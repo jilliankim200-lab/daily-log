@@ -148,11 +148,23 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badg
   ticker?: string; onNameClick?: (ticker: string, name: string) => void;
 }) {
   const [showTip, setShowTip] = useState(false);
+  const [tipAlign, setTipAlign] = useState<'left' | 'right'>('left');
   const [nameHover, setNameHover] = useState(false);
+  const badgeRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = () => {
+    if (!badgeTip) return;
+    if (badgeRef.current) {
+      const rect = badgeRef.current.getBoundingClientRect();
+      setTipAlign(rect.left + 320 > window.innerWidth ? 'right' : 'left');
+    }
+    setShowTip(true);
+  };
+
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', opacity: dim ? 0.55 : 1 }}>
-      <div style={{ position: 'relative', flexShrink: 0, paddingTop: 1 }}
-        onMouseEnter={() => badgeTip && setShowTip(true)}
+      <div ref={badgeRef} style={{ position: 'relative', flexShrink: 0, paddingTop: 1 }}
+        onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTip(false)}>
         <span style={{ fontSize: 'var(--text-sm)', padding: '2px 8px', borderRadius: 6, fontWeight: 600, display: 'block',
           minWidth: 44, textAlign: 'center', cursor: badgeTip ? 'help' : 'default',
@@ -160,10 +172,12 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badg
           {badge}
         </span>
         {showTip && badgeTip && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 300, minWidth: 280, maxWidth: 360,
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', zIndex: 300,
+            ...(tipAlign === 'right' ? { right: 0 } : { left: 0 }),
+            minWidth: 240, maxWidth: 300,
             background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
             borderRadius: 8, padding: '8px 12px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)',
-            lineHeight: 1.7, boxShadow: 'var(--shadow-tooltip)', whiteSpace: 'pre-wrap' }}>
+            lineHeight: 1.7, boxShadow: 'var(--shadow-tooltip)', whiteSpace: 'pre-wrap', wordBreak: 'keep-all' }}>
             {badgeTip}
           </div>
         )}

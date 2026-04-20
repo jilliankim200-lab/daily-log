@@ -349,7 +349,6 @@ export default function App() {
                 {!isMobile && (
                   <>
                     <ExchangeRate />
-                    <MarketIndices />
                   </>
                 )}
                 <button onClick={handleSync} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="데이터 새로고침">
