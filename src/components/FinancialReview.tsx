@@ -404,10 +404,140 @@ function Review2025({ isMobile }: { isMobile: boolean }) {
   );
 }
 
+// ── 2026 페이지 ───────────────────────────────────────────────
+function Review2026({ isMobile }: { isMobile: boolean }) {
+  const start2026    = 567929068;  // 2025 마감잔액
+  const planDeposit  = 91400000;   // 2026 계획 입금 합계
+
+  const depositPlan = [
+    { label: '퇴직연금 IRP (지윤)',   value: 3000000  },
+    { label: 'ISA (지윤)',           value: 20000000 },
+    { label: '펀슈 세제 (지윤)',      value: 6000000  },
+    { label: '한투 (지윤)',          value: 9000000  },
+    { label: 'KB 퇴직연금 IRP (지윤)', value: 3000000 },
+    { label: '퇴직연금 IRP (오빠)',   value: 3000000  },
+    { label: 'ISA 미래 (오빠)',      value: 20000000 },
+    { label: '펀슈 세제 (오빠)',      value: 4400000  },
+    { label: '미래에셋연금 (오빠)',   value: 9000000  },
+    { label: '기타증권',             value: 2000000  },
+    { label: '대출 상환 목표',        value: 12000000 },
+  ];
+
+  const goals = [
+    { title: '한국장 비중 조정', items: ['코스닥 → 코스피 중심으로 재배분', '한국 비중 15~20% 수준 유지', '코스피 5000선 대응 전략'] },
+    { title: '포트폴리오 안정화', items: ['지수투자 ↔ 커버드콜 기계적 자산배분', '국채 편입으로 하락장 방어', '환노출 비중 점검'] },
+    { title: '비트코인·금 비중 조정', items: ['금 : 비트코인 = 3 : 7 목표', '고점 물림 분할 평균단가 낮추기'] },
+    { title: '생활비 절감', items: ['비정기 소비 월 80만원 이하 목표', '외식·술 자제, 운동 유지'] },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+      {/* 진행 중 배너 */}
+      <div style={{
+        background: 'color-mix(in srgb, var(--accent-blue) 8%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--accent-blue) 30%, transparent)',
+        borderRadius: 'var(--radius-md)', padding: '12px 18px',
+        display: 'flex', alignItems: 'center', gap: 10,
+        fontSize: 'var(--text-sm)', color: 'var(--accent-blue)', fontWeight: 600,
+      }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-blue)',
+          animation: 'pulse 1.5s infinite',
+          flexShrink: 0,
+        }} />
+        2026년 진행 중 — 연도 마감 후 실적 데이터로 업데이트 예정
+      </div>
+
+      {/* 시작 현황 */}
+      <section>
+        <SectionTitle>2026년 시작 현황</SectionTitle>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
+          gap: 12,
+        }}>
+          <SummaryCard label="2025년 마감잔액 (시작점)" value={fmt(start2026)} accent />
+          <SummaryCard label="2026 계획 입금액" value={fmt(planDeposit)} />
+          <div style={{
+            background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', padding: '16px 20px',
+            border: '1px solid var(--border-primary)',
+          }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 500, marginBottom: 4 }}>입금 포함 목표 잔액</p>
+            <p className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {fmt(start2026 + planDeposit)}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-quaternary)', marginTop: 4 }}>수익 제외 단순 합산</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 2026 입금 계획 */}
+      <section>
+        <SectionTitle>2026년 입금 계획</SectionTitle>
+        <div style={{
+          background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--border-primary)', overflow: 'hidden',
+        }}>
+          {depositPlan.map((r, i) => (
+            <div key={r.label} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '10px 18px',
+              borderBottom: i < depositPlan.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+              background: i % 2 === 0 ? 'transparent' : 'var(--bg-tertiary)',
+            }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{r.label}</span>
+              <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {fmt(r.value)}
+              </span>
+            </div>
+          ))}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '12px 18px', background: 'var(--bg-secondary)',
+            borderTop: '2px solid var(--border-primary)',
+          }}>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>합계</span>
+            <span className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-profit)' }}>
+              {fmt(planDeposit)}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* 2026 목표 */}
+      <section>
+        <SectionTitle>2026년 목표 및 계획</SectionTitle>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {goals.map(g => (
+            <MemoCard key={g.title} title={g.title}>
+              <MemoBlock items={g.items} />
+            </MemoCard>
+          ))}
+        </div>
+      </section>
+
+      {/* 고정비 변동 */}
+      <section>
+        <SectionTitle>고정비 변동 사항</SectionTitle>
+        <div style={{
+          background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '16px 20px',
+          border: '1px solid var(--border-primary)',
+          lineHeight: 1.9, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
+        }}>
+          <p>• 의료실비 보험료 인상 예정 — 고정비 증가 요인</p>
+          <p>• 대출 목표 상환 <strong>₩12,000,000</strong> → 현잔액 ₩59,000,000</p>
+          <p>• 노랑우산 공제 유지 (월 25만 × 12 = ₩3,000,000)</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ── 메인 컴포넌트 ────────────────────────────────────────────
 export function FinancialReview() {
   const { isMobile } = useAppContext();
-  const [year, setYear] = useState<2024 | 2025>(2025);
+  const [year, setYear] = useState<2024 | 2025 | 2026>(2026);
 
   return (
     <div style={{ padding: isMobile ? '16px' : '24px' }}>
@@ -419,7 +549,7 @@ export function FinancialReview() {
 
       {/* 연도 탭 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
-        {([2025, 2024] as const).map(y => (
+        {([2026, 2025, 2024] as const).map(y => (
           <button
             key={y}
             onClick={() => setYear(y)}
@@ -431,7 +561,7 @@ export function FinancialReview() {
         ))}
       </div>
 
-      {year === 2024 ? <Review2024 isMobile={isMobile} /> : <Review2025 isMobile={isMobile} />}
+      {year === 2024 ? <Review2024 isMobile={isMobile} /> : year === 2025 ? <Review2025 isMobile={isMobile} /> : <Review2026 isMobile={isMobile} />}
     </div>
   );
 }

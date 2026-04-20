@@ -71,6 +71,50 @@ function getSignal(avgPrice: number, currentPrice: number | undefined): 'buy' | 
   return 'hold';
 }
 
+function getDaySignal(rate: number | undefined): 'buy' | 'sell' | 'hold' | 'none' {
+  if (rate === undefined) return 'none';
+  if (rate <= -3) return 'buy';
+  if (rate >= 3) return 'sell';
+  return 'hold';
+}
+
+type DetailedAssetType = '국내주식' | '선진국주식' | '신흥국주식' | '국내채권' | '선진국채권' | '커버드콜' | '금' | 'MMF' | '기타';
+
+const ASSET_TYPE_COLORS: Record<DetailedAssetType, string> = {
+  '국내주식':   '#2563EB',
+  '선진국주식': '#7C3AED',
+  '신흥국주식': '#D97706',
+  '국내채권':   '#059669',
+  '선진국채권': '#0891B2',
+  '커버드콜':   '#0369A1',
+  '금':         '#B45309',
+  'MMF':        '#6B7280',
+  '기타':       '#9CA3AF',
+};
+
+function getAssetType(name: string): DetailedAssetType {
+  if (['커버드콜'].some(k => name.includes(k))) return '커버드콜';
+  if (['KOFR', 'MMF', '금리액티브'].some(k => name.includes(k))) return 'MMF';
+  if (['금현물', 'KRX금'].some(k => name.includes(k))) return '금';
+  if (['차이나', '인도', 'CSI', 'Nifty', '신흥국', '이머징'].some(k => name.includes(k))) return '신흥국주식';
+  if (['미국채', '미국30년', '미국국채', '미국 국채'].some(k => name.includes(k))) return '선진국채권';
+  if (['국고채', '단기채', 'KIS국고'].some(k => name.includes(k))) return '국내채권';
+  if (['미국', 'S&P', '나스닥', '선진국', '글로벌', '반도체', 'AI', 'FANG', '액티브채권'].some(k => name.includes(k))) return '선진국주식';
+  if (['200TR', '코스피', '코스닥', '배당', '고배당', '밸류', 'KRX', 'KOSPI', 'KOSDAQ'].some(k => name.includes(k))) return '국내주식';
+  return '기타';
+}
+
+function AssetTypeBadge({ name }: { name: string }) {
+  const type = getAssetType(name);
+  const color = ASSET_TYPE_COLORS[type];
+  return (
+    <span style={{
+      fontSize: 10, padding: '1px 6px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+      background: `color-mix(in srgb, ${color} 14%, transparent)`, color,
+    }}>{type}</span>
+  );
+}
+
 function SignalBadge({ signal, noIcon }: { signal: 'buy' | 'sell' | 'hold' | 'none'; noIcon?: boolean }) {
   if (signal === 'none') return <span style={{ color: 'var(--text-quaternary)', fontSize: 12 }}>—</span>;
 
@@ -150,7 +194,7 @@ function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice
                           {isAmountHidden ? '••••' : `${Math.round(d.avgPrice).toLocaleString('ko-KR')}원`}
                         </span></span>
                         {pnlRate !== null && (
-                          <span style={{ color: pnlRate > 0 ? 'var(--color-gain)' : pnlRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)', fontWeight: 600 }}>
+                          <span style={{ color: pnlRate > 0 ? 'var(--color-profit)' : pnlRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)', fontWeight: 600 }}>
                             {pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(1)}%
                           </span>
                         )}
@@ -182,7 +226,7 @@ function OwnerSection({
   isAmountHidden: boolean;
   isMobile?: boolean;
 }) {
-  const [signalFilter, setSignalFilter] = useState<'all' | 'buy' | 'sell'>('all');
+  const [signalFilter, setSignalFilter] = useState<'all' | 'buy' | 'sell' | 'day-buy' | 'day-sell'>('all');
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -198,10 +242,14 @@ function OwnerSection({
 
   const buyCount = allHoldings.filter(h => !h.isFund && getSignal(h.avgPrice, prices[h.ticker]) === 'buy').length;
   const sellCount = allHoldings.filter(h => !h.isFund && getSignal(h.avgPrice, prices[h.ticker]) === 'sell').length;
+  const dayBuyCount = allHoldings.filter(h => !h.isFund && getDaySignal(dailyChangeRates[h.ticker]) === 'buy').length;
+  const daySellCount = allHoldings.filter(h => !h.isFund && getDaySignal(dailyChangeRates[h.ticker]) === 'sell').length;
 
   // filter by signal
   const filtered = signalFilter === 'all' ? allHoldings : allHoldings.filter(h => {
     if (h.isFund) return false;
+    if (signalFilter === 'day-buy') return getDaySignal(dailyChangeRates[h.ticker]) === 'buy';
+    if (signalFilter === 'day-sell') return getDaySignal(dailyChangeRates[h.ticker]) === 'sell';
     return getSignal(h.avgPrice, prices[h.ticker]) === signalFilter;
   });
 
@@ -253,19 +301,25 @@ function OwnerSection({
             {allHoldings.length}개 종목 · {accounts.length}개 계좌
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {(['all', 'buy', 'sell'] as const).map(f => {
-            const label = f === 'all' ? `전체 ${allHoldings.length}` : f === 'buy' ? `매수 ${buyCount}` : `매도 ${sellCount}`;
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          {([
+            { f: 'all',      label: `전체 ${allHoldings.length}`,    tooltip: '',                                   clr: 'neutral' },
+            { f: 'buy',      label: `평균가 매수 ${buyCount}`,         tooltip: '평균단가 대비 -3% 이하',              clr: 'loss'    },
+            { f: 'sell',     label: `평균가 매도 ${sellCount}`,         tooltip: '평균단가 대비 +10% 이상',             clr: 'profit'  },
+            { f: 'day-buy',  label: `당일 매수 ${dayBuyCount}`,        tooltip: '당일 등락률 -3% 이하',               clr: 'loss'    },
+            { f: 'day-sell', label: `당일 매도 ${daySellCount}`,        tooltip: '당일 등락률 +3% 이상',               clr: 'profit'  },
+          ] as const).map(({ f, label, tooltip, clr }) => {
             const isActive = signalFilter === f;
-            const colors = f === 'buy'
-              ? { bg: 'color-mix(in srgb, var(--color-loss) 12%, transparent)', color: 'var(--color-loss)', activeBg: 'var(--color-loss)', activeFg: '#fff' }
-              : f === 'sell'
+            const colors = clr === 'loss'
+              ? { bg: 'color-mix(in srgb, var(--color-loss) 12%, transparent)',   color: 'var(--color-loss)',   activeBg: 'var(--color-loss)',   activeFg: '#fff' }
+              : clr === 'profit'
               ? { bg: 'color-mix(in srgb, var(--color-profit) 12%, transparent)', color: 'var(--color-profit)', activeBg: 'var(--color-profit)', activeFg: '#fff' }
               : { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', activeBg: 'var(--accent-blue)', activeFg: 'var(--accent-blue-fg)' };
             return (
               <button
                 key={f}
                 onClick={() => setSignalFilter(signalFilter === f ? 'all' : f)}
+                title={tooltip}
                 style={{
                   padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
                   background: isActive ? colors.activeBg : colors.bg,
@@ -291,8 +345,8 @@ function OwnerSection({
         {[
           { label: '매입금액', value: isAmountHidden ? '••••••' : `${fmt(totalCost)}원`, color: 'var(--text-primary)' },
           { label: '평가금액', value: isAmountHidden ? '••••••' : `${fmt(totalCurrent)}원`, color: 'var(--text-primary)' },
-          { label: '수익금', value: isAmountHidden ? '••••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원`, color: totalPnl > 0 ? 'var(--color-gain)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
-          { label: '수익률', value: `${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%`, color: totalPnlRate > 0 ? 'var(--color-gain)' : totalPnlRate < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
+          { label: '수익금', value: isAmountHidden ? '••••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원`, color: totalPnl > 0 ? 'var(--color-profit)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
+          { label: '수익률', value: `${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%`, color: totalPnlRate > 0 ? 'var(--color-profit)' : totalPnlRate < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
         ].map(({ label, value, color }) => (
           <div key={label}>
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
@@ -327,7 +381,7 @@ function OwnerSection({
             const pnlRate = h.totalCost > 0 ? ((evalAmount - h.totalCost) / h.totalCost) * 100 : 0;
             const changeRate = dailyChangeRates[h.ticker] ?? (cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0);
             const signal = getSignal(h.avgPrice, cp);
-            const pnlColor = pnl > 0 ? 'var(--color-gain)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
+            const pnlColor = pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
             const sellAccounts = h.accountDetails.filter(d => getSignal(d.avgPrice, cp) === 'sell').map(d => d.alias);
             return (
               <div key={`${h.ticker}-${h.name}-${i}`} style={{
@@ -344,8 +398,9 @@ function OwnerSection({
                         </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
+                      <AssetTypeBadge name={h.name} />
                       <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-quaternary)' }}>{h.ticker}</div>
@@ -355,8 +410,15 @@ function OwnerSection({
                     <div className="toss-number" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                       {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
                     </div>
-                    <div className="toss-number" style={{ fontSize: 12, fontWeight: 600, color: pnlColor, marginTop: 2, whiteSpace: 'nowrap' }}>
-                      {isAmountHidden ? '••••' : `${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(2)}%`}
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center', marginTop: 2 }}>
+                      <div className="toss-number" style={{ fontSize: 12, fontWeight: 600, color: pnlColor, whiteSpace: 'nowrap' }}>
+                        {isAmountHidden ? '••••' : `${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(2)}%`}
+                      </div>
+                      {!isAmountHidden && totalCurrent > 0 && (
+                        <div className="toss-number" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          {(evalAmount / totalCurrent * 100).toFixed(1)}%
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -383,7 +445,7 @@ function OwnerSection({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-              {['신호', '종목명', '현재가', '수량', '매입금액', '평가금액', '수익금'].map(col => {
+              {['신호', '종목명', '현재가', '등락률', '수량', '매입금액', '평가금액', '수익금'].map(col => {
                 const sortable = !['신호', '종목명'].includes(col);
                 return (
                   <th
@@ -420,7 +482,7 @@ function OwnerSection({
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {h.name}
-                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
+                        <AssetTypeBadge name={h.name} />
                         <HoldingInfoPopup accountDetails={h.accountDetails} isFund />
                       </div>
                     </td>
@@ -444,7 +506,7 @@ function OwnerSection({
               const pnlRate = h.totalCost > 0 ? ((evalAmount - h.totalCost) / h.totalCost) * 100 : 0;
               const changeRate = dailyChangeRates[h.ticker] ?? (cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0);
               const signal = getSignal(h.avgPrice, cp);
-              const pnlColor = pnl > 0 ? 'var(--color-gain)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
+              const pnlColor = pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
               const sellAccounts = h.accountDetails.filter(d => getSignal(d.avgPrice, cp) === 'sell').map(d => d.alias);
 
               return (
@@ -468,6 +530,7 @@ function OwnerSection({
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {h.name}
+                      <AssetTypeBadge name={h.name} />
                       <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
                     </div>
                     <a
@@ -478,29 +541,35 @@ function OwnerSection({
                       onClick={(e) => e.stopPropagation()}
                     >{h.ticker}</a>
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: cp ? 'var(--text-primary)' : 'var(--text-quaternary)' }}>
+                    {cp ? (isAmountHidden ? '••••' : `${fmt(cp)}원`) : '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: changeRate > 0 ? 'var(--color-profit)' : changeRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
                     {cp ? (
                       <>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {isAmountHidden ? '••••' : `${fmt(cp)}원`}
-                        </div>
-                        {changeRate !== 0 && (
-                          <div style={{ fontSize: 12, fontWeight: 500, marginTop: 2, color: changeRate > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
-                            {changeRate > 0 ? '+' : ''}{fmt(Math.round(cp * changeRate / 100))}원 ({changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%)
-                          </div>
-                        )}
+                        <div>{changeRate > 0 ? '+' : ''}{fmt(Math.round(cp * changeRate / 100))}원</div>
+                        <div style={{ fontSize: 11, fontWeight: 500, marginTop: 1 }}>{changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%</div>
                       </>
-                    ) : <span style={{ color: 'var(--text-quaternary)' }}>—</span>}
+                    ) : '—'}
                   </td>
-                  <td style={{ display: 'none' }} />
                   <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                     {fmt(h.quantity)}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                     {isAmountHidden ? '••••••' : `${fmt(h.totalCost)}원`}
+                    {!isAmountHidden && totalCost > 0 && (
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
+                        {(h.totalCost / totalCost * 100).toFixed(1)}%
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
+                    {!isAmountHidden && totalCurrent > 0 && (
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
+                        {(evalAmount / totalCurrent * 100).toFixed(1)}%
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: pnlColor }}>
                     {isAmountHidden ? '••••' : (

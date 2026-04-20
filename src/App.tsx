@@ -11,8 +11,11 @@ import { HouseholdBudget } from "./components/HouseholdBudget";
 import { RebalancingGuide } from "./components/RebalancingGuide";
 import { OptimalGuide } from "./components/OptimalGuide";
 import { ChartPage } from "./components/ChartPage";
+import { AccountReturn } from "./components/AccountReturn";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
+import { MarketIndices } from "./components/MarketIndices";
+import { ExchangeRate } from "./components/ExchangeRate";
 import { fetchAccounts, fetchOtherAssets, saveOtherAssets } from "./api";
 import type { Account, OtherAsset } from "./types";
 import { fetchCurrentPrices } from "./utils/fetchPrices";
@@ -56,6 +59,7 @@ const MENU_ITEMS = [
   { id: "holdings", label: "보유종목", materialIcon: "list" },
   { id: "asset-change", label: "자산증감", materialIcon: "show_chart" },
   { id: "contribution", label: "납입", materialIcon: "savings" },
+  { id: "account-return", label: "계좌수익률", materialIcon: "percent" },
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
 ];
@@ -216,6 +220,7 @@ export default function App() {
       case "rebalancing-guide": return <RebalancingGuide />;
       case "optimal-guide": return <OptimalGuide />;
       case "chart": return <ChartPage />;
+      case "account-return": return <AccountReturn />;
     }
   };
 
@@ -341,6 +346,12 @@ export default function App() {
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {!isMobile && (
+                  <>
+                    <ExchangeRate />
+                    <MarketIndices />
+                  </>
+                )}
                 <button onClick={handleSync} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title="데이터 새로고침">
                   <MIcon name="sync" size={20} style={isSyncing ? { animation: 'spin 0.8s linear infinite' } : undefined} />
                 </button>

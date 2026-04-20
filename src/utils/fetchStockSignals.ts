@@ -7,6 +7,7 @@ const CACHE_TTL = 6 * 60 * 60 * 1000; // 6시간 캐시
 export interface StockSignal {
   ticker: string;
   currentPrice: number;
+  changeRate: number;  // 당일 등락률 (%)
   ma20: number;
   ma60: number;
   high: number;   // 70일 고점

@@ -164,7 +164,7 @@ function PeriodGuideModal({ onClose }: { onClose: () => void }) {
 }
 
 export function ChartPage() {
-  const { accounts, isMobile } = useAppContext();
+  const { accounts, isMobile, navigateTo } = useAppContext();
   const [selectedTicker, setSelectedTicker] = useState('');
   const [selectedName, setSelectedName] = useState('');
   const [days, setDays] = useState(90);
@@ -173,6 +173,8 @@ export function ChartPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showGuide, setShowGuide] = useState(false);
+  const [fromPage, setFromPage] = useState<string | null>(null);
+  const [fromTicker, setFromTicker] = useState<string | null>(null);
 
   // 전체 고유 종목 목록 (6자리 티커)
   const allHoldings = useMemo(() => {
@@ -193,13 +195,34 @@ export function ChartPage() {
     return result;
   }, [accounts]);
 
-  // 첫 종목 자동 선택
+  // sessionStorage에서 진입 컨텍스트 읽기
   useEffect(() => {
-    if (allHoldings.length > 0 && !selectedTicker) {
+    const navTicker = sessionStorage.getItem('chart_nav_ticker');
+    const navFrom   = sessionStorage.getItem('chart_nav_from');
+    if (navTicker) {
+      setFromPage(navFrom);
+      setFromTicker(navTicker);
+      sessionStorage.removeItem('chart_nav_ticker');
+      sessionStorage.removeItem('chart_nav_from');
+    }
+  }, []);
+
+  // 첫 종목 자동 선택 (또는 nav 컨텍스트 종목)
+  useEffect(() => {
+    if (allHoldings.length === 0) return;
+    if (fromTicker) {
+      const target = allHoldings.find(h => h.ticker === fromTicker);
+      if (target) {
+        setSelectedTicker(target.ticker);
+        setSelectedName(target.name);
+        setDays(90);
+        setShowMA({ ma5: false, ma20: true, ma60: false });
+      }
+    } else if (!selectedTicker) {
       setSelectedTicker(allHoldings[0].ticker);
       setSelectedName(allHoldings[0].name);
     }
-  }, [allHoldings]);
+  }, [allHoldings, fromTicker]);
 
   // 차트 데이터 fetch
   useEffect(() => {
@@ -256,9 +279,25 @@ export function ChartPage() {
       {showGuide && <PeriodGuideModal onClose={() => setShowGuide(false)} />}
 
       {/* 헤더 */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>차트</div>
-        <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>보유 종목의 주가와 이동평균선을 확인합니다.</div>
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>차트</div>
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>보유 종목의 주가와 이동평균선을 확인합니다.</div>
+        </div>
+        {fromPage && (
+          <button
+            onClick={() => {
+              if (fromTicker) sessionStorage.setItem('chart_return_ticker', fromTicker);
+              navigateTo(fromPage);
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+              border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)',
+              fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}
+          >
+            <MIcon name="arrow_back" size={16} />
+            돌아가기
+          </button>
+        )}
       </div>
 
       {/* 컨트롤 바 */}

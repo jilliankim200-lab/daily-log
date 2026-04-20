@@ -5,6 +5,7 @@ import { MIcon } from './MIcon';
 import type { Account, Holding } from '../types';
 import { fetchStockSignals, getSellSignal, getBuySignal } from '../utils/fetchStockSignals';
 import type { StockSignal } from '../utils/fetchStockSignals';
+import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
 
 type SignalFilter = { type: 'sell' | 'buy'; label: string } | null;
 
@@ -110,19 +111,21 @@ function fmtP(n: number): string {
 
 function TimingBadge({ timing }: { timing: { label: string; color: string; desc: string; range?: [number, number] } }) {
   const [show, setShow] = useState(false);
-  const hasRange = timing.range && timing.range[0] > 0 && timing.range[1] > timing.range[0];
+  const hasRange = timing.range && timing.range[0] > 0 && timing.range[1] > 0;
+  const rMin = hasRange ? Math.min(timing.range![0], timing.range![1]) : 0;
+  const rMax = hasRange ? Math.max(timing.range![0], timing.range![1]) : 0;
   return (
     <div style={{ position: 'relative', flexShrink: 0 }}
       onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default',
         background: `color-mix(in srgb, ${timing.color} var(--badge-mix), transparent)`,
         borderRadius: 5, padding: hasRange ? '2px 6px 3px' : '2px 6px' }}>
-        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: timing.color, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: timing.color, whiteSpace: 'nowrap' }}>
           {timing.label}
         </span>
         {hasRange && (
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 400, color: timing.color, opacity: 0.8, marginTop: 1, whiteSpace: 'nowrap' }}>
-            {fmtP(timing.range![0])}~{fmtP(timing.range![1])}
+          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: timing.color, marginTop: 1, whiteSpace: 'nowrap' }}>
+            {rMin === rMax ? fmtP(rMin) : `${fmtP(rMin)}~${fmtP(rMax)}`}
           </span>
         )}
       </div>
@@ -130,7 +133,7 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
         <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
           background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
           borderRadius: 8, padding: '7px 11px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
-          whiteSpace: 'nowrap', boxShadow: 'var(--shadow-tooltip)' }}>
+          maxWidth: 240, lineHeight: 1.6, boxShadow: 'var(--shadow-tooltip)', wordBreak: 'keep-all' }}>
           {timing.desc}
         </div>
       )}
@@ -139,55 +142,67 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
 }
 
 // ── 행 컴포넌트 ───────────────────────────────────────────────
-function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra }: {
+function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badgeTip, ticker, onNameClick }: {
   badge: string; badgeColor: string; name: string; cls?: AssetClass;
-  ret?: number | null; amount?: number; note?: string; dim?: boolean; extra?: React.ReactNode;
+  ret?: number | null; amount?: number; note?: string; dim?: boolean; extra?: React.ReactNode; badgeTip?: string;
+  ticker?: string; onNameClick?: (ticker: string, name: string) => void;
 }) {
+  const [showTip, setShowTip] = useState(false);
+  const [nameHover, setNameHover] = useState(false);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', opacity: dim ? 0.55 : 1 }}>
-      <span style={{ fontSize: 'var(--text-sm)', padding: '2px 8px', borderRadius: 6, fontWeight: 600, flexShrink: 0,
-        minWidth: 44, textAlign: 'center',
-        background: `color-mix(in srgb, ${badgeColor} var(--badge-mix), transparent)`, color: badgeColor }}>
-        {badge}
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 'var(--text-base)', color: dim ? 'var(--text-tertiary)' : 'var(--text-primary)', fontWeight: 500,
-          textDecoration: dim ? 'line-through' : 'none' }}>{name}</span>
-        {cls && <span style={{ fontSize: 'var(--text-xs)', marginLeft: 5, padding: '1px 5px', borderRadius: 4,
-          background: `color-mix(in srgb, ${ASSET_COLORS[cls]} var(--badge-mix), transparent)`, color: ASSET_COLORS[cls] }}>{cls}</span>}
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', opacity: dim ? 0.55 : 1 }}>
+      <div style={{ position: 'relative', flexShrink: 0, paddingTop: 1 }}
+        onMouseEnter={() => badgeTip && setShowTip(true)}
+        onMouseLeave={() => setShowTip(false)}>
+        <span style={{ fontSize: 'var(--text-sm)', padding: '2px 8px', borderRadius: 6, fontWeight: 600, display: 'block',
+          minWidth: 44, textAlign: 'center', cursor: badgeTip ? 'help' : 'default',
+          background: `color-mix(in srgb, ${badgeColor} var(--badge-mix), transparent)`, color: badgeColor }}>
+          {badge}
+        </span>
+        {showTip && badgeTip && (
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 300, minWidth: 280, maxWidth: 360,
+            background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
+            borderRadius: 8, padding: '8px 12px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)',
+            lineHeight: 1.7, boxShadow: 'var(--shadow-tooltip)', whiteSpace: 'pre-wrap' }}>
+            {badgeTip}
+          </div>
+        )}
       </div>
-      {note && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', flexShrink: 0 }}>{note}</span>}
-      {(ret != null || amount != null) && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, gap: 1 }}>
-          {ret != null && (
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-              수익률 <span style={{ fontWeight: 600, color: ret >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>{ret >= 0 ? '+' : ''}{ret.toFixed(1)}%</span>
-            </span>
-          )}
-          {amount != null && (
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-              보유 <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtKrw(amount)}</span>
-            </span>
-          )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span
+            onClick={ticker && onNameClick ? () => onNameClick(ticker, name) : undefined}
+            onMouseEnter={ticker && onNameClick ? () => setNameHover(true) : undefined}
+            onMouseLeave={ticker && onNameClick ? () => setNameHover(false) : undefined}
+            style={{ fontSize: 'var(--text-base)', color: dim ? 'var(--text-tertiary)' : 'var(--text-primary)', fontWeight: 600,
+              textDecoration: dim ? 'line-through' : 'none',
+              cursor: ticker && onNameClick ? 'pointer' : 'default',
+              background: nameHover && ticker && onNameClick ? 'var(--bg-tertiary)' : 'transparent',
+              borderRadius: 4, padding: '1px 4px', margin: '-1px -4px',
+            }}>{name}</span>
+          {cls && <span style={{ fontSize: 'var(--text-xs)', padding: '1px 5px', borderRadius: 4,
+            background: `color-mix(in srgb, ${ASSET_COLORS[cls]} var(--badge-mix), transparent)`, color: ASSET_COLORS[cls] }}>{cls}</span>}
         </div>
-      )}
-      {extra}
+        {(ret != null || amount != null || note) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+            {ret != null && (
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700,
+                color: ret >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                {ret >= 0 ? '+' : ''}{ret.toFixed(1)}%
+              </span>
+            )}
+            {amount != null && (
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{fmtKrw(amount)}</span>
+            )}
+            {note && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{note}</span>}
+          </div>
+        )}
+      </div>
+      {extra && <div style={{ flexShrink: 0 }}>{extra}</div>}
     </div>
   );
 }
 
-function StepHeader({ step, label, sub, color }: { step: number; label: string; sub?: string; color: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 }}>
-      <div style={{ width: 22, height: 22, borderRadius: '50%', background: `color-mix(in srgb, ${color} 20%, transparent)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color }}>{step}</span>
-      </div>
-      <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color }}>{label}</span>
-      {sub && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', fontWeight: 400 }}>{sub}</span>}
-    </div>
-  );
-}
 
 // ── 계좌 세율 ──────────────────────────────────────────────────
 function accTaxRate(acc: Account): number {
@@ -603,14 +618,24 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
 }
 
 // ── 계좌 카드 ──────────────────────────────────────────────────
-function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, dismissedBuys, onDismissBuy }: {
-  plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; signalFilter: SignalFilter;
+function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll }: {
+  plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; changeRates: Record<string, number>; signalFilter: SignalFilter;
   execMode?: boolean; checkedSells?: Set<string>; checkedBuys?: Set<string>;
   onToggleSell?: (key: string) => void; onToggleBuy?: (key: string) => void;
-  dismissedBuys?: Set<string>; onDismissBuy?: (accId: string, holdingId: string) => void;
+  onNameClick?: (ticker: string, name: string) => void;
+  expandAll?: boolean | null;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const { acc, sells, keeps, buys, freedCash, projectedSafePct, safeStatus, totalVal, safeAdjust } = plan;
+
+  useEffect(() => {
+    setCollapsed(!signalFilter);
+  }, [signalFilter]);
+
+  useEffect(() => {
+    if (expandAll === true) setCollapsed(false);
+    else if (expandAll === false) setCollapsed(true);
+  }, [expandAll]);
 
   // 필터 매칭 여부 확인
   const isRowMatch = (ticker: string | undefined, type: 'sell' | 'buy'): boolean => {
@@ -624,18 +649,145 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
   const hasIssue = safeStatus === 'under' || safeStatus === 'over';
   const noKeeps = keeps.length === 0 && sells.length > 0;
 
-  const borderColor = hasIssue
-    ? 'color-mix(in srgb, var(--color-loss) 25%, var(--border-primary))'
-    : sells.length > 0
-    ? 'color-mix(in srgb, var(--accent-blue) 20%, var(--border-primary))'
-    : 'var(--border-primary)';
+  const sellsCol = (
+    <div style={{ padding: '10px 14px', opacity: signalFilter?.type === 'buy' ? 0.25 : 1, transition: 'opacity 0.15s',
+      background: 'var(--bg-primary)' }}>
+      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-loss)', marginBottom: 8, letterSpacing: '0.03em' }}>
+        매도 · 총 {fmtKrw(sells.reduce((s, r) => s + r.val, 0))} 현금화
+      </div>
+      {sells.map((s, i) => {
+        const sig = s.h.ticker ? signals[s.h.ticker] : undefined;
+        const timing = sig ? getSellSignal(sig) : noSignal();
+        const matched = !signalFilter || signalFilter.type !== 'sell' || isRowMatch(s.h.ticker, 'sell');
+        return (
+          <div key={s.h.id} style={{ borderBottom: i < sells.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+            opacity: matched ? 1 : 0.2, transition: 'opacity 0.15s' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {execMode && (
+                <button onClick={() => onToggleSell?.(`${acc.id}__${s.h.id}`)}
+                  style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
+                    border: `2px solid ${checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'var(--color-loss)' : 'var(--text-tertiary)'}`,
+                    background: checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'color-mix(in srgb, var(--color-loss) 20%, transparent)' : 'var(--bg-elevated)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                  {checkedSells?.has(`${acc.id}__${s.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-loss)' }} />}
+                </button>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Row badge="전량매도" badgeColor="var(--color-loss)" name={s.h.name} cls={s.cls}
+                  ticker={s.h.ticker} onNameClick={onNameClick}
+                  ret={s.ret} amount={s.val}
+                  note={s.h.isFund ? undefined : s.h.quantity ? `${s.h.quantity}주` : undefined}
+                  dim={!matched} badgeTip={s.reasonDetail || undefined}
+                  extra={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {sig?.currentPrice && !s.h.isFund && (
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          {sig.currentPrice.toLocaleString()}원
+                        </span>
+                      )}
+                      {s.h.ticker && s.h.ticker in changeRates && !s.h.isFund && (() => {
+                        const cr = changeRates[s.h.ticker!];
+                        return (
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap',
+                            color: cr > 0 ? 'var(--color-profit)' : cr < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)' }}>
+                            {cr > 0 ? '+' : ''}{cr.toFixed(2)}%
+                          </span>
+                        );
+                      })()}
+                      <TimingBadge timing={timing} />
+                    </div>
+                  } />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const buysCol = (freedCash > 0 && keeps.length > 0) ? (
+    <div style={{ padding: '10px 14px', opacity: signalFilter?.type === 'sell' ? 0.25 : 1, transition: 'opacity 0.15s',
+      background: 'var(--bg-primary)' }}>
+      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-profit)', marginBottom: 8, letterSpacing: '0.03em' }}>
+        재매수 · 가용현금 {fmtKrw(freedCash)}
+        {acc.cash ? <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}> (현금 {fmtKrw(acc.cash)} 포함)</span> : null}
+      </div>
+      {noKeeps ? (
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-warning)', lineHeight: 1.7,
+          borderLeft: '2px solid var(--color-warning)', paddingLeft: 8 }}>
+          <div style={{ fontWeight: 700, marginBottom: 2 }}>⚠ 유지할 종목이 없습니다</div>
+          <div style={{ color: 'var(--text-secondary)' }}>모든 종목이 다른 계좌에도 보유 중입니다.</div>
+          <div style={{ marginTop: 4, color: 'var(--text-tertiary)' }}>
+            A. 매도하지 않고 중복 유지<br />
+            B. {fmtKrw(freedCash)}로 새 종목 직접 선택
+          </div>
+        </div>
+      ) : (
+        keeps.map((k, i) => {
+          const buy = buys.find(b => b.h.id === k.h.id);
+          const addBadge = buy && buy.addAmount > 0 ? (
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--color-profit)', flexShrink: 0,
+              background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4 }}>
+              +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
+            </span>
+          ) : null;
+          const sig = k.h.ticker ? signals[k.h.ticker] : undefined;
+          const timing = sig ? getBuySignal(sig) : noSignal();
+          const hasBuy = buy && buy.addAmount > 0;
+          const matched = isRowMatch(k.h.ticker, 'buy');
+          return (
+            <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+              opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {execMode && hasBuy && (
+                  <button onClick={() => onToggleBuy?.(`${acc.id}__${k.h.id}`)}
+                    style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
+                      border: `2px solid ${checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'var(--color-profit)' : 'var(--text-tertiary)'}`,
+                      background: checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'color-mix(in srgb, var(--color-profit) 20%, transparent)' : 'var(--bg-elevated)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    {checkedBuys?.has(`${acc.id}__${k.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-profit)' }} />}
+                  </button>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Row badge={k.isHighReturn ? '★유지' : '추가매수'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
+                    name={k.h.name} cls={k.cls} ticker={k.h.ticker} onNameClick={onNameClick}
+                    ret={k.ret} amount={k.val}
+                    badgeTip={k.keepReason || undefined}
+                    extra={
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        {sig?.currentPrice && !k.h.isFund && (
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {sig.currentPrice.toLocaleString()}원
+                          </span>
+                        )}
+                        {k.h.ticker && k.h.ticker in changeRates && !k.h.isFund && (() => {
+                          const cr = changeRates[k.h.ticker!];
+                          return (
+                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap',
+                              color: cr > 0 ? 'var(--color-profit)' : cr < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)' }}>
+                              {cr > 0 ? '+' : ''}{cr.toFixed(2)}%
+                            </span>
+                          );
+                        })()}
+                        {addBadge}
+                        <TimingBadge timing={timing} />
+                      </div>
+                    } />
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  ) : null;
 
   return (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, marginBottom: 14, border: `1px solid ${borderColor}`, overflow: 'hidden' }}>
+    <div style={{ border: '1px solid var(--border-primary)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
       {/* 헤더 */}
       <div onClick={() => setCollapsed(c => !c)} style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px', cursor: 'pointer',
+        padding: '12px 16px', cursor: 'pointer',
         borderBottom: collapsed ? 'none' : '1px solid var(--border-secondary)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -656,159 +808,57 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
       </div>
 
       {!collapsed && (
-        <div style={{ padding: '14px 16px 16px' }}>
-
-          {/* 안전자산 (퇴직/IRP) */}
+        <div>
+          {/* 안전자산 바 (퇴직/IRP) */}
           {isRet && (
-            <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10,
-              background: safeStatus === 'good' ? 'color-mix(in srgb, var(--color-profit) 8%, var(--bg-tertiary))' : safeStatus === 'over' ? 'color-mix(in srgb, var(--color-warning) 8%, var(--bg-tertiary))' : 'color-mix(in srgb, var(--color-loss) 8%, var(--bg-tertiary))',
-              border: `1px solid ${safeStatus === 'good' ? 'color-mix(in srgb, var(--color-profit) 20%, transparent)' : 'color-mix(in srgb, var(--color-loss) 20%, transparent)'}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>매도 후 안전자산 비율</span>
-                <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)' }}>
-                  {projectedSafePct.toFixed(1)}% {safeStatus === 'good' ? '✓ 적정' : safeStatus === 'under' ? '⚠ 미달' : '▲ 초과'}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '7px 16px', borderBottom: '1px solid var(--border-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>안전자산</span>
+                <div style={{ width: 72, height: 4, background: 'var(--bg-elevated)', borderRadius: 2, position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, height: 4, borderRadius: 2, width: `${Math.min(projectedSafePct, 100)}%`,
+                    background: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)', transition: 'width 0.5s' }} />
+                  <div style={{ position: 'absolute', left: '30%', top: -1, width: 1.5, height: 6, background: 'var(--color-profit)', borderRadius: 1 }} />
+                  <div style={{ position: 'absolute', left: '35%', top: -1, width: 1.5, height: 6, background: 'var(--color-warning)', borderRadius: 1 }} />
+                </div>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700,
+                  color: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)' }}>
+                  {projectedSafePct.toFixed(1)}% {safeStatus === 'good' ? '적정' : safeStatus === 'under' ? '⚠ 미달' : '▲ 초과'}
                 </span>
               </div>
-              {safeAdjust && <div style={{ marginTop: 4, fontSize: 'var(--text-sm)', fontWeight: 600, color: safeStatus === 'under' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
-                → {safeAdjust.action} 필요: {fmtKrw(safeAdjust.amount)}
-              </div>}
-              <div style={{ position: 'relative', height: 5, marginTop: 8, background: 'var(--bg-elevated)', borderRadius: 3 }}>
-                <div style={{ position: 'absolute', left: 0, top: 0, height: 5, borderRadius: 3, width: `${Math.min(projectedSafePct, 100)}%`, background: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)', transition: 'width 0.5s' }} />
-                <div style={{ position: 'absolute', left: '30%', top: -2, width: 2, height: 9, background: 'var(--color-profit)', borderRadius: 1 }} />
-                <div style={{ position: 'absolute', left: '35%', top: -2, width: 2, height: 9, background: 'var(--color-warning)', borderRadius: 1 }} />
-              </div>
+              {safeAdjust && (
+                <span style={{ fontSize: 'var(--text-xs)', color: safeStatus === 'under' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
+                  {safeAdjust.action} {fmtKrw(safeAdjust.amount)} 필요
+                </span>
+              )}
             </div>
           )}
 
-          {/* 변경 없음 */}
-          {sells.length === 0 && (
-            <div>
+          {/* 매도 있음: 좌(매도) / 우(재매수) — 반응형 2단 */}
+          {sells.length > 0 ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: buysCol ? 'repeat(auto-fit, minmax(260px, 1fr))' : '1fr',
+              columnGap: '1px',
+              background: buysCol ? 'var(--border-secondary)' : 'transparent',
+            }}>
+              {sellsCol}{buysCol}
+            </div>
+          ) : (
+            /* 변경 없음: 종목 목록만 */
+            <div style={{ padding: '4px 14px 10px' }}>
               {keeps.map((k, i) => {
                 const matched = isRowMatch(k.h.ticker, 'buy');
                 return (
                   <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
                     opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
                     <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
-                      name={k.h.name} cls={k.cls} ret={k.ret} amount={k.val} />
-                    {k.keepReason && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
+                      name={k.h.name} cls={k.cls} ticker={k.h.ticker} onNameClick={onNameClick}
+                      ret={k.ret} amount={k.val} badgeTip={k.keepReason || undefined} />
                   </div>
                 );
               })}
               {acc.cash && acc.cash > 0 && <Row badge="유지" badgeColor="var(--color-profit)" name="현금" amount={acc.cash} />}
-            </div>
-          )}
-
-          {/* STEP 1: 매도 */}
-          {sells.length > 0 && (
-            <div style={{ marginBottom: 16, opacity: signalFilter?.type === 'buy' ? 0.25 : 1, transition: 'opacity 0.15s' }}>
-              <StepHeader step={1} label="매도" sub={`— 총 ${fmtKrw(sells.reduce((s, r) => s + r.val, 0))} 현금화`} color="var(--color-loss)" />
-              <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '4px 12px' }}>
-                {sells.map((s, i) => {
-                  const sig = s.h.ticker ? signals[s.h.ticker] : undefined;
-                  const timing = sig ? getSellSignal(sig) : noSignal();
-                  const matched = !signalFilter || signalFilter.type !== 'sell' || isRowMatch(s.h.ticker, 'sell');
-                  return (
-                    <div key={s.h.id} style={{ borderBottom: i < sells.length - 1 ? '1px solid var(--border-secondary)' : 'none',
-                      opacity: matched ? 1 : 0.2, transition: 'opacity 0.15s' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {execMode && (
-                          <button onClick={() => onToggleSell?.(`${acc.id}__${s.h.id}`)}
-                            style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
-                              border: `2px solid ${checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'var(--color-loss)' : 'var(--text-tertiary)'}`,
-                              background: checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'color-mix(in srgb, var(--color-loss) 20%, transparent)' : 'var(--bg-elevated)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                            {checkedSells?.has(`${acc.id}__${s.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-loss)' }} />}
-                          </button>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Row badge="전량매도" badgeColor="var(--color-loss)" name={s.h.name} cls={s.cls}
-                            ret={s.ret} amount={s.val}
-                            note={s.h.isFund ? undefined : s.h.quantity ? `${s.h.quantity}주` : undefined}
-                            dim={!matched}
-                            extra={<TimingBadge timing={timing} />} />
-                        </div>
-                      </div>
-                      {s.reasonDetail && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{s.reasonDetail}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: 재매수 — 매도 현금 or 기존 현금이 있을 때 표시 */}
-          {freedCash > 0 && keeps.length > 0 && (
-            <div style={{ opacity: signalFilter?.type === 'sell' ? 0.25 : 1, transition: 'opacity 0.15s' }}>
-              <StepHeader step={sells.length > 0 ? 2 : 1} label="재매수"
-                sub={sells.length > 0
-                  ? `— 가용현금 ${fmtKrw(freedCash)} (매도 ${fmtKrw(sells.reduce((s,r)=>s+r.val,0))}${acc.cash ? ` + 기존현금 ${fmtKrw(acc.cash)}` : ''}) 비중대로 배분`
-                  : `— 기존현금 ${fmtKrw(acc.cash ?? 0)} 비중대로 배분`}
-                color="var(--color-profit)" />
-
-              {noKeeps ? (
-                <div style={{ background: 'color-mix(in srgb, var(--color-warning) 8%, var(--bg-tertiary))', borderRadius: 10, padding: '12px 14px',
-                  border: '1px solid color-mix(in srgb, var(--color-warning) 20%, transparent)', fontSize: 'var(--text-sm)', color: 'var(--color-warning)', lineHeight: 1.7 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ 이 계좌에 유지할 종목이 없습니다</div>
-                  <div style={{ color: 'var(--text-secondary)' }}>모든 종목이 다른 계좌에도 보유 중입니다. 아래 중 하나를 선택하세요:</div>
-                  <div style={{ marginTop: 6, color: 'var(--text-tertiary)' }}>
-                    A. 매도하지 않고 중복 그대로 유지<br />
-                    B. {fmtKrw(freedCash)}로 이 계좌에 새 종목 직접 선택 매수
-                  </div>
-                </div>
-              ) : (
-                <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '4px 12px' }}>
-                  {keeps.map((k, i) => {
-                    const buy = buys.find(b => b.h.id === k.h.id);
-                    const isDismissed = dismissedBuys?.has(`${acc.id}__${k.h.id}`);
-                    const addBadge = buy && buy.addAmount > 0 && !isDismissed ? (
-                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--color-profit)', flexShrink: 0,
-                        background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4 }}>
-                        +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
-                      </span>
-                    ) : null;
-                    const sig = k.h.ticker ? signals[k.h.ticker] : undefined;
-                    const timing = sig ? getBuySignal(sig) : noSignal();
-                    const hasBuy = buy && buy.addAmount > 0 && !isDismissed;
-                    return (
-                      <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
-                        opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {buy && buy.addAmount > 0 && isDismissed && (
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', flexShrink: 0,
-                              padding: '1px 6px', borderRadius: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border-secondary)' }}>
-                              매수완료
-                            </span>
-                          )}
-                          {execMode && hasBuy && (
-                            <button onClick={() => onToggleBuy?.(`${acc.id}__${k.h.id}`)}
-                              style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
-                                border: `2px solid ${checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'var(--color-profit)' : 'var(--text-tertiary)'}`,
-                                background: checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'color-mix(in srgb, var(--color-profit) 20%, transparent)' : 'var(--bg-elevated)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                              {checkedBuys?.has(`${acc.id}__${k.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-profit)' }} />}
-                            </button>
-                          )}
-                          {!execMode && buy && buy.addAmount > 0 && !isDismissed && (
-                            <button onClick={() => onDismissBuy?.(acc.id, k.h.id)}
-                              title="이미 매수했어요"
-                              style={{ flexShrink: 0, fontSize: 10, color: 'var(--text-tertiary)', cursor: 'pointer',
-                                padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-secondary)',
-                                background: 'transparent', lineHeight: 1.4 }}>
-                              이미 매수
-                            </button>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <Row badge={k.isHighReturn ? '★유지' : '추가매수'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
-                              name={k.h.name} cls={k.cls} ret={k.ret} amount={k.val}
-                              extra={<>{addBadge}<TimingBadge timing={timing} /></>} />
-                          </div>
-                        </div>
-                        {k.keepReason && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', padding: '0 0 4px 56px', marginTop: -4 }}>{k.keepReason}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -819,77 +869,86 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
 
 // ── 뱃지 범위 기준 모달 ────────────────────────────────────────
 const BADGE_RANGE_ROWS: { badge: string; color: string; type: '매도' | '매수'; range: string; desc: string }[] = [
-  { badge: '매도 적합', color: 'var(--color-profit)', type: '매도', range: '현재가 ~ 70일 고점', desc: '상승 추세 고점 구간, 지금부터 고점까지 매도 유효' },
+  { badge: '매도 적합', color: 'var(--color-profit)', type: '매도', range: '현재가 ~ 60일 고점', desc: '상승 추세 고점 구간, 지금부터 고점까지 매도 유효' },
   { badge: '매도 가능 (상승)', color: 'var(--color-profit)', type: '매도', range: '현재가 ~ 70% 위치점', desc: '추가 상승 여지 있으나 매도 가능한 구간' },
-  { badge: '매도 가능 (횡보)', color: 'var(--color-warning)', type: '매도', range: '현재가 ~ 70일 고점', desc: '횡보 중상단, 고점까지 매도 구간' },
-  { badge: '반등 대기', color: 'var(--color-warning)', type: '매도', range: 'MA20 ~ 70일 고점', desc: '횡보 하단, 반등 후 이 구간 진입 시 매도' },
-  { badge: '저점 매도', color: 'var(--color-loss)', type: '매도', range: '70일 저점 ~ 현재가', desc: '손절 구간, 이미 저점권에 있음' },
+  { badge: '매도 가능 (횡보)', color: 'var(--color-warning)', type: '매도', range: '현재가 ~ 60일 고점', desc: '횡보 중상단, 고점까지 매도 구간' },
+  { badge: '반등 대기', color: 'var(--color-warning)', type: '매도', range: 'MA20 ~ 60일 고점', desc: '횡보 하단, 반등 후 이 구간 진입 시 매도' },
+  { badge: '저점 매도', color: 'var(--color-loss)', type: '매도', range: '60일 저점 ~ 현재가', desc: '손절 구간, 이미 저점권에 있음' },
   { badge: '반등 후 매도', color: 'var(--color-loss)', type: '매도', range: 'MA60 ~ MA20', desc: '하락 추세, 반등 시 MA 구간 도달하면 매도' },
-  { badge: '반등 대기 (저점)', color: 'var(--color-warning)', type: '매수', range: '70일 저점 ~ MA20', desc: '70일 저점 근처, 하락 중 — MA20 회복 후 매수 진입' },
-  { badge: '반등 대기 (하락)', color: 'var(--color-warning)', type: '매수', range: '70일 저점 ~ MA20', desc: '하락 추세 진행 중 — MA20 돌파 시점에 매수 권장' },
-  { badge: '매수 적합 (횡보)', color: 'var(--color-profit)', type: '매수', range: '70일 저점 ~ MA20', desc: '횡보 하단 매수 구간' },
-  { badge: '분할 매수 (횡보)', color: 'var(--color-warning)', type: '매수', range: '70일 저점 ~ 현재가', desc: '횡보 중, 저점~현재가 구간 분할 매수' },
+  { badge: '반등 대기 (저점)', color: 'var(--color-warning)', type: '매수', range: '60일 저점 ~ MA20', desc: '60일 저점 근처, 하락 중 — MA20 회복 후 매수 진입' },
+  { badge: '반등 대기 (하락)', color: 'var(--color-warning)', type: '매수', range: '60일 저점 ~ MA20', desc: '하락 추세 진행 중 — MA20 돌파 시점에 매수 권장' },
+  { badge: '매수 적합 (횡보)', color: 'var(--color-profit)', type: '매수', range: '60일 저점 ~ MA20', desc: '횡보 하단 매수 구간' },
+  { badge: '분할 매수 (횡보)', color: 'var(--color-warning)', type: '매수', range: '60일 저점 ~ 현재가', desc: '횡보 중, 저점~현재가 구간 분할 매수' },
   { badge: '매수 가능', color: 'var(--color-profit)', type: '매수', range: 'MA20 ~ 현재가', desc: '상승 추세 초입, MA20 이상 구간에서 매수' },
   { badge: '분할 매수 (상승)', color: 'var(--color-warning)', type: '매수', range: 'MA20 ~ 현재가', desc: '상승 중상단, MA20 ~ 현재가 구간 나눠 매수' },
   { badge: '조정 대기', color: 'var(--color-loss)', type: '매수', range: 'MA60 ~ MA20', desc: '고점 근처, 조정 시 MA 구간 도달하면 매수' },
 ];
 
-function BadgeRangeModal({ onClose }: { onClose: () => void }) {
+function GuideModal({ onClose }: { onClose: () => void }) {
+  const signalRows = (type: '매도' | '매수') => BADGE_RANGE_ROWS.filter(r => r.type === type).map((r, i) => (
+    <div key={r.badge + i} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1.3fr', gap: 8,
+      padding: '8px 12px', fontSize: 'var(--text-sm)', alignItems: 'start',
+      borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none',
+      background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)' }}>
+      <span style={{ fontWeight: 700, color: r.color }}>{r.badge}</span>
+      <span style={{ color: 'var(--text-tertiary)', fontFamily: 'monospace', fontSize: 'var(--text-xs)' }}>{r.range}</span>
+      <span style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{r.desc}</span>
+    </div>
+  ));
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000,
       background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: 14,
-        border: '1px solid var(--border-primary)', width: '100%', maxWidth: 640, maxHeight: '80vh',
+        border: '1px solid var(--border-primary)', width: '100%', maxWidth: 680, maxHeight: '85vh',
         overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}>
-        {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 18px', borderBottom: '1px solid var(--border-secondary)' }}>
-          <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>타이밍 뱃지별 범위 기준</span>
+          padding: '14px 18px', borderBottom: '1px solid var(--border-secondary)', flexShrink: 0 }}>
+          <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>가이드 — 적용 원칙 & 타이밍 신호</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-tertiary)', fontSize: 18, lineHeight: 1, padding: '2px 4px' }}>✕</button>
+            color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>
+            <MIcon name="close" size={18} />
+          </button>
         </div>
-        {/* 설명 */}
-        <div style={{ padding: '10px 18px 6px', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
-          뱃지 아래 숫자는 해당 신호가 유효한 <strong style={{ color: 'var(--text-secondary)' }}>매도/매수 실행 가격 범위</strong>입니다.
-          매도 범위는 현재가·기술적 고점 기준, 매수 범위는 저점·MA 기준으로 산출합니다.
-        </div>
-        {/* 테이블 */}
-        <div style={{ overflowY: 'auto', padding: '4px 18px 18px' }}>
-          {/* 매도 */}
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-loss)', margin: '12px 0 6px', letterSpacing: 1 }}>SELL — 매도 신호</div>
-          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-secondary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', background: 'var(--bg-tertiary)',
-              padding: '6px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
-              <span>뱃지</span><span>가격 범위</span><span>설명</span>
-            </div>
-            {BADGE_RANGE_ROWS.filter(r => r.type === '매도').map((r, i, arr) => (
-              <div key={r.badge} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', gap: 8,
-                padding: '8px 12px', fontSize: 'var(--text-sm)', alignItems: 'start',
-                borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none',
-                background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)' }}>
-                <span style={{ fontWeight: 600, color: r.color }}>{r.badge}</span>
-                <span style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{r.range}</span>
-                <span style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{r.desc}</span>
-              </div>
-            ))}
+        <div style={{ overflowY: 'auto', padding: '16px 18px', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+
+          {/* 매도/재배분 기준 */}
+          <div style={{ fontWeight: 700, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>매도 / 재배분 기준</div>
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, lineHeight: 2 }}>
+            <div>① 동일 종목이 여러 계좌에 있으면 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>절세 우선순위 낮은 계좌에서 매도</span></div>
+            <div style={{ paddingLeft: 14, color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', lineHeight: 1.8 }}>IRP &gt; 퇴직연금 &gt; 연금저축 &gt; ISA &gt; 일반/CMA</div>
+            <div>② 매도 현금은 <span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>같은 계좌 유지 종목에 목표 비중 기반 재배분</span> (계좌 간 이동 없음)</div>
+            <div>③ <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)</div>
+            <div>④ 퇴직/IRP는 매도 후 안전자산(채권+금) 비율이 <span style={{ fontWeight: 600 }}>30~35%</span> 유지되는지 별도 체크</div>
           </div>
-          {/* 매수 */}
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', margin: '16px 0 6px', letterSpacing: 1 }}>BUY — 매수 신호</div>
-          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-secondary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', background: 'var(--bg-tertiary)',
+
+          {/* 타이밍 신호 공통 설명 */}
+          <div style={{ fontWeight: 700, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>타이밍 신호 기준</div>
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 'var(--text-xs)', lineHeight: 1.9 }}>
+            <span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>MA20</span> 최근 20거래일 평균가 (단기) &nbsp;·&nbsp;
+            <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>MA60</span> 최근 60거래일 평균가 (중기) &nbsp;·&nbsp;
+            <span style={{ fontWeight: 600 }}>위치</span> 60일 저점~고점 내 현재가 위치 (0%=저점, 100%=고점)
+            <br />뱃지 아래 숫자는 신호가 유효한 <strong>매도/매수 실행 가격 범위</strong>입니다.
+          </div>
+
+          {/* SELL */}
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-loss)', margin: '0 0 6px', letterSpacing: 1 }}>SELL — 매도</div>
+          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-secondary)', marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1.3fr', background: 'var(--bg-tertiary)',
               padding: '6px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
-              <span>뱃지</span><span>가격 범위</span><span>설명</span>
+              <span>신호</span><span>가격 범위</span><span>설명</span>
             </div>
-            {BADGE_RANGE_ROWS.filter(r => r.type === '매수').map((r, i) => (
-              <div key={r.badge} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr', gap: 8,
-                padding: '8px 12px', fontSize: 'var(--text-sm)', alignItems: 'start',
-                borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none',
-                background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--bg-tertiary) 50%, transparent)' }}>
-                <span style={{ fontWeight: 600, color: r.color }}>{r.badge}</span>
-                <span style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{r.range}</span>
-                <span style={{ color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{r.desc}</span>
-              </div>
-            ))}
+            {signalRows('매도')}
+          </div>
+
+          {/* BUY */}
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-profit)', margin: '0 0 6px', letterSpacing: 1 }}>BUY — 매수</div>
+          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-secondary)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1.3fr', background: 'var(--bg-tertiary)',
+              padding: '6px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', gap: 8 }}>
+              <span>신호</span><span>가격 범위</span><span>설명</span>
+            </div>
+            {signalRows('매수')}
           </div>
         </div>
       </div>
@@ -968,7 +1027,7 @@ function computeAllPlans(
       const tp = accPriority(item.acc);
       reasonMap.set(key, {
         reason: '다른 절세 계좌에 동일 종목',
-        reasonDetail: `${accLabel(winner.acc)}(우선순위 ${wp})에 동일 종목 → ${accLabel(item.acc)}(우선순위 ${tp})에서 매도`
+        reasonDetail: `${accLabel(winner.acc)}(우선순위 ${wp})에 동일 종목 → ${accLabel(item.acc)}(우선순위 ${tp})에서 매도 → 매도금은 ${accLabel(item.acc)} 유지 종목에 목표 비중대로 재배분`
       });
     }
   }
@@ -1039,7 +1098,8 @@ export function OptimalGuide() {
   const { accounts, prices, isMobile, navigateTo, reloadAccounts } = useAppContext();
   const [signals, setSignals] = useState<Record<string, StockSignal>>({});
   const [signalsLoading, setSignalsLoading] = useState(false);
-  const [showRangeGuide, setShowRangeGuide] = useState(false);
+  const [changeRates, setChangeRates] = useState<Record<string, number>>({});
+  const [showGuide, setShowGuide] = useState(false);
   const [signalFilter, setSignalFilter] = useState<SignalFilter>(null);
   const [targets, setTargets] = useState<TargetAllocation>(loadTargetsFromStorage);
   const [prevTargets, setPrevTargets] = useState<TargetAllocation | null>(null);
@@ -1047,25 +1107,10 @@ export function OptimalGuide() {
   const [exchangeRate, setExchangeRate] = useState(1450);
   const [showComparison, setShowComparison] = useState(false);
   const [execMode, setExecMode] = useState(false);
+  const [expandAll, setExpandAll] = useState<boolean | null>(null);
   const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
   const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
-  const [dismissedBuys, setDismissedBuys] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('og_dismissed_buys') || '[]')); }
-    catch { return new Set(); }
-  });
-  const dismissBuy = (accId: string, holdingId: string) => {
-    const key = `${accId}__${holdingId}`;
-    const next = new Set(dismissedBuys);
-    next.add(key);
-    setDismissedBuys(next);
-    localStorage.setItem('og_dismissed_buys', JSON.stringify([...next]));
-  };
-  const clearDismissed = () => {
-    setDismissedBuys(new Set());
-    localStorage.removeItem('og_dismissed_buys');
-  };
-
   // KV에서 targets + prevTargets 로드 (마운트 시 1회)
   useEffect(() => {
     kvGet<TargetAllocation>('rebalancing_targets').then(val => {
@@ -1131,6 +1176,26 @@ export function OptimalGuide() {
   const { accountPlans, totalSells, retirementIssues } = useMemo(() =>
     computeAllPlans(accounts, prices, targets, new Set()), [accounts, prices, targets]);
 
+  const currentAlloc = useMemo(() => {
+    const byClass: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
+    let total = 0;
+    for (const acc of accounts) {
+      total += acc.cash || 0;
+      for (const h of acc.holdings) {
+        const v = hVal(h, prices);
+        byClass[classify(h.name)] += v;
+        total += v;
+      }
+    }
+    const result: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
+    if (total > 0) {
+      for (const cls of Object.keys(byClass) as AssetClass[]) {
+        result[cls] = Math.round(byClass[cls] / total * 1000) / 10;
+      }
+    }
+    return result;
+  }, [accounts, prices]);
+
   const toggleCheck = (set: Set<string>, setFn: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
     setFn(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   };
@@ -1182,7 +1247,6 @@ export function OptimalGuide() {
       setExecMode(false);
       setCheckedSells(new Set());
       setCheckedBuys(new Set());
-      clearDismissed();
     } catch (err) {
       console.error('실행 저장 실패:', err);
     } finally {
@@ -1208,14 +1272,19 @@ export function OptimalGuide() {
     return result;
   }, [accountPlans, prevTargets, prices]);
 
-  // 전체 티커 수집 후 신호 fetch
+  // 전체 티커 수집 후 신호 + 등락률 fetch
   useEffect(() => {
-    const tickers = accounts.flatMap(a => a.holdings.map(h => h.ticker)).filter(Boolean);
+    const tickers = accounts.flatMap(a => a.holdings.map(h => h.ticker)).filter(Boolean) as string[];
     if (tickers.length === 0) return;
     setSignalsLoading(true);
     fetchStockSignals(tickers).then(data => {
       setSignals(data);
       setSignalsLoading(false);
+    });
+    fetchCurrentPricesWithChange(tickers).then(data => {
+      const rates: Record<string, number> = {};
+      for (const [t, v] of Object.entries(data)) rates[t] = v.changeRate;
+      setChangeRates(rates);
     });
   }, [accounts]);
 
@@ -1233,8 +1302,10 @@ export function OptimalGuide() {
       }
       for (const k of plan.keeps) {
         if (k.h.ticker && signals[k.h.ticker]) {
-          const sig = getBuySignal(signals[k.h.ticker]);
-          buyMap.set(sig.label, sig.color);
+          const sellSig = getSellSignal(signals[k.h.ticker]);
+          sellMap.set(sellSig.label, sellSig.color);
+          const buySig = getBuySignal(signals[k.h.ticker]);
+          buyMap.set(buySig.label, buySig.color);
         }
       }
     }
@@ -1290,37 +1361,6 @@ export function OptimalGuide() {
         ))}
       </div>
 
-      {/* 시뮬레이션 비교 + 실행 */}
-      <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={() => setShowComparison(c => !c)}
-          style={{ fontSize: 'var(--text-sm)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-            border: showComparison ? '1.5px solid var(--accent-blue)' : '1px solid var(--border-primary)',
-            background: showComparison ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
-            color: showComparison ? 'var(--accent-blue)' : 'var(--text-secondary)',
-            display: 'flex', alignItems: 'center', gap: 5 }}>
-          <MIcon name="compare_arrows" size={14} style={{ color: showComparison ? 'var(--accent-blue)' : 'var(--text-tertiary)' }} />
-          시뮬레이션 비교
-        </button>
-        <button onClick={() => { setExecMode(m => !m); setCheckedSells(new Set()); setCheckedBuys(new Set()); }}
-          style={{ fontSize: 'var(--text-sm)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-            border: execMode ? '1.5px solid var(--color-profit)' : '1px solid var(--border-primary)',
-            background: execMode ? 'color-mix(in srgb, var(--color-profit) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
-            color: execMode ? 'var(--color-profit)' : 'var(--text-secondary)',
-            display: 'flex', alignItems: 'center', gap: 5 }}>
-          <MIcon name={execMode ? 'close' : 'play_arrow'} size={14} style={{ color: execMode ? 'var(--color-profit)' : 'var(--text-tertiary)' }} />
-          {execMode ? '실행 취소' : '실행'}
-        </button>
-        {execMode && checkedCount > 0 && (
-          <button onClick={handleExecSave} disabled={saving}
-            style={{ fontSize: 'var(--text-sm)', padding: '6px 14px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
-              border: 'none', background: 'var(--color-profit)', color: '#fff',
-              display: 'flex', alignItems: 'center', gap: 5, opacity: saving ? 0.6 : 1 }}>
-            <MIcon name="save" size={14} style={{ color: '#fff' }} />
-            {saving ? '저장 중...' : `실행 저장 (${checkedCount}건)`}
-          </button>
-        )}
-      </div>
-
       {showComparison && <ComparisonPanel accounts={accounts} prices={prices} plans={accountPlans} targets={targets} />}
 
       {/* 목표 비중 카드 */}
@@ -1339,55 +1379,43 @@ export function OptimalGuide() {
             수정
           </button>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(5, 1fr)', gap: '4px 0', fontSize: 'var(--text-sm)' }}>
+          {/* 헤더 */}
+          <span />
+          {(Object.keys(targets) as AssetClass[]).map(cls => (
+            <span key={cls} style={{ textAlign: 'center', fontWeight: 700, color: ASSET_COLORS[cls], paddingBottom: 4 }}>{cls}</span>
+          ))}
+          {/* 목표 */}
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', paddingRight: 10, display: 'flex', alignItems: 'center' }}>목표</span>
           {(Object.entries(targets) as [AssetClass, number][]).map(([cls, pct]) => (
-            <div key={cls} style={{ display: 'flex', alignItems: 'baseline', gap: 5,
-              background: `color-mix(in srgb, ${ASSET_COLORS[cls]} var(--badge-mix), transparent)`,
-              borderRadius: 6, padding: '4px 10px' }}>
-              <span style={{ fontSize: 'var(--text-sm)', color: ASSET_COLORS[cls], fontWeight: 600 }}>{cls}</span>
-              <span style={{ fontSize: 'var(--text-sm)', color: ASSET_COLORS[cls], fontWeight: 700 }}>{pct}%</span>
+            <span key={cls} style={{ textAlign: 'center', fontWeight: 700, color: ASSET_COLORS[cls] }}>
+              {pct}%
               {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && (
                 <span
                   onClick={e => { e.stopPropagation(); if (divChangePlans.length > 0) setShowDivDetail(true); }}
-                  style={{ fontSize: 'var(--text-xs)', color: ASSET_COLORS[cls], opacity: 0.85, marginLeft: 2,
+                  style={{ fontSize: 'var(--text-xs)', color: ASSET_COLORS[cls], opacity: 0.8, marginLeft: 3,
                     cursor: divChangePlans.length > 0 ? 'pointer' : 'default',
                     textDecoration: divChangePlans.length > 0 ? 'underline dotted' : 'none' }}>
-                  월 배당 {fmtKrw(coveredCallMonthlyDiv)}
-                  {divChangePlans.length > 0 && ' ▾'}
+                  {divChangePlans.length > 0 && '▾'}
                 </span>
               )}
-            </div>
+            </span>
           ))}
-        </div>
-      </div>
-
-      {/* 원칙 */}
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, fontSize: 'var(--text-sm)', lineHeight: 1.9, color: 'var(--text-tertiary)' }}>
-        <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, fontSize: 'var(--text-base)' }}>적용 원칙</div>
-
-        <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>[ 매도/재배분 기준 ]</div>
-        <div>① 동일 종목이 여러 계좌에 있으면 <span style={{ color: 'var(--text-secondary)' }}>절세 우선순위 낮은 계좌에서 매도</span></div>
-        <div style={{ paddingLeft: 12, color: 'var(--text-tertiary)' }}>IRP &gt; 퇴직연금 &gt; 연금저축 &gt; ISA &gt; 일반/CMA</div>
-        <div>② 매도 현금은 <span style={{ color: 'var(--color-profit)' }}>같은 계좌 유지 종목에 목표 비중 기반 재배분</span> (계좌 간 이동 없음)</div>
-        <div>③ <span style={{ color: 'var(--color-gold)' }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)</div>
-        <div>④ 퇴직/IRP는 매도 후 안전자산(채권+금) 비율이 30~35% 유지되는지 별도 체크</div>
-
-        <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginTop: 10, marginBottom: 6 }}>[ 타이밍 신호 기준 — 실제 시세 데이터 ]</div>
-        <div style={{ marginBottom: 6 }}>
-          <span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>MA20</span> 최근 20거래일 평균가 (단기 추세) &nbsp;·&nbsp;
-          <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>MA60</span> 최근 60거래일 평균가 (중기 추세) &nbsp;·&nbsp;
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>위치</span> 70일 저점~고점 범위 내 현재가 위치 (0%=저점, 100%=고점)
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
-          <div><span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>매도 적합</span> — 현재가가 MA20·MA60 모두 위 + 위치 70% 이상 → 상승 추세 고점, 지금 팔기 유리</div>
-          <div><span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>매도 가능</span> — 현재가가 MA20·MA60 위 + 위치 70% 미만 → 상승 중이나 추가 여지 있음</div>
-          <div><span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>반등 대기</span> — 횡보 구간(MA20·MA60 사이) + 위치 하단 → 소폭 반등 후 매도 권장</div>
-          <div><span style={{ color: 'var(--color-loss)', fontWeight: 600 }}>반등 후 매도</span> — 현재가가 MA20·MA60 모두 아래 → 하락 추세, 지금 매도 시 손해 가능성</div>
-          <div><span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>저점 매수</span> — 현재가가 MA20·MA60 모두 아래 + 위치 30% 이하 → 바닥 구간, 매수 기회</div>
-          <div><span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>분할 매수</span> — 하락 추세이나 저점 미확인 → 한 번에 아닌 2~3회 나눠 매수</div>
-          <div><span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>매수 가능</span> — 현재가가 MA20·MA60 위 + 위치 60% 미만 → 상승 추세 초입 구간, 즉시 매수 가능</div>
-          <div><span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>분할 매수</span> — 상승 추세 + 위치 60~80% → 오르고 있으나 고점 위험, 2회 분할 권장</div>
-          <div><span style={{ color: 'var(--color-loss)', fontWeight: 600 }}>조정 대기</span> — 현재가가 MA20·MA60 위 + 위치 80% 이상 → 고점 근처, 조정 후 매수 권장</div>
+          {/* 현재 */}
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', paddingRight: 10, display: 'flex', alignItems: 'center' }}>현재</span>
+          {(Object.keys(targets) as AssetClass[]).map(cls => {
+            const cur = currentAlloc[cls] ?? 0;
+            const diff = cur - targets[cls];
+            const diffColor = Math.abs(diff) <= 3 ? 'var(--color-profit)' : Math.abs(diff) <= 8 ? 'var(--color-warning)' : 'var(--color-loss)';
+            return (
+              <div key={cls} style={{ textAlign: 'center' }}>
+                <span style={{ fontWeight: 700, color: diffColor }}>{cur.toFixed(1)}%</span>
+                <span style={{ fontSize: 'var(--text-xs)', color: diffColor, opacity: 0.75, marginLeft: 3 }}>
+                  {diff >= 0 ? '+' : ''}{diff.toFixed(1)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -1395,17 +1423,17 @@ export function OptimalGuide() {
       <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
         <MIcon name="account_balance_wallet" size={16} style={{ color: 'var(--text-secondary)' }} />
         계좌별 액션 플랜
-        <button onClick={() => setShowRangeGuide(true)} style={{
+        <button onClick={() => setShowGuide(true)} style={{
           marginLeft: 'auto', fontSize: 'var(--text-sm)', padding: '3px 10px', borderRadius: 6, fontWeight: 600,
           cursor: 'pointer', border: '1px solid var(--border-primary)',
           background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
           <MIcon name="info" size={13} style={{ color: 'var(--text-tertiary)' }} />
-          뱃지별 범위 기준
+          가이드
         </button>
       </div>
-      {showRangeGuide && <BadgeRangeModal onClose={() => setShowRangeGuide(false)} />}
+      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
 
       {/* 커버드콜 매수 변화 팝업 */}
       {showDivDetail && divChangePlans.length > 0 && (
@@ -1451,10 +1479,11 @@ export function OptimalGuide() {
         </div>
       )}
 
-      {/* 신호 필터 */}
+      {/* 신호 필터 + 액션 버튼 */}
       {!signalsLoading && (availableSignals.sell.length > 0 || availableSignals.buy.length > 0) && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginRight: 2 }}>신호 필터</span>
             <button
               onClick={() => setSignalFilter(null)}
@@ -1495,6 +1524,47 @@ export function OptimalGuide() {
                 {s.label}
               </button>
             ))}
+            </div>
+            {/* 액션 버튼 */}
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+              <button onClick={() => setExpandAll(true)} title="모두 펼치기"
+                style={{ padding: '4px 6px', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--border-primary)',
+                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+                <MIcon name="unfold_more" size={16} style={{ color: 'var(--text-tertiary)' }} />
+              </button>
+              <button onClick={() => setExpandAll(false)} title="모두 닫기"
+                style={{ padding: '4px 6px', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--border-primary)',
+                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+                <MIcon name="unfold_less" size={16} style={{ color: 'var(--text-tertiary)' }} />
+              </button>
+              <button onClick={() => setShowComparison(c => !c)}
+                style={{ fontSize: 'var(--text-sm)', padding: '4px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+                  border: showComparison ? '1.5px solid var(--accent-blue)' : '1px solid var(--border-primary)',
+                  background: showComparison ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
+                  color: showComparison ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center', gap: 4 }}>
+                <MIcon name="compare_arrows" size={13} style={{ color: showComparison ? 'var(--accent-blue)' : 'var(--text-tertiary)' }} />
+                비교
+              </button>
+              <button onClick={() => { setExecMode(m => !m); setCheckedSells(new Set()); setCheckedBuys(new Set()); }}
+                style={{ fontSize: 'var(--text-sm)', padding: '4px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+                  border: execMode ? '1.5px solid var(--color-profit)' : '1px solid var(--border-primary)',
+                  background: execMode ? 'color-mix(in srgb, var(--color-profit) 12%, var(--bg-secondary))' : 'var(--bg-secondary)',
+                  color: execMode ? 'var(--color-profit)' : 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center', gap: 4 }}>
+                <MIcon name={execMode ? 'close' : 'play_arrow'} size={13} style={{ color: execMode ? 'var(--color-profit)' : 'var(--text-tertiary)' }} />
+                {execMode ? '취소' : '실행'}
+              </button>
+              {execMode && checkedCount > 0 && (
+                <button onClick={handleExecSave} disabled={saving}
+                  style={{ fontSize: 'var(--text-sm)', padding: '4px 12px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer', fontWeight: 700,
+                    border: 'none', background: 'var(--color-profit)', color: '#fff',
+                    display: 'flex', alignItems: 'center', gap: 4, opacity: saving ? 0.6 : 1 }}>
+                  <MIcon name="save" size={13} style={{ color: '#fff' }} />
+                  {saving ? '저장 중...' : `저장 (${checkedCount}건)`}
+                </button>
+              )}
+            </div>
           </div>
           {signalFilter && (
             <div style={{ marginTop: 6, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
@@ -1506,24 +1576,18 @@ export function OptimalGuide() {
         </div>
       )}
 
-      {dismissedBuys.size > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
-          padding: '6px 12px', borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-secondary)' }}>
-          <MIcon name="check_circle" size={14} style={{ color: 'var(--color-profit)' }} />
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-            {dismissedBuys.size}개 종목 매수완료로 숨김
-          </span>
-          <button onClick={clearDismissed} style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)',
-            cursor: 'pointer', border: '1px solid var(--border-secondary)', borderRadius: 4,
-            padding: '1px 8px', background: 'transparent' }}>초기화</button>
-        </div>
-      )}
       {filteredPlans.map(plan => (
-        <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} signalFilter={signalFilter}
+        <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} changeRates={changeRates} signalFilter={signalFilter}
           execMode={execMode} checkedSells={checkedSells} checkedBuys={checkedBuys}
+          expandAll={expandAll}
           onToggleSell={k => toggleCheck(checkedSells, setCheckedSells, k)}
           onToggleBuy={k => toggleCheck(checkedBuys, setCheckedBuys, k)}
-          dismissedBuys={dismissedBuys} onDismissBuy={dismissBuy} />
+          onNameClick={(ticker, name) => {
+            sessionStorage.setItem('chart_nav_ticker', ticker);
+            sessionStorage.setItem('chart_nav_from', 'optimal-guide');
+            sessionStorage.setItem('chart_nav_name', name);
+            navigateTo('chart');
+          }} />
       ))}
     </div>
   );

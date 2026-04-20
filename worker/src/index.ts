@@ -142,8 +142,9 @@ async function fetchStockDetail(ticker: string): Promise<StockDetail | null> {
   const slice60 = priceArr.slice(-60);
   const ma20 = Math.round(slice20.reduce((s, p) => s + p, 0) / slice20.length);
   const ma60 = slice60.length >= 5 ? Math.round(slice60.reduce((s, p) => s + p, 0) / slice60.length) : ma20;
-  const high = Math.max(...priceArr);
-  const low = Math.min(...priceArr);
+  const range = slice60.length >= 5 ? slice60 : priceArr;
+  const high = Math.max(...range);
+  const low = Math.min(...range);
   const position = high > low ? Math.round((cur - low) / (high - low) * 100) / 100 : 0.5;
   return { currentPrice: cur, ma20, ma60, high, low, position };
 }
@@ -614,16 +615,19 @@ export default {
 
       if (priceArr.length < 5) return json({ error: 'no data' }, 404);
 
-      const cur = priceArr[priceArr.length - 1];
+      const live = await fetchCurrentPriceWithChange(ticker);
+      const cur = live?.price ?? priceArr[priceArr.length - 1];
+      const changeRate = live?.changeRate ?? 0;
       const slice20 = priceArr.slice(-20);
       const slice60 = priceArr.slice(-60);
       const ma20 = Math.round(slice20.reduce((s, p) => s + p, 0) / slice20.length);
       const ma60 = Math.round(slice60.reduce((s, p) => s + p, 0) / slice60.length);
-      const high = Math.max(...priceArr);
-      const low = Math.min(...priceArr);
-      const position = high > low ? (cur - low) / (high - low) : 0.5; // 0=저점 1=고점
+      const range = slice60.length >= 5 ? slice60 : priceArr;
+      const high = Math.max(...range);
+      const low = Math.min(...range);
+      const position = high > low ? (cur - low) / (high - low) : 0.5;
 
-      return json({ ticker, currentPrice: cur, ma20, ma60, high, low, position: Math.round(position * 100) / 100 });
+      return json({ ticker, currentPrice: cur, changeRate, ma20, ma60, high, low, position: Math.round(position * 100) / 100 });
     }
 
     return json({ error: 'not found' }, 404);

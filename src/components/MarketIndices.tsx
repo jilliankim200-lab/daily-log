@@ -100,7 +100,7 @@ export function MarketIndices() {
         className="flex items-center gap-[4px] px-[8px] py-[4px] rounded-[4px] bg-white/40 dark:bg-white/5 backdrop-blur-sm hover:bg-white/60 dark:hover:bg-white/10 transition-colors border border-white/20 dark:border-white/10"
       >
         <span className="text-[13px] font-semibold text-[--color-text-body] dark:text-white whitespace-nowrap">
-          📊 주요지수
+          주요지수
         </span>
       </button>
 
