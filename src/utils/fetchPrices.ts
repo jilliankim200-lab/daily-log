@@ -28,6 +28,23 @@ function isValidKrTicker(ticker: string): boolean {
   return /^[0-9A-Z]{6}$/i.test(ticker);
 }
 
+export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<Record<string, { price: number; changeRate: number }>> {
+  const validTickers = [...new Set(tickers.filter(isValidKrTicker))];
+  if (validTickers.length === 0) return {};
+  const result: Record<string, { price: number; changeRate: number }> = {};
+  try {
+    const batchSize = 50;
+    for (let i = 0; i < validTickers.length; i += batchSize) {
+      const batch = validTickers.slice(i, i + batchSize);
+      const res = await fetch(`${WORKER_URL}/stock-prices-with-change?tickers=${batch.join(',')}`);
+      if (!res.ok) continue;
+      const data: Record<string, { price: number; changeRate: number }> = await res.json();
+      Object.assign(result, data);
+    }
+  } catch { /* skip */ }
+  return result;
+}
+
 export async function fetchCurrentPrices(tickers: string[]): Promise<Record<string, number>> {
   const validTickers = [...new Set(tickers.filter(isValidKrTicker))];
   if (validTickers.length === 0) return {};

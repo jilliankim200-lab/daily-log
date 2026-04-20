@@ -51,6 +51,24 @@ async function fetchCurrentPrice(ticker: string): Promise<number | null> {
   }
 }
 
+async function fetchCurrentPriceWithChange(ticker: string): Promise<{ price: number; changeRate: number } | null> {
+  try {
+    const res = await fetch(
+      `https://polling.finance.naver.com/api/realtime/domestic/stock/${ticker}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    const item = data.datas?.[0];
+    if (!item?.closePriceRaw) return null;
+    const price = parseInt(item.closePriceRaw, 10);
+    const changeRate = parseFloat(String(item.fluctuationsRatio ?? item.fluctuationsRatioRaw ?? 0).replace(/,/g, ''));
+    return { price, changeRate };
+  } catch {
+    return null;
+  }
+}
+
 function holdingValue(h: any, price?: number): number {
   if (h.isFund) return h.amount || 0;
   if (price) return price * h.quantity;
@@ -567,6 +585,19 @@ export default {
       );
       const result: Record<string, number> = {};
       for (const [t, p] of entries) { if (p !== null) result[t] = p; }
+      return json(result);
+    }
+
+    // GET /stock-prices-with-change?tickers=... — 현재가 + 당일 등락률 일괄 조회
+    if (request.method === 'GET' && url.pathname === '/stock-prices-with-change') {
+      const raw = url.searchParams.get('tickers') || '';
+      const tickers = raw.split(',').map(t => t.trim()).filter(t => /^[0-9A-Z]{6}$/i.test(t));
+      if (tickers.length === 0) return json({});
+      const entries = await Promise.all(
+        tickers.map(async t => [t, await fetchCurrentPriceWithChange(t)] as [string, { price: number; changeRate: number } | null])
+      );
+      const result: Record<string, { price: number; changeRate: number }> = {};
+      for (const [t, d] of entries) { if (d !== null) result[t] = d; }
       return json(result);
     }
 

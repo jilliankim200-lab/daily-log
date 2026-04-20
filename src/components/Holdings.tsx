@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../App';
-import { fetchCurrentPrices } from '../utils/fetchPrices';
+import { fetchCurrentPricesWithChange, fetchCurrentPrices } from '../utils/fetchPrices';
 import { MIcon } from './MIcon';
 import type { Account, Holding } from '../types';
 
@@ -171,12 +171,14 @@ function OwnerSection({
   ownerName,
   accounts,
   prices,
+  dailyChangeRates,
   isAmountHidden,
   isMobile,
 }: {
   ownerName: string;
   accounts: Account[];
   prices: Record<string, number>;
+  dailyChangeRates: Record<string, number>;
   isAmountHidden: boolean;
   isMobile?: boolean;
 }) {
@@ -210,7 +212,7 @@ function OwnerSection({
     const cpA = prices[a.ticker], cpB = prices[b.ticker];
     switch (sortKey) {
       case '현재가': av = cpA || 0; bv = cpB || 0; break;
-      case '등락률': av = cpA && a.avgPrice ? ((cpA - a.avgPrice) / a.avgPrice) * 100 : 0; bv = cpB && b.avgPrice ? ((cpB - b.avgPrice) / b.avgPrice) * 100 : 0; break;
+      case '등락률': av = dailyChangeRates[a.ticker] ?? (cpA && a.avgPrice ? ((cpA - a.avgPrice) / a.avgPrice) * 100 : 0); bv = dailyChangeRates[b.ticker] ?? (cpB && b.avgPrice ? ((cpB - b.avgPrice) / b.avgPrice) * 100 : 0); break;
       case '수량': av = a.quantity; bv = b.quantity; break;
       case '매입금액': av = a.totalCost; bv = b.totalCost; break;
       case '평가금액': av = cpA ? cpA * a.quantity : a.totalCost; bv = cpB ? cpB * b.quantity : b.totalCost; break;
@@ -323,7 +325,7 @@ function OwnerSection({
             const evalAmount = cp ? cp * h.quantity : h.totalCost;
             const pnl = evalAmount - h.totalCost;
             const pnlRate = h.totalCost > 0 ? ((evalAmount - h.totalCost) / h.totalCost) * 100 : 0;
-            const changeRate = cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
+            const changeRate = dailyChangeRates[h.ticker] ?? (cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0);
             const signal = getSignal(h.avgPrice, cp);
             const pnlColor = pnl > 0 ? 'var(--color-gain)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
             const sellAccounts = h.accountDetails.filter(d => getSignal(d.avgPrice, cp) === 'sell').map(d => d.alias);
@@ -359,9 +361,15 @@ function OwnerSection({
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                  <span>현재가 <span className="toss-number" style={{ color: cp ? (changeRate > 0 ? 'var(--color-gain)' : changeRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)') : 'var(--text-quaternary)', fontWeight: 600 }}>
-                    {cp ? `${fmt(cp)}` : '—'}{cp && changeRate !== 0 ? ` (${changeRate > 0 ? '+' : ''}${changeRate.toFixed(2)}%)` : ''}
-                  </span></span>
+                  <span>현재가 <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    {cp ? fmt(cp) : '—'}
+                  </span>
+                  {cp && changeRate !== 0 && (
+                    <span className="toss-number" style={{ marginLeft: 4, fontWeight: 600, color: changeRate > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                      {changeRate > 0 ? '+' : ''}{fmt(Math.round(cp * changeRate / 100))}원 ({changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%)
+                    </span>
+                  )}
+                  </span>
                   <span>수량 <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{fmt(h.quantity)}</span></span>
                 </div>
               </div>
@@ -375,7 +383,7 @@ function OwnerSection({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-              {['신호', '종목명', '현재가', '등락률', '수량', '매입금액', '평가금액', '수익금'].map(col => {
+              {['신호', '종목명', '현재가', '수량', '매입금액', '평가금액', '수익금'].map(col => {
                 const sortable = !['신호', '종목명'].includes(col);
                 return (
                   <th
@@ -434,7 +442,7 @@ function OwnerSection({
               const evalAmount = cp ? cp * h.quantity : h.totalCost;
               const pnl = evalAmount - h.totalCost;
               const pnlRate = h.totalCost > 0 ? ((evalAmount - h.totalCost) / h.totalCost) * 100 : 0;
-              const changeRate = cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
+              const changeRate = dailyChangeRates[h.ticker] ?? (cp ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0);
               const signal = getSignal(h.avgPrice, cp);
               const pnlColor = pnl > 0 ? 'var(--color-gain)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-primary)';
               const sellAccounts = h.accountDetails.filter(d => getSignal(d.avgPrice, cp) === 'sell').map(d => d.alias);
@@ -470,12 +478,21 @@ function OwnerSection({
                       onClick={(e) => e.stopPropagation()}
                     >{h.ticker}</a>
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: cp ? 'var(--text-primary)' : 'var(--text-quaternary)' }}>
-                    {cp ? (isAmountHidden ? '••••' : fmt(cp)) : '—'}
+                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    {cp ? (
+                      <>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {isAmountHidden ? '••••' : `${fmt(cp)}원`}
+                        </div>
+                        {changeRate !== 0 && (
+                          <div style={{ fontSize: 12, fontWeight: 500, marginTop: 2, color: changeRate > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                            {changeRate > 0 ? '+' : ''}{fmt(Math.round(cp * changeRate / 100))}원 ({changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%)
+                          </div>
+                        )}
+                      </>
+                    ) : <span style={{ color: 'var(--text-quaternary)' }}>—</span>}
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: changeRate > 0 ? 'var(--color-gain)' : changeRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
-                    {cp ? `${changeRate > 0 ? '+' : ''}${changeRate.toFixed(2)}%` : '—'}
-                  </td>
+                  <td style={{ display: 'none' }} />
                   <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                     {fmt(h.quantity)}
                   </td>
@@ -508,6 +525,7 @@ function OwnerSection({
 export function Holdings() {
   const { accounts, isAmountHidden, isMobile } = useAppContext();
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [dailyChangeRates, setDailyChangeRates] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
 
   const loadPrices = async () => {
@@ -515,10 +533,27 @@ export function Holdings() {
     if (allTickers.length === 0) return;
     setLoading(true);
     try {
-      const p = await fetchCurrentPrices(allTickers);
-      setPrices(p);
+      const data = await fetchCurrentPricesWithChange(allTickers);
+      const p: Record<string, number> = {};
+      const cr: Record<string, number> = {};
+      for (const [t, d] of Object.entries(data)) {
+        p[t] = d.price;
+        cr[t] = d.changeRate;
+      }
+      if (Object.keys(p).length > 0) {
+        setPrices(p);
+        setDailyChangeRates(cr);
+      } else {
+        // 새 엔드포인트 미배포 시 기존 API 폴백
+        const fallback = await fetchCurrentPrices(allTickers);
+        setPrices(fallback);
+      }
     } catch (err) {
       console.error('가격 조회 실패:', err);
+      try {
+        const fallback = await fetchCurrentPrices(allTickers);
+        setPrices(fallback);
+      } catch { /* skip */ }
     } finally {
       setLoading(false);
     }
@@ -538,7 +573,7 @@ export function Holdings() {
       }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            매수매도알림
+            보유종목
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-tertiary)', marginTop: 6 }}>
             매입가 대비 3% 이상 하락 시 매수 신호, 10% 이상 상승 시 매도 신호
@@ -561,6 +596,7 @@ export function Holdings() {
           ownerName="지윤"
           accounts={wifeAccounts}
           prices={prices}
+          dailyChangeRates={dailyChangeRates}
           isAmountHidden={isAmountHidden}
           isMobile={isMobile}
         />
@@ -568,6 +604,7 @@ export function Holdings() {
           ownerName="오빠"
           accounts={husbandAccounts}
           prices={prices}
+          dailyChangeRates={dailyChangeRates}
           isAmountHidden={isAmountHidden}
           isMobile={isMobile}
         />

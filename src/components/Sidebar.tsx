@@ -21,6 +21,7 @@ export function Sidebar({ currentPage, onNavigate, isCollapsed = false, onToggle
 
   const menuItems = [
     { id: "couple-accounts", label: "부부 계좌", icon: "person", gradient: "from-purple-500 to-pink-500" },
+    { id: "holdings", label: "보유종목", icon: "list", gradient: "from-green-500 to-teal-500" },
     { id: "dashboard", label: "대시보드", icon: "home", gradient: "from-blue-500 to-cyan-500" },
     { id: "asset-change", label: "자산증감", icon: "trending_up", gradient: "from-pink-500 to-rose-500" },
     { id: "rebalancing-checklist", label: "리밸런싱", icon: "checklist", gradient: "from-orange-500 to-amber-500" },

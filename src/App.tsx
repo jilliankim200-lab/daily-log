@@ -53,7 +53,7 @@ const MENU_ITEMS = [
   { id: "rebalancing-guide", label: "리밸런싱 가이드", materialIcon: "auto_fix_high" },
   { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars" },
   { id: "chart", label: "차트", materialIcon: "candlestick_chart" },
-  { id: "holdings", label: "매수매도알림", materialIcon: "bar_chart" },
+  { id: "holdings", label: "보유종목", materialIcon: "list" },
   { id: "asset-change", label: "자산증감", materialIcon: "show_chart" },
   { id: "contribution", label: "납입", materialIcon: "savings" },
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
