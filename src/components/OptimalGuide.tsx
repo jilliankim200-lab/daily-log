@@ -603,10 +603,11 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
 }
 
 // ── 계좌 카드 ──────────────────────────────────────────────────
-function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy }: {
+function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, dismissedBuys, onDismissBuy }: {
   plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; signalFilter: SignalFilter;
   execMode?: boolean; checkedSells?: Set<string>; checkedBuys?: Set<string>;
   onToggleSell?: (key: string) => void; onToggleBuy?: (key: string) => void;
+  dismissedBuys?: Set<string>; onDismissBuy?: (accId: string, holdingId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const { acc, sells, keeps, buys, freedCash, projectedSafePct, safeStatus, totalVal, safeAdjust } = plan;
@@ -758,7 +759,8 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '4px 12px' }}>
                   {keeps.map((k, i) => {
                     const buy = buys.find(b => b.h.id === k.h.id);
-                    const addBadge = buy && buy.addAmount > 0 ? (
+                    const isDismissed = dismissedBuys?.has(`${acc.id}__${k.h.id}`);
+                    const addBadge = buy && buy.addAmount > 0 && !isDismissed ? (
                       <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', flexShrink: 0,
                         background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4, fontWeight: 400 }}>
                         +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
@@ -766,12 +768,17 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                     ) : null;
                     const sig = k.h.ticker ? signals[k.h.ticker] : undefined;
                     const timing = sig ? getBuySignal(sig) : noSignal();
-                    const matched = isRowMatch(k.h.ticker, 'buy');
-                    const hasBuy = buy && buy.addAmount > 0;
+                    const hasBuy = buy && buy.addAmount > 0 && !isDismissed;
                     return (
                       <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
                         opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {buy && buy.addAmount > 0 && isDismissed && (
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', flexShrink: 0,
+                              padding: '1px 6px', borderRadius: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border-secondary)' }}>
+                              매수완료
+                            </span>
+                          )}
                           {execMode && hasBuy && (
                             <button onClick={() => onToggleBuy?.(`${acc.id}__${k.h.id}`)}
                               style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
@@ -779,6 +786,15 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                                 background: checkedBuys?.has(`${acc.id}__${k.h.id}`) ? 'color-mix(in srgb, var(--color-profit) 20%, transparent)' : 'var(--bg-elevated)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                               {checkedBuys?.has(`${acc.id}__${k.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-profit)' }} />}
+                            </button>
+                          )}
+                          {!execMode && buy && buy.addAmount > 0 && !isDismissed && (
+                            <button onClick={() => onDismissBuy?.(acc.id, k.h.id)}
+                              title="이미 매수했어요"
+                              style={{ flexShrink: 0, fontSize: 10, color: 'var(--text-tertiary)', cursor: 'pointer',
+                                padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-secondary)',
+                                background: 'transparent', lineHeight: 1.4 }}>
+                              이미 매수
                             </button>
                           )}
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -980,7 +996,8 @@ function computeAllPlans(
 
     const sellTotal = sells.reduce((s, r) => s + r.val, 0);
     const freedCash = sellTotal + cash;
-    const buys = computeBuys(keeps, freedCash, targets, prices);
+    // 매수 추천은 실제 보유 현금만 기준 — 미실행 매도 대금 포함 시 매도 전에도 같은 추천 반복됨
+    const buys = computeBuys(keeps, cash, targets, prices);
 
     const projectedTotal = keeps.reduce((s, k) => s + k.val, 0);
     const projectedSafe = keeps.reduce((s, k) => isSafeAsset(k.cls) ? s + k.val : s, 0);
@@ -1033,6 +1050,21 @@ export function OptimalGuide() {
   const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
   const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [dismissedBuys, setDismissedBuys] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('og_dismissed_buys') || '[]')); }
+    catch { return new Set(); }
+  });
+  const dismissBuy = (accId: string, holdingId: string) => {
+    const key = `${accId}__${holdingId}`;
+    const next = new Set(dismissedBuys);
+    next.add(key);
+    setDismissedBuys(next);
+    localStorage.setItem('og_dismissed_buys', JSON.stringify([...next]));
+  };
+  const clearDismissed = () => {
+    setDismissedBuys(new Set());
+    localStorage.removeItem('og_dismissed_buys');
+  };
 
   // KV에서 targets + prevTargets 로드 (마운트 시 1회)
   useEffect(() => {
@@ -1150,6 +1182,7 @@ export function OptimalGuide() {
       setExecMode(false);
       setCheckedSells(new Set());
       setCheckedBuys(new Set());
+      clearDismissed();
     } catch (err) {
       console.error('실행 저장 실패:', err);
     } finally {
@@ -1473,11 +1506,24 @@ export function OptimalGuide() {
         </div>
       )}
 
+      {dismissedBuys.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
+          padding: '6px 12px', borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-secondary)' }}>
+          <MIcon name="check_circle" size={14} style={{ color: 'var(--color-profit)' }} />
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+            {dismissedBuys.size}개 종목 매수완료로 숨김
+          </span>
+          <button onClick={clearDismissed} style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)',
+            cursor: 'pointer', border: '1px solid var(--border-secondary)', borderRadius: 4,
+            padding: '1px 8px', background: 'transparent' }}>초기화</button>
+        </div>
+      )}
       {filteredPlans.map(plan => (
         <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} signalFilter={signalFilter}
           execMode={execMode} checkedSells={checkedSells} checkedBuys={checkedBuys}
           onToggleSell={k => toggleCheck(checkedSells, setCheckedSells, k)}
-          onToggleBuy={k => toggleCheck(checkedBuys, setCheckedBuys, k)} />
+          onToggleBuy={k => toggleCheck(checkedBuys, setCheckedBuys, k)}
+          dismissedBuys={dismissedBuys} onDismissBuy={dismissBuy} />
       ))}
     </div>
   );
