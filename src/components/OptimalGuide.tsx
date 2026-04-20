@@ -761,8 +761,8 @@ function AccountCard({ plan, isMobile, signals, signalFilter, execMode, checkedS
                     const buy = buys.find(b => b.h.id === k.h.id);
                     const isDismissed = dismissedBuys?.has(`${acc.id}__${k.h.id}`);
                     const addBadge = buy && buy.addAmount > 0 && !isDismissed ? (
-                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', flexShrink: 0,
-                        background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4, fontWeight: 400 }}>
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--color-profit)', flexShrink: 0,
+                        background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4 }}>
                         +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
                       </span>
                     ) : null;

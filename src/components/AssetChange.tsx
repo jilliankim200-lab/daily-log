@@ -343,6 +343,21 @@ export function AssetChange() {
     return sorted.slice(0, tab.days);
   }, [snapshots, period]);
 
+  // assetChange/changeRate를 저장된 값 대신 인접 스냅샷 차이로 재계산
+  // (첫 스냅샷 저장 시 이전 데이터 없어서 0으로 저장되는 문제 해결)
+  const enrichedSnapshots = useMemo(() => {
+    // filteredSnapshots은 desc 정렬(최신→과거). i+1이 전날
+    return filteredSnapshots.map((s, i) => {
+      const prev = filteredSnapshots[i + 1];
+      if (!prev) return s;
+      const assetChange = s.totalAsset - prev.totalAsset;
+      const changeRate = prev.totalAsset > 0
+        ? Math.round((assetChange / prev.totalAsset) * 10000) / 100
+        : 0;
+      return { ...s, assetChange, changeRate };
+    });
+  }, [filteredSnapshots]);
+
   const periodSummary = useMemo(() => {
     if (filteredSnapshots.length < 2)
       return { changeAmount: 0, changeRate: 0 };
@@ -712,13 +727,13 @@ export function AssetChange() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {(isYearFilter
               ? (sortNewest ? monthlySummary : [...monthlySummary].reverse())
-              : (sortNewest ? [...filteredSnapshots].reverse() : [...filteredSnapshots])
+              : (sortNewest ? [...enrichedSnapshots].reverse() : [...enrichedSnapshots])
             ).map(row => {
-              const date = isYearFilter ? (row as typeof monthlySummary[0]).date.replace('-', '년 ') + '월' : (row as typeof filteredSnapshots[0]).date;
-              const totalAsset = isYearFilter ? (row as typeof monthlySummary[0]).totalAsset : (row as typeof filteredSnapshots[0]).totalAsset;
-              const assetChange = isYearFilter ? (row as typeof monthlySummary[0]).assetChange : (row as typeof filteredSnapshots[0]).assetChange;
-              const changeRate = isYearFilter ? (row as typeof monthlySummary[0]).changeRate : (row as typeof filteredSnapshots[0]).changeRate;
-              const dividend = isYearFilter ? (row as typeof monthlySummary[0]).lastDividend : (row as typeof filteredSnapshots[0]).dividend;
+              const date = isYearFilter ? (row as typeof monthlySummary[0]).date.replace('-', '년 ') + '월' : (row as typeof enrichedSnapshots[0]).date;
+              const totalAsset = isYearFilter ? (row as typeof monthlySummary[0]).totalAsset : (row as typeof enrichedSnapshots[0]).totalAsset;
+              const assetChange = isYearFilter ? (row as typeof monthlySummary[0]).assetChange : (row as typeof enrichedSnapshots[0]).assetChange;
+              const changeRate = isYearFilter ? (row as typeof monthlySummary[0]).changeRate : (row as typeof enrichedSnapshots[0]).changeRate;
+              const dividend = isYearFilter ? (row as typeof monthlySummary[0]).lastDividend : (row as typeof enrichedSnapshots[0]).dividend;
               const isYearRow = isYearFilter;
               return (
                 <div
@@ -798,7 +813,7 @@ export function AssetChange() {
                     </tr>
                   ))
                 ) : (
-                  (sortNewest ? [...filteredSnapshots].reverse() : [...filteredSnapshots]).map((snapshot, idx) => (
+                  (sortNewest ? [...enrichedSnapshots].reverse() : [...enrichedSnapshots]).map((snapshot, idx) => (
                     <tr key={snapshot.date} style={{ borderBottom: "1px solid var(--border-primary)", background: idx % 2 === 0 ? "transparent" : "var(--bg-secondary)" }}>
                       <td style={{ padding: "10px 12px", color: "var(--text-primary)", whiteSpace: "nowrap" }}>{snapshot.date}</td>
                       <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{formatAmount(snapshot.totalAsset, isAmountHidden)}원</td>
