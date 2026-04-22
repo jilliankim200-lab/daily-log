@@ -64,7 +64,7 @@ function HoldingForm({
         <input className="toss-input" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="0" />
       </Field>
       <div className="flex gap-1.5">
-        <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
+        <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: 'var(--text-sm)' }}>
           <MIcon name="check" size={14} />{holding ? '수정' : '추가'}
         </button>
         <button onClick={onCancel} className="toss-btn toss-btn-ghost" style={{ padding: '8px 10px' }}>
@@ -102,7 +102,7 @@ function FundForm({
         <input className="toss-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" />
       </Field>
       <div className="flex gap-1.5">
-        <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
+        <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: 'var(--text-sm)' }}>
           <MIcon name="check" size={14} />{fund ? '수정' : '추가'}
         </button>
         <button onClick={onCancel} className="toss-btn toss-btn-ghost" style={{ padding: '8px 10px' }}>
@@ -211,7 +211,7 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
   }, [handleKeyDown]);
 
   const btnStyle = (bg?: string, color?: string): React.CSSProperties => ({
-    padding: '14px 0', fontSize: 18, fontWeight: 600, border: 'none', borderRadius: 10, cursor: 'pointer',
+    padding: '14px 0', fontSize: 'var(--text-lg)', fontWeight: 600, border: 'none', borderRadius: 10, cursor: 'pointer',
     background: bg || 'var(--bg-tertiary)', color: color || 'var(--text-primary)',
     transition: 'opacity 0.1s',
   });
@@ -229,7 +229,7 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
         <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <MIcon name="calculate" size={18} style={{ color: 'var(--accent-blue)' }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>계산기</span>
+            <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>계산기</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}>
             <MIcon name="close" size={18} />
@@ -242,19 +242,19 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
           style={{ padding: '20px 20px 12px', textAlign: 'right', cursor: 'pointer', position: 'relative' }}
           title="클릭하면 클립보드에서 붙여넣기"
         >
-          {op && <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 4 }}>{fmt(prev || 0)} {op}</div>}
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+          {op && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 4 }}>{fmt(prev || 0)} {op}</div>}
+          <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
             {(() => { const n = parseFloat(display); return isNaN(n) ? display : fmt(n); })()}
           </div>
           {pasteMsg && (
             <div style={{
               position: 'absolute', bottom: 2, right: 20,
-              fontSize: 11, color: 'var(--accent-blue)', fontWeight: 600,
+              fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', fontWeight: 600,
             }}>
               {pasteMsg}
             </div>
           )}
-          <div style={{ fontSize: 11, color: 'var(--text-quaternary)', marginTop: 4 }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 4 }}>
             클릭하면 붙여넣기
           </div>
         </div>
@@ -286,7 +286,7 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
           <button
             onClick={() => onApply(Math.round(parseFloat(display) || 0))}
             style={{
-              width: '100%', padding: '12px 0', fontSize: 15, fontWeight: 700,
+              width: '100%', padding: '12px 0', fontSize: 'var(--text-base)', fontWeight: 700,
               background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)', border: 'none',
               borderRadius: 10, cursor: 'pointer',
             }}
@@ -378,19 +378,19 @@ function AccountCard({
               <div style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', flexShrink: 0 }}>
                 <AccountTypeIcon type={account.accountType} />
               </div>
-              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{account.alias}</span>
-              <span className="toss-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11 }}>{account.accountType}</span>
+              <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>{account.alias}</span>
+              <span className="toss-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}>{account.accountType}</span>
             </div>
             <MIcon name="expand_more" size={16} style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0 }} />
           </div>
           {/* 하단: 금액 + 수익 */}
           <div style={{ paddingLeft: 40 }}>
-            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 2 }}>{account.institution} · {account.holdings.length}개 종목</p>
-            <p className="toss-number" style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 2 }}>{account.institution} · {account.holdings.length}개 종목</p>
+            <p className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
               {isAmountHidden ? '••••' : `${fmt(totalWithCash)}원`}
             </p>
             <p className="toss-number" style={{
-              fontSize: 12, marginTop: 2, whiteSpace: 'nowrap',
+              fontSize: 'var(--text-xs)', marginTop: 2, whiteSpace: 'nowrap',
               color: totalPnl > 0 ? 'var(--color-profit)' : totalPnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
             }}>
               {isAmountHidden ? '••••' : `${totalPnl > 0 ? '+' : ''}${fmt(totalPnl)}원 (${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%)`}
@@ -476,7 +476,7 @@ function AccountCard({
                     autoFocus
                     onKeyDown={e => { if (e.key === 'Enter') saveCash(); if (e.key === 'Escape') setEditingCash(false); }}
                   />
-                  <button onClick={saveCash} className="toss-btn toss-btn-primary" style={{ padding: '6px 10px', fontSize: 12 }}>
+                  <button onClick={saveCash} className="toss-btn toss-btn-primary" style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}>
                     <MIcon name="check" size={12} />
                   </button>
                   <button onClick={() => setEditingCash(false)} className="toss-btn toss-btn-ghost" style={{ padding: '6px 8px' }}>
@@ -524,7 +524,7 @@ function AccountCard({
                           {h.name}
                         </span>
                         {h.isFund && (
-                          <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', flexShrink: 0 }}>펀드</span>
+                          <span style={{ fontSize: 'var(--text-xs)', padding: '1px 5px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', flexShrink: 0 }}>펀드</span>
                         )}
                       </div>
                       {!h.isFund && (
@@ -539,7 +539,7 @@ function AccountCard({
                       </div>
                       {pnlRate !== null && (
                         <div className="toss-number" style={{
-                          fontSize: 11, fontWeight: 'var(--font-semibold)', whiteSpace: 'nowrap',
+                          fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', whiteSpace: 'nowrap',
                           color: pnl > 0 ? 'var(--color-profit)' : pnl < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)',
                         }}>
                           {isAmountHidden ? '••••' : `${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(2)}%`}
@@ -590,7 +590,7 @@ function AccountCard({
                         <td style={{ fontWeight: 'var(--font-medium)' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                             {h.name}
-                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
+                            <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
                           </span>
                         </td>
                         <td style={{ textAlign: 'right', color: 'var(--text-tertiary)' }}>-</td>
@@ -638,7 +638,7 @@ function AccountCard({
                         {isAmountHidden ? '••••' : !cp ? '-' : (
                           <span>
                             {pnl > 0 ? '+' : ''}{fmt(pnl)}원<br/>
-                            <span style={{ fontSize: 11 }}>({pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(2)}%)</span>
+                            <span style={{ fontSize: 'var(--text-xs)' }}>({pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(2)}%)</span>
                           </span>
                         )}
                       </td>
@@ -763,10 +763,10 @@ function AddAccountForm({
           <button onClick={() => {
             if (!alias.trim()) return;
             onSave({ id: generateId(), owner, ownerName, institution: inst, accountType: type, alias: alias.trim(), holdings: [] });
-          }} className="toss-btn toss-btn-primary" style={{ padding: '10px 18px', fontSize: 13 }}>
+          }} className="toss-btn toss-btn-primary" style={{ padding: '10px 18px', fontSize: 'var(--text-sm)' }}>
             <MIcon name="check" size={14} /> 저장
           </button>
-          <button onClick={onCancel} className="toss-btn toss-btn-secondary" style={{ padding: '10px 14px', fontSize: 13 }}>취소</button>
+          <button onClick={onCancel} className="toss-btn toss-btn-secondary" style={{ padding: '10px 14px', fontSize: 'var(--text-sm)' }}>취소</button>
         </div>
       </div>
     </div>
@@ -901,11 +901,11 @@ export function CoupleAccounts() {
               borderBottom: i < arr.length - 1 ? '1px solid var(--border-secondary)' : 'none',
             }}>
               <div>
-                <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{item.label}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{item.sub}</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{item.label}</span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 6 }}>{item.sub}</span>
               </div>
               <span className="toss-number" style={{
-                fontSize: 16, fontWeight: 600,
+                fontSize: 'var(--text-base)', fontWeight: 600,
                 color: item.accent ? 'var(--accent-blue)' : 'var(--text-primary)',
                 whiteSpace: 'nowrap',
               }}>
@@ -1100,7 +1100,7 @@ function OtherAssetForm({
         <input className="toss-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" />
       </Field>
       <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: 13 }}>
+        <button onClick={submit} className="toss-btn toss-btn-primary" style={{ padding: '8px 14px', fontSize: 'var(--text-sm)' }}>
           <MIcon name="check" size={14} />{asset ? '수정' : '추가'}
         </button>
         <button onClick={onCancel} className="toss-btn toss-btn-ghost" style={{ padding: '8px 10px' }}>
@@ -1117,7 +1117,7 @@ function SummaryCard({ label, value, sub, isAmountHidden, accent, icon }: {
   return (
     <div className="toss-card" style={{ padding: '20px', ...(accent ? { background: 'var(--accent-blue)', border: 'none' } : {}) }}>
       <p style={{ fontSize: 'var(--text-xs)', color: accent ? 'color-mix(in srgb, var(--accent-blue-fg) 70%, transparent)' : 'var(--text-tertiary)', fontWeight: 500, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-        {icon && <span className="material-symbols-rounded" style={{ fontSize: 14 }}>{icon}</span>}
+        {icon && <span className="material-symbols-rounded" style={{ fontSize: 'var(--text-sm)' }}>{icon}</span>}
         {label}
       </p>
       <p className="toss-number" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: accent ? 'var(--accent-blue-fg)' : 'var(--text-primary)' }}>

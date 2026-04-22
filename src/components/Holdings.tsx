@@ -109,14 +109,14 @@ function AssetTypeBadge({ name }: { name: string }) {
   const color = ASSET_TYPE_COLORS[type];
   return (
     <span style={{
-      fontSize: 10, padding: '1px 6px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+      fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
       background: `color-mix(in srgb, ${color} 14%, transparent)`, color,
     }}>{type}</span>
   );
 }
 
 function SignalBadge({ signal, noIcon }: { signal: 'buy' | 'sell' | 'hold' | 'none'; noIcon?: boolean }) {
-  if (signal === 'none') return <span style={{ color: 'var(--text-quaternary)', fontSize: 12 }}>—</span>;
+  if (signal === 'none') return <span style={{ color: 'var(--text-quaternary)', fontSize: 'var(--text-xs)' }}>—</span>;
 
   const config = {
     buy:  { label: '매수', color: 'var(--color-loss)',    icon: 'trending_up'   },
@@ -128,7 +128,7 @@ function SignalBadge({ signal, noIcon }: { signal: 'buy' | 'sell' | 'hold' | 'no
   return (
     <span className={`signal-badge signal-badge-${signal}`} style={{
       display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
-      padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+      padding: '4px 12px', borderRadius: 20, fontSize: 'var(--text-sm)', fontWeight: 600,
       background: `color-mix(in srgb, ${c.color} 12%, transparent)`,
       color: c.color,
     }}>
@@ -162,7 +162,7 @@ function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice
             boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>계좌별 상세</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-primary)' }}>계좌별 상세</span>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-tertiary)' }}>
                 <MIcon name="close" size={12} />
               </button>
@@ -185,10 +185,10 @@ function HoldingInfoPopup({ accountDetails, isFund, isAmountHidden, currentPrice
                       border: multiAccount && signal === 'sell' ? '1px solid rgba(255,69,58,0.3)' : '1px solid transparent',
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{d.alias}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: signalConfig.color }}>{signalConfig.label}</span>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-primary)' }}>{d.alias}</span>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: signalConfig.color }}>{signalConfig.label}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                         <span>수량 <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{d.quantity.toLocaleString('ko-KR')}</span></span>
                         <span>평단 <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
                           {isAmountHidden ? '••••' : `${Math.round(d.avgPrice).toLocaleString('ko-KR')}원`}
@@ -294,10 +294,10 @@ function OwnerSection({
         borderBottom: '1px solid var(--border-primary)',
       }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>
             {ownerName}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 4 }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
             {allHoldings.length}개 종목 · {accounts.length}개 계좌
           </div>
         </div>
@@ -321,7 +321,7 @@ function OwnerSection({
                 onClick={() => setSignalFilter(signalFilter === f ? 'all' : f)}
                 title={tooltip}
                 style={{
-                  padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+                  padding: '4px 12px', borderRadius: 20, fontSize: 'var(--text-sm)', fontWeight: 600, border: 'none', cursor: 'pointer',
                   background: isActive ? colors.activeBg : colors.bg,
                   color: isActive ? colors.activeFg : colors.color,
                   transition: 'all 0.15s',
@@ -349,7 +349,7 @@ function OwnerSection({
           { label: '수익률', value: `${totalPnlRate > 0 ? '+' : ''}${totalPnlRate.toFixed(2)}%`, color: totalPnlRate > 0 ? 'var(--color-profit)' : totalPnlRate < 0 ? 'var(--color-loss)' : 'var(--text-primary)' },
         ].map(({ label, value, color }) => (
           <div key={label}>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
             <div className="toss-number" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{value}</div>
           </div>
         ))}
@@ -366,10 +366,10 @@ function OwnerSection({
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
-                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
+                    <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
+                    <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
                   </div>
-                  <span className="toss-number" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                  <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                     {isAmountHidden ? '••••••' : `${fmt(h.amount || 0)}원`}
                   </span>
                 </div>
@@ -393,36 +393,36 @@ function OwnerSection({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <SignalBadge signal={signal} noIcon />
                       {sellAccounts.length > 0 && (
-                        <span style={{ fontSize: 10, color: 'var(--color-profit)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-profit)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {sellAccounts.join('·')}
                         </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
+                      <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>{h.name}</span>
                       <AssetTypeBadge name={h.name} />
                       <HoldingInfoPopup accountDetails={h.accountDetails} isAmountHidden={isAmountHidden} currentPrice={cp} />
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-quaternary)' }}>{h.ticker}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)' }}>{h.ticker}</div>
                   </div>
                   {/* 우: 금액 + 수익률 */}
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div className="toss-number" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                       {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
                     </div>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center', marginTop: 2 }}>
-                      <div className="toss-number" style={{ fontSize: 12, fontWeight: 600, color: pnlColor, whiteSpace: 'nowrap' }}>
+                      <div className="toss-number" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: pnlColor, whiteSpace: 'nowrap' }}>
                         {isAmountHidden ? '••••' : `${pnlRate > 0 ? '+' : ''}${pnlRate.toFixed(2)}%`}
                       </div>
                       {!isAmountHidden && totalCurrent > 0 && (
-                        <div className="toss-number" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                        <div className="toss-number" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                           {(evalAmount / totalCurrent * 100).toFixed(1)}%
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                <div style={{ display: 'flex', gap: 16, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                   <span>현재가 <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
                     {cp ? fmt(cp) : '—'}
                   </span>
@@ -442,7 +442,7 @@ function OwnerSection({
 
       {/* Desktop Table */}
       {!isMobile && <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
               {['신호', '종목명', '현재가', '등락률', '수량', '매입금액', '평가금액', '수익금'].map(col => {
@@ -453,7 +453,7 @@ function OwnerSection({
                     onClick={sortable ? () => toggleSort(col) : undefined}
                     style={{
                       padding: '12px 16px', textAlign: col === '종목명' ? 'left' : 'right',
-                      fontSize: 12, fontWeight: 600, color: sortKey === col ? 'var(--accent-blue)' : 'var(--text-tertiary)',
+                      fontSize: 'var(--text-xs)', fontWeight: 600, color: sortKey === col ? 'var(--accent-blue)' : 'var(--text-tertiary)',
                       whiteSpace: 'nowrap', cursor: sortable ? 'pointer' : 'default', userSelect: 'none',
                       ...(col === '신호' ? { textAlign: 'center', width: 70 } : {}),
                     }}
@@ -477,7 +477,7 @@ function OwnerSection({
                 return (
                   <tr key={`fund-${h.name}-${i}`} style={{ borderBottom: '1px solid var(--border-primary)' }}>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-quaternary)' }}>—</span>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)' }}>—</span>
                     </td>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -521,7 +521,7 @@ function OwnerSection({
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                       <SignalBadge signal={signal} />
                       {sellAccounts.length > 0 && (
-                        <span style={{ fontSize: 10, color: 'var(--color-profit)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-profit)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {sellAccounts.join('·')}
                         </span>
                       )}
@@ -537,7 +537,7 @@ function OwnerSection({
                       href={`https://www.tossinvest.com/stocks/A${h.ticker}/order`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontSize: 11, color: 'var(--text-quaternary)', fontWeight: 400, marginTop: 2, display: 'inline-block', textDecoration: 'none' }}
+                      style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', fontWeight: 400, marginTop: 2, display: 'inline-block', textDecoration: 'none' }}
                       onClick={(e) => e.stopPropagation()}
                     >{h.ticker}</a>
                   </td>
@@ -548,7 +548,7 @@ function OwnerSection({
                     {cp ? (
                       <>
                         <div>{changeRate > 0 ? '+' : ''}{fmt(Math.round(cp * changeRate / 100))}원</div>
-                        <div style={{ fontSize: 11, fontWeight: 500, marginTop: 1 }}>{changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%</div>
+                        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 500, marginTop: 1 }}>{changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%</div>
                       </>
                     ) : '—'}
                   </td>
@@ -558,7 +558,7 @@ function OwnerSection({
                   <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                     {isAmountHidden ? '••••••' : `${fmt(h.totalCost)}원`}
                     {!isAmountHidden && totalCost > 0 && (
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
                         {(h.totalCost / totalCost * 100).toFixed(1)}%
                       </div>
                     )}
@@ -566,7 +566,7 @@ function OwnerSection({
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
                     {!isAmountHidden && totalCurrent > 0 && (
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
                         {(evalAmount / totalCurrent * 100).toFixed(1)}%
                       </div>
                     )}
@@ -575,7 +575,7 @@ function OwnerSection({
                     {isAmountHidden ? '••••' : (
                       <div>
                         <div>{pnl > 0 ? '+' : ''}{fmt(pnl)}원</div>
-                        <div style={{ fontSize: 11, fontWeight: 400, marginTop: 1 }}>
+                        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 400, marginTop: 1 }}>
                           {pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(2)}%
                         </div>
                       </div>
@@ -641,10 +641,10 @@ export function Holdings() {
         marginBottom: isMobile ? 16 : 28,
       }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
             보유종목
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-tertiary)', marginTop: 6 }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 6 }}>
             매입가 대비 3% 이상 하락 시 매수 신호, 10% 이상 상승 시 매도 신호
           </p>
         </div>

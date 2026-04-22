@@ -2,6 +2,8 @@ import React, { useState, useEffect, useId } from 'react';
 import { useAppContext } from '../App';
 import { kvGet, kvSet } from '../api';
 import { MIcon } from './MIcon';
+import type { Account } from '../types';
+import { holdingValue } from '../types';
 
 interface AccountRow {
   id: string;
@@ -14,6 +16,7 @@ interface AccountRow {
   deposit2025: number;
   actual2026: number;
   deposit2026: number;
+  linkedAccId?: string;
 }
 
 const SEED: AccountRow[] = [
@@ -82,7 +85,7 @@ function NumInput({ value, onChange }: { value: number; onChange: (v: number) =>
       onBlur={handleBlur}
       style={{
         width: '100%', border: '1px solid var(--border-primary)', borderRadius: 6,
-        padding: '4px 8px', fontSize: 12, background: 'var(--bg-primary)',
+        padding: '4px 8px', fontSize: 'var(--text-xs)', background: 'var(--bg-primary)',
         color: 'var(--text-primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums',
         outline: 'none', minWidth: 90,
       }}
@@ -91,14 +94,16 @@ function NumInput({ value, onChange }: { value: number; onChange: (v: number) =>
 }
 
 export function AccountReturn() {
-  const { isAmountHidden, isMobile } = useAppContext();
+  const { isAmountHidden, isMobile, prices } = useAppContext();
   const [rows, setRows]       = useState<AccountRow[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('rate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [editing, setEditing] = useState(false);
   const [editRows, setEditRows] = useState<AccountRow[]>([]);
   const [saving, setSaving]   = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -106,6 +111,7 @@ export function AccountReturn() {
       const data = (d && d.length > 0) ? d.map(r => ({ actual2026: 0, ...r })) : SEED;
       setRows(data);
     });
+    kvGet<Account[]>('accounts').then(d => { if (d) setAccounts(d); });
   }, []);
 
   // ── 편집 시작 ──
@@ -131,6 +137,37 @@ export function AccountReturn() {
 
   // ── 취소 ──
   const handleCancel = () => { setEditing(false); setDeleteConfirm(null); };
+
+  // ── 잔액 동기화 (계좌종목등록 합계 → balance2025) ──
+  const calcAccBal = (acc: Account, p: Record<string, number> = prices) =>
+    Math.round(acc.holdings.reduce((s, h) => s + holdingValue(h, p[h.ticker]), acc.cash || 0));
+
+  const syncBalances = async () => {
+    setSyncing(true);
+    try {
+      const fresh = await kvGet<Account[]>('accounts') || accounts;
+      const updated = rows.map(r => {
+        if (!r.linkedAccId) return r;
+        const acc = fresh.find(a => a.id === r.linkedAccId);
+        return acc ? { ...r, balance2025: calcAccBal(acc) } : r;
+      });
+      await kvSet('contributions_v2', updated);
+      setRows(updated);
+      setAccounts(fresh);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // ── 편집 모드: 계좌 연결 + 잔액 자동 계산 ──
+  const linkAccount = (rowId: string, accId: string) => {
+    setEditRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r;
+      const acc = accounts.find(a => a.id === accId);
+      const bal = acc ? calcAccBal(acc) : r.balance2025;
+      return { ...r, linkedAccId: accId || undefined, balance2025: accId ? bal : r.balance2025 };
+    }));
+  };
 
   // ── 행 수정 ──
   const updateRow = (id: string, field: keyof AccountRow, value: string | number) => {
@@ -194,21 +231,21 @@ export function AccountReturn() {
         {/* 편집 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>계좌수익률 편집</div>
-            <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 4 }}>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>계좌수익률 편집</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
               수정 후 저장하면 서버에 반영됩니다
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleCancel} style={{
-              padding: '8px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600,
+              padding: '8px 18px', borderRadius: 8, fontSize: 'var(--text-sm)', fontWeight: 600,
               border: '1px solid var(--border-primary)', cursor: 'pointer',
               background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
             }}>
               취소
             </button>
             <button onClick={handleSave} disabled={saving} style={{
-              padding: '8px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600,
+              padding: '8px 18px', borderRadius: 8, fontSize: 'var(--text-sm)', fontWeight: 600,
               border: 'none', cursor: saving ? 'wait' : 'pointer',
               background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)',
               opacity: saving ? 0.6 : 1,
@@ -225,7 +262,7 @@ export function AccountReturn() {
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-primary)' }}>
                 {['소유자', '계좌명', '이전입금', "'24입금", "'25입금", "'26실제입금", '현재잔액', ''].map(h => (
                   <th key={h} style={{
-                    padding: '10px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)',
+                    padding: '10px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)',
                     textAlign: h === '소유자' || h === '계좌명' || h === '' ? 'left' : 'right', whiteSpace: 'nowrap',
                   }}>{h}</th>
                 ))}
@@ -244,7 +281,7 @@ export function AccountReturn() {
                       onChange={e => updateRow(r.id, 'owner', e.target.value)}
                       style={{
                         border: '1px solid var(--border-primary)', borderRadius: 6, padding: '4px 6px',
-                        fontSize: 12, background: 'var(--bg-primary)', color: OWNER_COLOR[r.owner], fontWeight: 700,
+                        fontSize: 'var(--text-xs)', background: 'var(--bg-primary)', color: OWNER_COLOR[r.owner], fontWeight: 700,
                         cursor: 'pointer',
                       }}
                     >
@@ -261,18 +298,43 @@ export function AccountReturn() {
                       onChange={e => updateRow(r.id, 'name', e.target.value)}
                       style={{
                         border: '1px solid var(--border-primary)', borderRadius: 6,
-                        padding: '4px 8px', fontSize: 13, fontWeight: 600,
+                        padding: '4px 8px', fontSize: 'var(--text-sm)', fontWeight: 600,
                         background: 'var(--bg-primary)', color: 'var(--text-primary)',
                         minWidth: 100, outline: 'none',
                       }}
                     />
                   </td>
                   {/* 숫자 필드들 */}
-                  {(['before2024', 'deposit2024', 'deposit2025', 'actual2026', 'balance2025'] as const).map(field => (
+                  {(['before2024', 'deposit2024', 'deposit2025', 'actual2026'] as const).map(field => (
                     <td key={field} style={{ padding: '8px 12px' }}>
                       <NumInput value={r[field]} onChange={v => updateRow(r.id, field, v)} />
                     </td>
                   ))}
+                  {/* 현재잔액 — 계좌 연결 or 수동 입력 */}
+                  <td style={{ padding: '8px 12px', minWidth: 160 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <select
+                        value={r.linkedAccId || ''}
+                        onChange={e => linkAccount(r.id, e.target.value)}
+                        style={{
+                          fontSize: 'var(--text-xs)', border: '1px solid var(--border-primary)', borderRadius: 6,
+                          padding: '3px 6px', background: 'var(--bg-primary)', color: r.linkedAccId ? 'var(--accent-blue)' : 'var(--text-tertiary)',
+                          cursor: 'pointer', maxWidth: 150, fontWeight: r.linkedAccId ? 600 : 400,
+                        }}
+                      >
+                        <option value="">수동 입력</option>
+                        {accounts
+                          .filter(a => r.owner === 'other' || a.owner === r.owner)
+                          .map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.alias || `${a.institution} ${a.accountType}`}
+                            </option>
+                          ))
+                        }
+                      </select>
+                      <NumInput value={r.balance2025} onChange={v => updateRow(r.id, 'balance2025', v)} />
+                    </div>
+                  </td>
                   {/* 삭제 */}
                   <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                     <button
@@ -280,7 +342,7 @@ export function AccountReturn() {
                       title={deleteConfirm === r.id ? '한 번 더 클릭하면 삭제됩니다' : '삭제'}
                       style={{
                         border: 'none', borderRadius: 6, padding: '4px 8px',
-                        cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600,
                         background: deleteConfirm === r.id
                           ? 'var(--color-profit)' : 'color-mix(in srgb, var(--color-profit) 10%, transparent)',
                         color: deleteConfirm === r.id ? '#fff' : 'var(--color-profit)',
@@ -301,7 +363,7 @@ export function AccountReturn() {
           display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center',
           padding: '10px', borderRadius: 10, border: '1px dashed var(--border-primary)',
           background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer',
-          fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
+          fontSize: 'var(--text-sm)', fontWeight: 600, transition: 'all 0.15s',
         }}>
           <MIcon name="add" size={16} />
           계좌 추가
@@ -323,8 +385,8 @@ export function AccountReturn() {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>계좌수익률</div>
-          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 4 }}>
+          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>계좌수익률</div>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
             총 입금액 대비 현재 잔액 기준 수익률
           </div>
         </div>
@@ -336,7 +398,7 @@ export function AccountReturn() {
             const color    = o === 'all' ? 'var(--text-secondary)' : OWNER_COLOR[o];
             return (
               <button key={o} onClick={() => setOwnerFilter(o)} style={{
-                padding: '4px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+                padding: '4px 14px', borderRadius: 20, fontSize: 'var(--text-sm)', fontWeight: 600,
                 border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                 background: isActive
                   ? (o === 'all' ? 'var(--accent-blue)' : `color-mix(in srgb, ${color} 80%, transparent)`)
@@ -345,10 +407,23 @@ export function AccountReturn() {
               }}>{label}</button>
             );
           })}
+          {/* 잔액 동기화 버튼 */}
+          {rows.some(r => r.linkedAccId) && (
+            <button onClick={syncBalances} disabled={syncing} style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 14px', borderRadius: 20, fontSize: 'var(--text-sm)', fontWeight: 600,
+              border: 'none', cursor: syncing ? 'wait' : 'pointer',
+              background: 'color-mix(in srgb, var(--accent-blue) 12%, transparent)',
+              color: 'var(--accent-blue)', opacity: syncing ? 0.6 : 1,
+            }}>
+              <MIcon name="sync" size={14} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+              {syncing ? '동기화 중...' : '잔액 동기화'}
+            </button>
+          )}
           {/* 편집 버튼 */}
           <button onClick={startEdit} style={{
             display: 'flex', alignItems: 'center', gap: 4,
-            padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+            padding: '6px 14px', borderRadius: 20, fontSize: 'var(--text-sm)', fontWeight: 600,
             border: '1px solid var(--border-primary)', cursor: 'pointer',
             background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
           }}>
@@ -365,7 +440,7 @@ export function AccountReturn() {
             background: 'var(--bg-secondary)', borderRadius: 12,
             padding: '14px 16px', border: '1px solid var(--border-primary)',
           }}>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 6 }}>{label}</div>
             <div className="toss-number" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
               {isAmountHidden ? '••••••' : value}
             </div>
@@ -373,7 +448,96 @@ export function AccountReturn() {
         ))}
       </div>
 
-      {/* 테이블 */}
+      {/* 테이블 / 모바일 카드 */}
+      {isMobile ? (
+        <div style={{ background: 'var(--bg-primary)', borderRadius: 16, border: '1px solid var(--border-primary)', overflow: 'hidden' }}>
+          {sorted.map((r, i) => {
+            const { totalDeposit, current, gain, rate } = calcRow(r);
+            const gc = gainColor(gain);
+            return (
+              <div key={r.id} style={{
+                padding: '12px 14px',
+                borderBottom: i < sorted.length - 1 ? '1px solid var(--border-primary)' : 'none',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{
+                    fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                    color: '#fff', background: OWNER_COLOR[r.owner], flexShrink: 0,
+                  }}>{OWNER_LABEL[r.owner]}</span>
+                  <span style={{
+                    fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', flex: 1, minWidth: 0,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{r.name}</span>
+                  {r.linkedAccId && <MIcon name="link" size={12} style={{ color: 'var(--accent-blue)', opacity: 0.7, flexShrink: 0 }} />}
+                  <span className="toss-number" style={{
+                    fontSize: 'var(--text-sm)', fontWeight: 700, color: gc, padding: '2px 8px', borderRadius: 8,
+                    background: `color-mix(in srgb, ${gc} 10%, transparent)`, flexShrink: 0,
+                  }}>{rate > 0 ? '+' : ''}{rate.toFixed(2)}%</span>
+                </div>
+                {(r.before2024 > 0 || r.deposit2024 > 0 || r.deposit2025 > 0 || r.actual2026 > 0) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8, fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)' }}>
+                    {r.before2024 > 0 && <span>이전 {isAmountHidden ? '••' : `${fmt(Math.round(r.before2024 / 10000))}만`}</span>}
+                    {r.deposit2024 > 0 && <span>'24 {isAmountHidden ? '••' : `${fmt(Math.round(r.deposit2024 / 10000))}만`}</span>}
+                    {r.deposit2025 > 0 && <span>'25 {isAmountHidden ? '••' : `${fmt(Math.round(r.deposit2025 / 10000))}만`}</span>}
+                    {r.actual2026 > 0 && <span>'26 {isAmountHidden ? '••' : `${fmt(Math.round(r.actual2026 / 10000))}만`}</span>}
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: 'var(--text-xs)' }}>
+                  <div>
+                    <div style={{ color: 'var(--text-tertiary)', marginBottom: 2 }}>입금</div>
+                    <div className="toss-number" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      {isAmountHidden ? '••' : `${fmt(totalDeposit)}원`}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: 'var(--text-tertiary)', marginBottom: 2 }}>잔액</div>
+                    <div className="toss-number" style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                      {isAmountHidden ? '••' : `${fmt(current)}원`}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: 'var(--text-tertiary)', marginBottom: 2 }}>수익</div>
+                    <div className="toss-number" style={{ fontWeight: 700, color: gc, whiteSpace: 'nowrap' }}>
+                      {isAmountHidden ? '••' : `${gain > 0 ? '+' : ''}${fmt(gain)}원`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {/* 합계 푸터 */}
+          <div style={{ padding: '12px 14px', background: 'var(--bg-secondary)', borderTop: '2px solid var(--border-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>합계 ({sorted.length}개)</span>
+              <span className="toss-number" style={{
+                fontSize: 'var(--text-sm)', fontWeight: 700, color: gainColor(totalRate),
+                padding: '2px 8px', borderRadius: 8,
+                background: `color-mix(in srgb, ${gainColor(totalRate)} 10%, transparent)`,
+              }}>{totalRate > 0 ? '+' : ''}{totalRate.toFixed(2)}%</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: 'var(--text-xs)' }}>
+              <div>
+                <div style={{ color: 'var(--text-tertiary)', marginBottom: 2 }}>입금</div>
+                <div className="toss-number" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  {isAmountHidden ? '••' : `${fmt(totals.deposit)}원`}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-tertiary)', marginBottom: 2 }}>잔액</div>
+                <div className="toss-number" style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                  {isAmountHidden ? '••' : `${fmt(totals.current)}원`}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-tertiary)', marginBottom: 2 }}>수익</div>
+                <div className="toss-number" style={{ fontWeight: 700, color: gainColor(totals.gain), whiteSpace: 'nowrap' }}>
+                  {isAmountHidden ? '••' : `${totals.gain > 0 ? '+' : ''}${fmt(totals.gain)}원`}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div style={{ background: 'var(--bg-primary)', borderRadius: 16, border: '1px solid var(--border-primary)', overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -386,7 +550,7 @@ export function AccountReturn() {
                 { label: '수익률',    key: 'rate'    as SortKey },
               ].map(({ label, key }) => (
                 <th key={label} onClick={() => key && toggleSort(key)} style={{
-                  padding: '12px 16px', fontSize: 12, fontWeight: 600,
+                  padding: '12px 16px', fontSize: 'var(--text-xs)', fontWeight: 600,
                   color: 'var(--text-tertiary)', background: 'var(--bg-secondary)',
                   borderBottom: '1px solid var(--border-primary)',
                   textAlign: label === '계좌' ? 'left' : 'right',
@@ -408,12 +572,13 @@ export function AccountReturn() {
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                        fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 7px', borderRadius: 20,
                         color: '#fff', background: OWNER_COLOR[r.owner],
                       }}>{OWNER_LABEL[r.owner]}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{r.name}</span>
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>{r.name}</span>
+                      {r.linkedAccId && <MIcon name="link" size={12} style={{ color: 'var(--accent-blue)', opacity: 0.7 }} />}
                     </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 11, color: 'var(--text-quaternary)' }}>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)' }}>
                       {r.before2024  > 0 && <span>이전 {isAmountHidden ? '••••' : `${fmt(Math.round(r.before2024  / 10000))}만`}</span>}
                       {r.deposit2024 > 0 && <span>'24 {isAmountHidden  ? '••••' : `${fmt(Math.round(r.deposit2024 / 10000))}만`}</span>}
                       {r.deposit2025 > 0 && <span>'25 {isAmountHidden  ? '••••' : `${fmt(Math.round(r.deposit2025 / 10000))}만`}</span>}
@@ -421,23 +586,23 @@ export function AccountReturn() {
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                    <div className="toss-number" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>
                       {isAmountHidden ? '••••••' : `${fmt(totalDeposit)}원`}
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    <div className="toss-number" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>
                       {isAmountHidden ? '••••••' : `${fmt(current)}원`}
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: gc }}>
-                    <div className="toss-number" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>
                       {isAmountHidden ? '••••' : `${gain > 0 ? '+' : ''}${fmt(gain)}원`}
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>
                     <div className="toss-number" style={{
-                      fontSize: 15, color: gc, display: 'inline-block',
+                      fontSize: 'var(--text-base)', color: gc, display: 'inline-block',
                       padding: '2px 10px', borderRadius: 8,
                       background: `color-mix(in srgb, ${gc} 10%, transparent)`,
                     }}>
@@ -450,27 +615,27 @@ export function AccountReturn() {
           </tbody>
           <tfoot>
             <tr style={{ background: 'var(--bg-secondary)', borderTop: '2px solid var(--border-primary)' }}>
-              <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <td style={{ padding: '12px 16px', fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
                 합계 ({sorted.length}개)
               </td>
               <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                <div className="toss-number" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                   {isAmountHidden ? '••••••' : `${fmt(totals.deposit)}원`}
                 </div>
               </td>
               <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                <div className="toss-number" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                   {isAmountHidden ? '••••••' : `${fmt(totals.current)}원`}
                 </div>
               </td>
               <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: gainColor(totals.gain) }}>
-                <div className="toss-number" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                <div className="toss-number" style={{ fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>
                   {isAmountHidden ? '••••' : `${totals.gain > 0 ? '+' : ''}${fmt(totals.gain)}원`}
                 </div>
               </td>
               <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>
                 <div className="toss-number" style={{
-                  fontSize: 15, color: gainColor(totalRate), display: 'inline-block',
+                  fontSize: 'var(--text-base)', color: gainColor(totalRate), display: 'inline-block',
                   padding: '2px 10px', borderRadius: 8,
                   background: `color-mix(in srgb, ${gainColor(totalRate)} 10%, transparent)`,
                 }}>
@@ -481,6 +646,7 @@ export function AccountReturn() {
           </tfoot>
         </table>
       </div>
+      )}
     </div>
   );
 }

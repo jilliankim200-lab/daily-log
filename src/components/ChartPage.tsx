@@ -46,7 +46,7 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div style={{
       background: 'var(--bg-elevated)', border: '1px solid var(--border-primary)',
-      borderRadius: 10, padding: '10px 14px', fontSize: 12, minWidth: 160,
+      borderRadius: 10, padding: '10px 14px', fontSize: 'var(--text-xs)', minWidth: 160,
       boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
     }}>
       <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
@@ -117,9 +117,9 @@ function PeriodGuideModal({ onClose }: { onClose: () => void }) {
         {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 18px', borderBottom: '1px solid var(--border-secondary)', flexShrink: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>기간 · MA 조합 가이드</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>기간 · MA 조합 가이드</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-tertiary)', fontSize: 18, lineHeight: 1, padding: '2px 4px' }}>✕</button>
+            color: 'var(--text-tertiary)', fontSize: 'var(--text-lg)', lineHeight: 1, padding: '2px 4px' }}>✕</button>
         </div>
 
         {/* MA 설명 한줄 */}
@@ -132,8 +132,8 @@ function PeriodGuideModal({ onClose }: { onClose: () => void }) {
           ].map(m => (
             <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 20, height: 2, borderRadius: 1, background: m.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: m.color }}>{m.label}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{m.desc}</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: m.color }}>{m.label}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{m.desc}</span>
             </div>
           ))}
         </div>
@@ -145,16 +145,16 @@ function PeriodGuideModal({ onClose }: { onClose: () => void }) {
               border: `1px solid color-mix(in srgb, ${c.tagColor} 20%, var(--border-secondary))` }}>
               {/* 타이틀 행 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{c.title}</span>
-                <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 5, fontWeight: 600,
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{c.title}</span>
+                <span style={{ fontSize: 'var(--text-xs)', padding: '1px 7px', borderRadius: 5, fontWeight: 600,
                   background: `color-mix(in srgb, ${c.tagColor} 15%, transparent)`, color: c.tagColor }}>
                   {c.tag}
                 </span>
               </div>
               {/* 목적 */}
-              <div style={{ fontSize: 11, color: c.tagColor, fontWeight: 600, marginBottom: 5 }}>→ {c.goal}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: c.tagColor, fontWeight: 600, marginBottom: 5 }}>→ {c.goal}</div>
               {/* 설명 */}
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.75 }}>{c.desc}</p>
+              <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>{c.desc}</p>
             </div>
           ))}
         </div>
@@ -282,7 +282,7 @@ export function ChartPage() {
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>차트</div>
-          <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>보유 종목의 주가와 이동평균선을 확인합니다.</div>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>보유 종목의 주가와 이동평균선을 확인합니다.</div>
         </div>
         {fromPage && (
           <button
@@ -292,7 +292,7 @@ export function ChartPage() {
             }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
               border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)',
-              fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}
+              fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}
           >
             <MIcon name="arrow_back" size={16} />
             돌아가기
@@ -313,7 +313,7 @@ export function ChartPage() {
           style={{
             background: 'var(--bg-secondary)', color: 'var(--text-primary)',
             border: '1px solid var(--border-primary)', borderRadius: 8,
-            padding: '7px 12px', fontSize: 13, cursor: 'pointer', minWidth: 200,
+            padding: '7px 12px', fontSize: 'var(--text-sm)', cursor: 'pointer', minWidth: 200,
           }}
         >
           {allHoldings.map(h => (
@@ -332,13 +332,13 @@ export function ChartPage() {
               if (opt.days === 90)  setShowMA({ ma5: false, ma20: true,  ma60: false });
               if (opt.days === 180) setShowMA({ ma5: false, ma20: true,  ma60: true  });
             }} style={{
-              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+              padding: '6px 12px', borderRadius: 8, fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', border: 'none',
               background: days === opt.days ? 'var(--accent-blue)' : 'var(--bg-secondary)',
               color: days === opt.days ? 'var(--accent-blue-fg)' : 'var(--text-secondary)',
             }}>{opt.label}</button>
           ))}
           <button onClick={() => setShowGuide(true)} style={{
-            padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            padding: '5px 10px', borderRadius: 8, fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer',
             background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
             border: '1px solid var(--border-primary)',
           }}>가이드</button>
@@ -348,7 +348,7 @@ export function ChartPage() {
         <div style={{ display: 'flex', gap: 4 }}>
           {MA_OPTIONS.map(ma => (
             <button key={ma.key} onClick={() => setShowMA(prev => ({ ...prev, [ma.key]: !prev[ma.key] }))} style={{
-              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+              padding: '6px 12px', borderRadius: 8, fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', border: 'none',
               background: showMA[ma.key] ? `color-mix(in srgb, ${ma.color} 20%, var(--bg-secondary))` : 'var(--bg-secondary)',
               color: showMA[ma.key] ? ma.color : 'var(--text-tertiary)',
               outline: showMA[ma.key] ? `1px solid ${ma.color}` : '1px solid transparent',
@@ -360,12 +360,12 @@ export function ChartPage() {
       {/* 종목 정보 */}
       {selectedName && (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{selectedName}</span>
-          <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{selectedTicker}</span>
+          <span style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>{selectedName}</span>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{selectedTicker}</span>
           {lastPrice > 0 && (
             <>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{fmtPrice(lastPrice)}</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: changeColor }}>
+              <span style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtPrice(lastPrice)}</span>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: changeColor }}>
                 {changeRate >= 0 ? '+' : ''}{changeRate.toFixed(2)}%
               </span>
             </>
@@ -376,13 +376,13 @@ export function ChartPage() {
       {/* 차트 */}
       <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: isMobile ? '12px 4px' : '20px 16px', minHeight: 340 }}>
         {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 8, color: 'var(--text-tertiary)', fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 8, color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
             <MIcon name="sync" size={18} style={{ color: 'var(--text-tertiary)' }} />
             데이터 로딩 중...
           </div>
         )}
         {error && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--color-loss)', fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--color-loss)', fontSize: 'var(--text-sm)' }}>
             {error}
           </div>
         )}
@@ -392,14 +392,14 @@ export function ChartPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-secondary)" opacity={0.5} />
               <XAxis
                 dataKey="date"
-                tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }}
+                tick={{ fill: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}
                 interval={xInterval}
                 tickLine={false}
                 axisLine={{ stroke: 'var(--border-secondary)' }}
               />
               <YAxis
                 domain={[yMin, yMax]}
-                tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }}
+                tick={{ fill: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v.toLocaleString()}
@@ -407,7 +407,7 @@ export function ChartPage() {
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend
-                wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                wrapperStyle={{ fontSize: 'var(--text-xs)', paddingTop: 12 }}
                 formatter={(value) => <span style={{ color: 'var(--text-secondary)' }}>{value}</span>}
               />
 
@@ -452,12 +452,12 @@ export function ChartPage() {
                 opacity: showMA[ma.key] ? 1 : 0.4,
                 border: `1px solid ${showMA[ma.key] ? `color-mix(in srgb, ${ma.color} 30%, transparent)` : 'transparent'}`,
               }}>
-                <div style={{ fontSize: 11, color: ma.color, fontWeight: 700, marginBottom: 2 }}>{ma.label} ({ma.period}일)</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: ma.color, fontWeight: 700, marginBottom: 2 }}>{ma.label} ({ma.period}일)</div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                   {val ? val.toLocaleString('ko-KR') + '원' : '—'}
                 </div>
                 {diff != null && (
-                  <div style={{ fontSize: 11, color: diff >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', marginTop: 2 }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: diff >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', marginTop: 2 }}>
                     현재가 {diff >= 0 ? '+' : ''}{diff.toFixed(1)}%
                   </div>
                 )}

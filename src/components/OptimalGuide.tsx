@@ -132,8 +132,9 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
       {show && (
         <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
           background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
-          borderRadius: 8, padding: '7px 11px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
-          maxWidth: 240, lineHeight: 1.6, boxShadow: 'var(--shadow-tooltip)', wordBreak: 'keep-all' }}>
+          borderRadius: 10, padding: '9px 14px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
+          width: 280, lineHeight: 1.55, boxShadow: 'var(--shadow-tooltip)',
+          whiteSpace: 'normal', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
           {timing.desc}
         </div>
       )}
@@ -632,12 +633,16 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
 }
 
 // ── 계좌 카드 ──────────────────────────────────────────────────
-function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll }: {
+function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll, executedInCycle, executedMap, executionInputs, onExecutionInputChange }: {
   plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; changeRates: Record<string, number>; signalFilter: SignalFilter;
   execMode?: boolean; checkedSells?: Set<string>; checkedBuys?: Set<string>;
   onToggleSell?: (key: string) => void; onToggleBuy?: (key: string) => void;
   onNameClick?: (ticker: string, name: string) => void;
   expandAll?: boolean | null;
+  executedInCycle?: Set<string>;
+  executedMap?: Record<string, ExecutionRecord>;
+  executionInputs?: Record<string, number>;
+  onExecutionInputChange?: (key: string, value: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState(true);
   const { acc, sells, keeps, buys, freedCash, projectedSafePct, safeStatus, totalVal, safeAdjust } = plan;
@@ -686,6 +691,25 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                   {checkedSells?.has(`${acc.id}__${s.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-loss)' }} />}
                 </button>
               )}
+              {execMode && checkedSells?.has(`${acc.id}__${s.h.id}`) && (() => {
+                const rk = `${acc.id}__${s.h.id}`;
+                const max = s.h.isFund ? (s.h.amount || 0) : (s.h.quantity || 0);
+                const val = executionInputs?.[rk] ?? max;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                    <input type="number" min={0} max={max} value={val}
+                      onChange={e => onExecutionInputChange?.(rk, Math.max(0, Math.min(max, Number(e.target.value) || 0)))}
+                      onClick={e => e.currentTarget.select()}
+                      style={{
+                        width: 56, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-secondary)',
+                        background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                        fontSize: 'var(--text-xs)', textAlign: 'right',
+                      }}
+                      aria-label="매도 실행 수량" />
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{s.h.isFund ? '원' : '주'}</span>
+                  </div>
+                );
+              })()}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Row badge="전량매도" badgeColor="var(--color-loss)" name={s.h.name} cls={s.cls}
                   ticker={s.h.ticker} onNameClick={onNameClick}
@@ -738,16 +762,42 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
         </div>
       ) : (
         keeps.map((k, i) => {
+          const rowKey = `${acc.id}__${k.h.id}`;
+          const isExecuted = executedInCycle?.has(rowKey) ?? false;
           const buy = buys.find(b => b.h.id === k.h.id);
-          const addBadge = buy && buy.addAmount > 0 ? (
+          const addBadge = !isExecuted && buy && buy.addAmount > 0 ? (
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--color-profit)', flexShrink: 0,
               background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4 }}>
               +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
             </span>
           ) : null;
+          const execRec = executedMap?.[rowKey];
+          const recQty = execRec?.isFund ? execRec.recommendedAmount : (execRec?.recommendedShares ?? 0);
+          const exeQty = execRec?.isFund ? execRec.amount : (execRec?.shares ?? 0);
+          const isPartial = isExecuted && recQty > 0 && exeQty > 0 && exeQty < recQty;
+          const remaining = Math.max(0, recQty - exeQty);
+          const unit = execRec?.isFund ? '원' : '주';
+          const execBadge = isExecuted ? (
+            isPartial ? (
+              <span title={`실행일 ${execRec?.date} · 실행 ${exeQty.toLocaleString()}${unit} / 추천 ${recQty.toLocaleString()}${unit} · 남음 ${remaining.toLocaleString()}${unit}`}
+                style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-warning)', flexShrink: 0,
+                  background: 'color-mix(in srgb, var(--color-warning) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-warning) 40%, transparent)',
+                  borderRadius: 6, padding: '3px 8px', marginLeft: 4, whiteSpace: 'nowrap' }}>
+                부분 실행 {exeQty.toLocaleString()}/{recQty.toLocaleString()}{unit} · 남음 {remaining.toLocaleString()}
+              </span>
+            ) : (
+              <span title={`실행일: ${execRec?.date ?? ''}`}
+                style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', flexShrink: 0,
+                  background: 'var(--bg-elevated)', border: '1px solid var(--border-secondary)',
+                  borderRadius: 6, padding: '3px 8px', marginLeft: 4, whiteSpace: 'nowrap' }}>
+                이미 실행
+              </span>
+            )
+          ) : null;
           const sig = k.h.ticker ? signals[k.h.ticker] : undefined;
           const timing = sig ? getBuySignal(sig) : noSignal();
-          const hasBuy = buy && buy.addAmount > 0;
+          const hasBuy = !isExecuted && buy && buy.addAmount > 0;
           const matched = isRowMatch(k.h.ticker, 'buy');
           return (
             <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
@@ -762,6 +812,24 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                     {checkedBuys?.has(`${acc.id}__${k.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-profit)' }} />}
                   </button>
                 )}
+                {execMode && hasBuy && checkedBuys?.has(`${acc.id}__${k.h.id}`) && (() => {
+                  const max = k.h.isFund ? (buy?.addAmount ?? 0) : (buy?.shares ?? 0);
+                  const val = executionInputs?.[rowKey] ?? max;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                      <input type="number" min={0} max={max} value={val}
+                        onChange={e => onExecutionInputChange?.(rowKey, Math.max(0, Math.min(max, Number(e.target.value) || 0)))}
+                        onClick={e => e.currentTarget.select()}
+                        style={{
+                          width: 56, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-secondary)',
+                          background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                          fontSize: 'var(--text-xs)', textAlign: 'right',
+                        }}
+                        aria-label="매수 실행 수량" />
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{k.h.isFund ? '원' : '주'}</span>
+                    </div>
+                  );
+                })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Row badge={k.isHighReturn ? '★유지' : '추가매수'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
                     name={k.h.name} cls={k.cls} ticker={k.h.ticker} onNameClick={onNameClick}
@@ -784,6 +852,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                           );
                         })()}
                         {addBadge}
+                        {execBadge}
                         <TimingBadge timing={timing} />
                       </div>
                     } />
@@ -848,12 +917,12 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
             </div>
           )}
 
-          {/* 매도 있음: 좌(매도) / 우(재매수) — 반응형 2단 */}
+          {/* 매도 있음: 상(매도) / 하(재매수) — 수직 배열 */}
           {sells.length > 0 ? (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: buysCol ? 'repeat(auto-fit, minmax(260px, 1fr))' : '1fr',
-              columnGap: '1px',
+              gridTemplateColumns: '1fr',
+              rowGap: buysCol ? '1px' : '0',
               background: buysCol ? 'var(--border-secondary)' : 'transparent',
             }}>
               {sellsCol}{buysCol}
@@ -974,6 +1043,53 @@ function GuideModal({ onClose }: { onClose: () => void }) {
 type TargetAllocation = { 주식: number; 채권: number; 커버드콜: number; 금: number; 기타: number };
 const DEFAULT_TARGETS: TargetAllocation = { 주식: 60, 채권: 20, 커버드콜: 10, 금: 5, 기타: 5 };
 
+// ── 재조정 사이클: 매월 1일·15일 기준 ───────────────────────────
+const EXECUTED_STORAGE_KEY = 'executed_holdings';
+
+type ExecutionRecord = {
+  date: string;              // 실행일 YYYY-MM-DD
+  type: 'buy' | 'sell';
+  shares: number;            // 실제 실행 수량 (펀드는 0)
+  amount: number;            // 실제 실행 금액 (원)
+  recommendedShares: number; // 추천 수량
+  recommendedAmount: number; // 추천 금액
+  isFund?: boolean;
+};
+
+function toIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function todayIso(): string { return toIso(new Date()); }
+function getCurrentCycleStart(): string {
+  const d = new Date();
+  const cycleDay = d.getDate() >= 15 ? 15 : 1;
+  return toIso(new Date(d.getFullYear(), d.getMonth(), cycleDay));
+}
+function getNextCycleDate(): string {
+  const d = new Date();
+  return toIso(d.getDate() < 15 ? new Date(d.getFullYear(), d.getMonth(), 15) : new Date(d.getFullYear(), d.getMonth() + 1, 1));
+}
+function daysUntil(iso: string): number {
+  const a = new Date(todayIso()).getTime();
+  const b = new Date(iso).getTime();
+  return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
+}
+
+// 구 포맷(문자열 날짜) → 신 포맷(ExecutionRecord) 마이그레이션
+function migrateExecutedMap(raw: unknown): Record<string, ExecutionRecord> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, ExecutionRecord> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === 'string') {
+      // 구 포맷: 수량 정보 없음 → 전량 실행으로 간주 (recommendedShares=0이면 부분 판정 불가)
+      out[key] = { date: value, type: 'buy', shares: 0, amount: 0, recommendedShares: 0, recommendedAmount: 0 };
+    } else if (value && typeof value === 'object' && 'date' in (value as object)) {
+      out[key] = value as ExecutionRecord;
+    }
+  }
+  return out;
+}
+
 // 목표 비중 기반 buys 계산 헬퍼
 function computeBuys(
   keeps: AccountPlan['keeps'],
@@ -998,7 +1114,8 @@ function computeBuys(
 
 function computeAllPlans(
   accounts: Account[], prices: Record<string, number>,
-  targets: TargetAllocation, overrideKeeps: Set<string>
+  targets: TargetAllocation, overrideKeeps: Set<string>,
+  executedInCycle: Set<string> = new Set()
 ): { accountPlans: AccountPlan[]; totalSells: number; retirementIssues: number } {
   const holdingMap = new Map<string, { h: Holding; acc: Account; val: number; ret: number | null }[]>();
   for (const acc of accounts) {
@@ -1070,7 +1187,9 @@ function computeAllPlans(
     const sellTotal = sells.reduce((s, r) => s + r.val, 0);
     const freedCash = sellTotal + cash;
     // 매수 추천은 실제 보유 현금만 기준 — 미실행 매도 대금 포함 시 매도 전에도 같은 추천 반복됨
-    const buys = computeBuys(keeps, cash, targets, prices);
+    // 이번 사이클에 이미 실행한 종목은 후보에서 제외 → 다음 사이클(1일/15일)에 통합 재계산
+    const keepsForBuys = keeps.filter(k => !executedInCycle.has(`${acc.id}__${k.h.id}`));
+    const buys = computeBuys(keepsForBuys, cash, targets, prices);
 
     const projectedTotal = keeps.reduce((s, k) => s + k.val, 0);
     const projectedSafe = keeps.reduce((s, k) => isSafeAsset(k.cls) ? s + k.val : s, 0);
@@ -1125,6 +1244,27 @@ export function OptimalGuide() {
   const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
   const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+
+  // 사이클 내 실행 이력 (localStorage) — 매월 1일·15일에 자연히 무효화
+  const [executedMap, setExecutedMap] = useState<Record<string, ExecutionRecord>>(() => {
+    try { return migrateExecutedMap(JSON.parse(localStorage.getItem(EXECUTED_STORAGE_KEY) || '{}')); }
+    catch { return {}; }
+  });
+  const cycleStart = useMemo(() => getCurrentCycleStart(), []);
+  const nextCycle = useMemo(() => getNextCycleDate(), []);
+  const executedInCycle = useMemo(() => {
+    const s = new Set<string>();
+    for (const [key, rec] of Object.entries(executedMap)) {
+      if (rec.date >= cycleStart) s.add(key);
+    }
+    return s;
+  }, [executedMap, cycleStart]);
+
+  // 부분 실행 입력값 (execMode 내에서만 유효, 저장 후 리셋)
+  const [executionInputs, setExecutionInputs] = useState<Record<string, number>>({});
+  const setExecutionInput = (key: string, value: number) => {
+    setExecutionInputs(prev => ({ ...prev, [key]: value }));
+  };
   // KV에서 targets + prevTargets 로드 (마운트 시 1회)
   useEffect(() => {
     kvGet<TargetAllocation>('rebalancing_targets').then(val => {
@@ -1188,7 +1328,8 @@ export function OptimalGuide() {
   }, [accounts, prices, targets, exchangeRate]);
 
   const { accountPlans, totalSells, retirementIssues } = useMemo(() =>
-    computeAllPlans(accounts, prices, targets, new Set()), [accounts, prices, targets]);
+    computeAllPlans(accounts, prices, targets, new Set(), executedInCycle),
+    [accounts, prices, targets, executedInCycle]);
 
   const currentAlloc = useMemo(() => {
     const byClass: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
@@ -1221,7 +1362,10 @@ export function OptimalGuide() {
     setSaving(true);
     try {
       const updated = structuredClone(accounts);
-      // 1. 매도 처리: 체크된 종목 제거 + 현금에 매도금액 추가
+      const today = todayIso();
+      const newRecs: Record<string, ExecutionRecord> = {};
+
+      // 1. 매도 처리 (부분 매도 지원)
       for (const key of checkedSells) {
         const [accId, holdingId] = key.split('__');
         const acc = updated.find(a => a.id === accId);
@@ -1229,38 +1373,93 @@ export function OptimalGuide() {
         const idx = acc.holdings.findIndex(h => h.id === holdingId);
         if (idx === -1) continue;
         const h = acc.holdings[idx];
-        const sellVal = hVal(h, prices);
-        acc.holdings.splice(idx, 1);
-        acc.cash = (acc.cash || 0) + sellVal;
+        const plan = accountPlans.find(p => p.acc.id === accId);
+        const sell = plan?.sells.find(s => s.h.id === holdingId);
+        if (!sell) continue;
+
+        if (h.isFund) {
+          // 펀드: 금액 기준. 입력값 없으면 전량 매도
+          const maxAmt = h.amount || 0;
+          const execAmt = Math.min(Math.max(0, executionInputs[key] ?? maxAmt), maxAmt);
+          if (execAmt <= 0) continue;
+          h.amount = maxAmt - execAmt;
+          acc.cash = (acc.cash || 0) + execAmt;
+          if ((h.amount || 0) <= 0) acc.holdings.splice(idx, 1);
+          newRecs[key] = {
+            date: today, type: 'sell', isFund: true,
+            shares: 0, amount: execAmt,
+            recommendedShares: 0, recommendedAmount: sell.val,
+          };
+        } else {
+          const maxShares = h.quantity || 0;
+          const execShares = Math.min(Math.max(0, Math.floor(executionInputs[key] ?? maxShares)), maxShares);
+          if (execShares <= 0) continue;
+          const pricePerShare = maxShares > 0 ? sell.val / maxShares : 0;
+          const sellAmount = Math.round(execShares * pricePerShare);
+          h.quantity = maxShares - execShares;
+          acc.cash = (acc.cash || 0) + sellAmount;
+          if (h.quantity <= 0) acc.holdings.splice(idx, 1);
+          newRecs[key] = {
+            date: today, type: 'sell',
+            shares: execShares, amount: sellAmount,
+            recommendedShares: maxShares, recommendedAmount: sell.val,
+          };
+        }
       }
-      // 2. 추가매수 처리: 체크된 종목의 수량 증가 + 현금 차감
+
+      // 2. 추가매수 처리 (부분 매수 지원)
       for (const key of checkedBuys) {
         const [accId, holdingId] = key.split('__');
         const acc = updated.find(a => a.id === accId);
         if (!acc) continue;
         const h = acc.holdings.find(hh => hh.id === holdingId);
         if (!h) continue;
-        // 해당 plan에서 buy 정보 찾기
         const plan = accountPlans.find(p => p.acc.id === accId);
-        if (!plan) continue;
-        const buy = plan.buys.find(b => b.h.id === holdingId);
+        const buy = plan?.buys.find(b => b.h.id === holdingId);
         if (!buy || buy.addAmount <= 0) continue;
+
         if (h.isFund) {
-          h.amount = (h.amount || 0) + buy.addAmount;
+          const maxAmt = buy.addAmount;
+          const execAmt = Math.min(Math.max(0, executionInputs[key] ?? maxAmt), maxAmt);
+          if (execAmt <= 0) continue;
+          h.amount = (h.amount || 0) + execAmt;
+          acc.cash = Math.max(0, (acc.cash || 0) - execAmt);
+          newRecs[key] = {
+            date: today, type: 'buy', isFund: true,
+            shares: 0, amount: execAmt,
+            recommendedShares: 0, recommendedAmount: buy.addAmount,
+          };
         } else if (buy.shares && buy.shares > 0 && buy.price) {
-          h.quantity += buy.shares;
-          // 평단가 재계산
-          const oldCost = h.avgPrice * (h.quantity - buy.shares);
-          const newCost = buy.price * buy.shares;
-          h.avgPrice = Math.round((oldCost + newCost) / h.quantity);
+          const maxShares = buy.shares;
+          const execShares = Math.min(Math.max(0, Math.floor(executionInputs[key] ?? maxShares)), maxShares);
+          if (execShares <= 0) continue;
+          const cost = execShares * buy.price;
+          const oldCost = h.avgPrice * h.quantity;
+          h.quantity += execShares;
+          h.avgPrice = h.quantity > 0 ? Math.round((oldCost + cost) / h.quantity) : h.avgPrice;
+          acc.cash = Math.max(0, (acc.cash || 0) - cost);
+          newRecs[key] = {
+            date: today, type: 'buy',
+            shares: execShares, amount: cost,
+            recommendedShares: maxShares, recommendedAmount: buy.addAmount,
+          };
         }
-        acc.cash = Math.max(0, (acc.cash || 0) - buy.addAmount);
       }
+
       await saveAccounts(updated);
+
+      // 실행 기록 저장 (reloadAccounts 이전에 → 렌더 깜빡임 방지)
+      if (Object.keys(newRecs).length > 0) {
+        const nextMap = { ...executedMap, ...newRecs };
+        localStorage.setItem(EXECUTED_STORAGE_KEY, JSON.stringify(nextMap));
+        setExecutedMap(nextMap);
+      }
+
       await reloadAccounts();
       setExecMode(false);
       setCheckedSells(new Set());
       setCheckedBuys(new Set());
+      setExecutionInputs({});
     } catch (err) {
       console.error('실행 저장 실패:', err);
     } finally {
@@ -1338,8 +1537,9 @@ export function OptimalGuide() {
           s.h.ticker && signals[s.h.ticker] && getSellSignal(signals[s.h.ticker]).label === signalFilter.label
         );
       } else {
-        return plan.keeps.some(k =>
-          k.h.ticker && signals[k.h.ticker] && getBuySignal(signals[k.h.ticker]).label === signalFilter.label
+        // 실제 매수 추천(buys)이 있는 계좌만 — 유지만 있는 "변경 없음" 계좌 제외
+        return plan.buys.some(b =>
+          b.h.ticker && signals[b.h.ticker] && getBuySignal(signals[b.h.ticker]).label === signalFilter.label
         );
       }
     });
@@ -1357,19 +1557,19 @@ export function OptimalGuide() {
       </div>
 
       {/* 요약 카드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 6 : 10, marginBottom: isMobile ? 14 : 20 }}>
         {[
           { icon: 'remove_shopping_cart', label: '매도 종목', value: `${totalSells}개`, color: totalSells > 0 ? 'var(--color-loss)' : 'var(--color-profit)' },
           { icon: 'warning', label: '안전자산 조정', value: `${retirementIssues}개`, color: retirementIssues > 0 ? 'var(--color-loss)' : 'var(--color-profit)' },
           { icon: 'account_balance', label: '전체 계좌', value: `${accounts.length}개`, color: 'var(--text-secondary)' },
         ].map(c => (
-          <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: `color-mix(in srgb, ${c.color} 15%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <MIcon name={c.icon} size={16} style={{ color: c.color }} />
+          <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: isMobile ? '8px 10px' : '12px 14px', display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10, minWidth: 0 }}>
+            <div style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: 9, background: `color-mix(in srgb, ${c.color} 15%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <MIcon name={c.icon} size={isMobile ? 14 : 16} style={{ color: c.color }} />
             </div>
-            <div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{c.label}</div>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: c.color }}>{c.value}</div>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ fontSize: isMobile ? 'var(--text-xs)' : 'var(--text-sm)', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</div>
+              <div style={{ fontSize: isMobile ? 'var(--text-base)' : 'var(--text-lg)', fontWeight: 700, color: c.color }}>{c.value}</div>
             </div>
           </div>
         ))}
@@ -1393,44 +1593,80 @@ export function OptimalGuide() {
             수정
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(5, 1fr)', gap: '4px 0', fontSize: 'var(--text-sm)' }}>
-          {/* 헤더 */}
-          <span />
-          {(Object.keys(targets) as AssetClass[]).map(cls => (
-            <span key={cls} style={{ textAlign: 'center', fontWeight: 700, color: ASSET_COLORS[cls], paddingBottom: 4 }}>{cls}</span>
-          ))}
-          {/* 목표 */}
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', paddingRight: 10, display: 'flex', alignItems: 'center' }}>목표</span>
-          {(Object.entries(targets) as [AssetClass, number][]).map(([cls, pct]) => (
-            <span key={cls} style={{ textAlign: 'center', fontWeight: 700, color: ASSET_COLORS[cls] }}>
-              {pct}%
-              {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && (
-                <span
-                  onClick={e => { e.stopPropagation(); if (divChangePlans.length > 0) setShowDivDetail(true); }}
-                  style={{ fontSize: 'var(--text-xs)', color: ASSET_COLORS[cls], opacity: 0.8, marginLeft: 3,
-                    cursor: divChangePlans.length > 0 ? 'pointer' : 'default',
-                    textDecoration: divChangePlans.length > 0 ? 'underline dotted' : 'none' }}>
-                  {divChangePlans.length > 0 && '▾'}
-                </span>
-              )}
-            </span>
-          ))}
-          {/* 현재 */}
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', paddingRight: 10, display: 'flex', alignItems: 'center' }}>현재</span>
-          {(Object.keys(targets) as AssetClass[]).map(cls => {
-            const cur = currentAlloc[cls] ?? 0;
-            const diff = cur - targets[cls];
-            const diffColor = Math.abs(diff) <= 3 ? 'var(--color-profit)' : Math.abs(diff) <= 8 ? 'var(--color-warning)' : 'var(--color-loss)';
-            return (
-              <div key={cls} style={{ textAlign: 'center' }}>
-                <span style={{ fontWeight: 700, color: diffColor }}>{cur.toFixed(1)}%</span>
-                <span style={{ fontSize: 'var(--text-xs)', color: diffColor, opacity: 0.75, marginLeft: 3 }}>
-                  {diff >= 0 ? '+' : ''}{diff.toFixed(1)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        {isMobile ? (
+          /* 모바일: 자산 클래스별 세로 스택 (한 줄에 목표 vs 현재 나란히) */
+          <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--text-sm)' }}>
+            {(Object.keys(targets) as AssetClass[]).map((cls, idx, arr) => {
+              const cur = currentAlloc[cls] ?? 0;
+              const diff = cur - targets[cls];
+              const diffColor = Math.abs(diff) <= 3 ? 'var(--color-profit)' : Math.abs(diff) <= 8 ? 'var(--color-warning)' : 'var(--color-loss)';
+              return (
+                <div key={cls} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 2px',
+                  borderBottom: idx < arr.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+                }}>
+                  <span style={{ fontWeight: 700, color: ASSET_COLORS[cls], minWidth: 54, flexShrink: 0 }}>{cls}</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 72 }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>목표</span>
+                    <span style={{ fontWeight: 700, color: ASSET_COLORS[cls] }}>{targets[cls]}%</span>
+                    {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && divChangePlans.length > 0 && (
+                      <span onClick={e => { e.stopPropagation(); setShowDivDetail(true); }}
+                        style={{ fontSize: 'var(--text-xs)', color: ASSET_COLORS[cls], opacity: 0.8,
+                          cursor: 'pointer', textDecoration: 'underline dotted' }}>▾</span>
+                    )}
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>현재</span>
+                    <span style={{ fontWeight: 700, color: diffColor }}>{cur.toFixed(1)}%</span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: diffColor, opacity: 0.75 }}>
+                      ({diff >= 0 ? '+' : ''}{diff.toFixed(1)})
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(5, 1fr)', gap: '4px 0', fontSize: 'var(--text-sm)' }}>
+            {/* 헤더 */}
+            <span />
+            {(Object.keys(targets) as AssetClass[]).map(cls => (
+              <span key={cls} style={{ textAlign: 'center', fontWeight: 700, color: ASSET_COLORS[cls], paddingBottom: 4 }}>{cls}</span>
+            ))}
+            {/* 목표 */}
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', paddingRight: 10, display: 'flex', alignItems: 'center' }}>목표</span>
+            {(Object.entries(targets) as [AssetClass, number][]).map(([cls, pct]) => (
+              <span key={cls} style={{ textAlign: 'center', fontWeight: 700, color: ASSET_COLORS[cls] }}>
+                {pct}%
+                {cls === '커버드콜' && coveredCallMonthlyDiv > 0 && (
+                  <span
+                    onClick={e => { e.stopPropagation(); if (divChangePlans.length > 0) setShowDivDetail(true); }}
+                    style={{ fontSize: 'var(--text-xs)', color: ASSET_COLORS[cls], opacity: 0.8, marginLeft: 3,
+                      cursor: divChangePlans.length > 0 ? 'pointer' : 'default',
+                      textDecoration: divChangePlans.length > 0 ? 'underline dotted' : 'none' }}>
+                    {divChangePlans.length > 0 && '▾'}
+                  </span>
+                )}
+              </span>
+            ))}
+            {/* 현재 */}
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', paddingRight: 10, display: 'flex', alignItems: 'center' }}>현재</span>
+            {(Object.keys(targets) as AssetClass[]).map(cls => {
+              const cur = currentAlloc[cls] ?? 0;
+              const diff = cur - targets[cls];
+              const diffColor = Math.abs(diff) <= 3 ? 'var(--color-profit)' : Math.abs(diff) <= 8 ? 'var(--color-warning)' : 'var(--color-loss)';
+              return (
+                <div key={cls} style={{ textAlign: 'center' }}>
+                  <span style={{ fontWeight: 700, color: diffColor }}>{cur.toFixed(1)}%</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: diffColor, opacity: 0.75, marginLeft: 3 }}>
+                    {diff >= 0 ? '+' : ''}{diff.toFixed(1)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 계좌별 플랜 */}
@@ -1458,7 +1694,7 @@ export function OptimalGuide() {
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>커버드콜 비중 변경 영향</div>
-              <button onClick={() => setShowDivDetail(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 18 }}>✕</button>
+              <button onClick={() => setShowDivDetail(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 'var(--text-lg)' }}>✕</button>
             </div>
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 14 }}>
               {prevTargets && `커버드콜 ${prevTargets['커버드콜']}% → ${targets['커버드콜']}% · 계좌별 추가매수금액 변화`}
@@ -1496,51 +1732,92 @@ export function OptimalGuide() {
       {/* 신호 필터 + 액션 버튼 */}
       {!signalsLoading && (availableSignals.sell.length > 0 || availableSignals.buy.length > 0) && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
             <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginRight: 2 }}>신호 필터</span>
-            <button
-              onClick={() => setSignalFilter(null)}
-              style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
-                background: signalFilter === null ? 'var(--accent-blue)' : 'var(--bg-secondary)',
-                color: signalFilter === null ? 'var(--accent-blue-fg)' : 'var(--text-tertiary)' }}>
-              전체
-            </button>
-            {availableSignals.sell.length > 0 && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매도</span>
-            )}
-            {availableSignals.sell.map(s => (
-              <button key={`sell-${s.label}`}
-                onClick={() => setSignalFilter(signalFilter?.label === s.label && signalFilter?.type === 'sell' ? null : { type: 'sell', label: s.label })}
-                style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
-                  background: signalFilter?.type === 'sell' && signalFilter?.label === s.label
-                    ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))`
-                    : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
-                  color: s.color,
-                  outline: signalFilter?.type === 'sell' && signalFilter?.label === s.label ? `1.5px solid ${s.color}` : 'none',
+            {isMobile ? (
+              /* 모바일: select 단일 드롭다운 */
+              <select
+                value={signalFilter ? `${signalFilter.type}:${signalFilter.label}` : ''}
+                onChange={e => {
+                  const v = e.target.value;
+                  if (!v) { setSignalFilter(null); return; }
+                  const [type, ...rest] = v.split(':');
+                  setSignalFilter({ type: type as 'sell' | 'buy', label: rest.join(':') });
+                }}
+                style={{
+                  width: 110, height: 32, padding: '0 26px 0 10px', borderRadius: 8,
+                  border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)', fontSize: 'var(--text-sm)', fontWeight: 600,
+                  lineHeight: 1.2, boxSizing: 'border-box',
+                  appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'><path d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 9px center',
+                  backgroundSize: '10px 7px',
                 }}>
-                {s.label}
-              </button>
-            ))}
-            {availableSignals.buy.length > 0 && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매수</span>
+                <option value="">전체</option>
+                {availableSignals.sell.length > 0 && (
+                  <optgroup label="매도">
+                    {availableSignals.sell.map(s => (
+                      <option key={`sell-${s.label}`} value={`sell:${s.label}`}>{s.label}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {availableSignals.buy.length > 0 && (
+                  <optgroup label="매수">
+                    {availableSignals.buy.map(s => (
+                      <option key={`buy-${s.label}`} value={`buy:${s.label}`}>{s.label}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            ) : (
+              <>
+                <button
+                  onClick={() => setSignalFilter(null)}
+                  style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
+                    background: signalFilter === null ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+                    color: signalFilter === null ? 'var(--accent-blue-fg)' : 'var(--text-tertiary)' }}>
+                  전체
+                </button>
+                {availableSignals.sell.length > 0 && (
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매도</span>
+                )}
+                {availableSignals.sell.map(s => (
+                  <button key={`sell-${s.label}`}
+                    onClick={() => setSignalFilter(signalFilter?.label === s.label && signalFilter?.type === 'sell' ? null : { type: 'sell', label: s.label })}
+                    style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
+                      background: signalFilter?.type === 'sell' && signalFilter?.label === s.label
+                        ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))`
+                        : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
+                      color: s.color,
+                      outline: signalFilter?.type === 'sell' && signalFilter?.label === s.label ? `1.5px solid ${s.color}` : 'none',
+                    }}>
+                    {s.label}
+                  </button>
+                ))}
+                {availableSignals.buy.length > 0 && (
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매수</span>
+                )}
+                {availableSignals.buy.map(s => (
+                  <button key={`buy-${s.label}`}
+                    onClick={() => setSignalFilter(signalFilter?.label === s.label && signalFilter?.type === 'buy' ? null : { type: 'buy', label: s.label })}
+                    style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
+                      background: signalFilter?.type === 'buy' && signalFilter?.label === s.label
+                        ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))`
+                        : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
+                      color: s.color,
+                      outline: signalFilter?.type === 'buy' && signalFilter?.label === s.label ? `1.5px solid ${s.color}` : 'none',
+                    }}>
+                    {s.label}
+                  </button>
+                ))}
+              </>
             )}
-            {availableSignals.buy.map(s => (
-              <button key={`buy-${s.label}`}
-                onClick={() => setSignalFilter(signalFilter?.label === s.label && signalFilter?.type === 'buy' ? null : { type: 'buy', label: s.label })}
-                style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
-                  background: signalFilter?.type === 'buy' && signalFilter?.label === s.label
-                    ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))`
-                    : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
-                  color: s.color,
-                  outline: signalFilter?.type === 'buy' && signalFilter?.label === s.label ? `1.5px solid ${s.color}` : 'none',
-                }}>
-                {s.label}
-              </button>
-            ))}
             </div>
             {/* 액션 버튼 */}
-            <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
               <button onClick={() => setExpandAll(true)} title="모두 펼치기"
                 style={{ padding: '4px 6px', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--border-primary)',
                   background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
@@ -1590,10 +1867,35 @@ export function OptimalGuide() {
         </div>
       )}
 
+      {/* 사이클 정보 배너 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8, flexWrap: 'wrap',
+        padding: isMobile ? '6px 10px' : '8px 12px', marginBottom: 10, borderRadius: 8,
+        background: 'var(--bg-elevated)', border: '1px solid var(--border-secondary)',
+        fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5,
+      }}>
+        <MIcon name="event" size={14} style={{ color: 'var(--text-tertiary)' }} />
+        <span>
+          이번 사이클 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{cycleStart}</span> 시작 ·
+          다음 재조정 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{nextCycle}</span>
+          <span style={{ color: 'var(--text-tertiary)' }}> ({daysUntil(nextCycle)}일 후)</span>
+        </span>
+        {executedInCycle.size > 0 && (
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <MIcon name="check_circle" size={13} style={{ color: 'var(--color-profit)' }} />
+            이번 사이클 실행 <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{executedInCycle.size}</span>건
+          </span>
+        )}
+      </div>
+
       {filteredPlans.map(plan => (
         <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} changeRates={changeRates} signalFilter={signalFilter}
           execMode={execMode} checkedSells={checkedSells} checkedBuys={checkedBuys}
           expandAll={expandAll}
+          executedInCycle={executedInCycle}
+          executedMap={executedMap}
+          executionInputs={executionInputs}
+          onExecutionInputChange={setExecutionInput}
           onToggleSell={k => toggleCheck(checkedSells, setCheckedSells, k)}
           onToggleBuy={k => toggleCheck(checkedBuys, setCheckedBuys, k)}
           onNameClick={(ticker, name) => {

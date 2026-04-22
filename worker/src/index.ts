@@ -524,11 +524,12 @@ export default {
     // GET /market-indices
     if (request.method === 'GET' && url.pathname === '/market-indices') {
       try {
-        const [kospiRes, kosdaqRes, nasdaqRes, sp500Res] = await Promise.all([
+        const [kospiRes, kosdaqRes, nasdaqRes, sp500Res, usdKrwRes] = await Promise.all([
           fetch('https://polling.finance.naver.com/api/realtime/domestic/index/KOSPI', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
           fetch('https://polling.finance.naver.com/api/realtime/domestic/index/KOSDAQ', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
           fetch('https://polling.finance.naver.com/api/realtime/worldstock/index/.IXIC', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
           fetch('https://polling.finance.naver.com/api/realtime/worldstock/index/.INX', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
         ]);
         const parseIndex = async (res: Response, name: string) => {
           try {
@@ -537,16 +538,32 @@ export default {
             const cp = parseFloat(String(item.closePrice ?? item.currentValue ?? 0).replace(/,/g, ''));
             const ch = parseFloat(String(item.compareToPreviousClosePrice ?? item.change ?? 0).replace(/,/g, ''));
             const pct = parseFloat(String(item.fluctuationsRatio ?? item.changePercent ?? 0).replace(/,/g, ''));
-            return { name, currentPrice: cp, change: ch, changePercent: pct };
-          } catch { return { name, currentPrice: 0, change: 0, changePercent: 0, error: 'fetch failed' }; }
+            const dir = item.compareToPreviousPrice?.name ?? (pct > 0 ? 'RISING' : pct < 0 ? 'FALLING' : 'FLAT');
+            const signedCh = dir === 'FALLING' ? -Math.abs(ch) : ch;
+            const signedPct = dir === 'FALLING' ? -Math.abs(pct) : pct;
+            return { name, currentPrice: cp, change: signedCh, changePercent: signedPct, direction: dir };
+          } catch { return { name, currentPrice: 0, change: 0, changePercent: 0, direction: 'FLAT', error: 'fetch failed' }; }
         };
-        const [kospi, kosdaq, nasdaq, sp500] = await Promise.all([
+        const parseFx = async (res: Response) => {
+          try {
+            const d: any = await res.json();
+            const cp = parseFloat(String(d.closePrice ?? 0).replace(/,/g, ''));
+            const ch = parseFloat(String(d.fluctuations ?? 0).replace(/,/g, ''));
+            const pct = parseFloat(String(d.fluctuationsRatio ?? 0).replace(/,/g, ''));
+            const dir = d.fluctuationsType?.name ?? (pct > 0 ? 'RISING' : pct < 0 ? 'FALLING' : 'FLAT');
+            const signedCh = dir === 'FALLING' ? -Math.abs(ch) : ch;
+            const signedPct = dir === 'FALLING' ? -Math.abs(pct) : pct;
+            return { name: '달러 환율', currentPrice: cp, change: signedCh, changePercent: signedPct, direction: dir };
+          } catch { return { name: '달러 환율', currentPrice: 0, change: 0, changePercent: 0, direction: 'FLAT', error: 'fetch failed' }; }
+        };
+        const [kospi, kosdaq, nasdaq, sp500, fx_usdkrw] = await Promise.all([
           parseIndex(kospiRes, 'KOSPI'),
           parseIndex(kosdaqRes, 'KOSDAQ'),
           parseIndex(nasdaqRes, 'NASDAQ'),
           parseIndex(sp500Res, 'S&P500'),
+          parseFx(usdKrwRes),
         ]);
-        return json({ kospi, kosdaq, nasdaq, sp500, lastUpdated: new Date().toISOString() });
+        return json({ kospi, kosdaq, nasdaq, sp500, fx_usdkrw, lastUpdated: new Date().toISOString() });
       } catch {
         return json({ lastUpdated: new Date().toISOString() });
       }

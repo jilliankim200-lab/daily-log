@@ -55,14 +55,14 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle style={{ fontSize: '18px', fontWeight: '600' }}>매매등록</DialogTitle>
-          <DialogDescription style={{ fontSize: '14px', color: 'var(--color-gray-500)' }}>매매 정보를 입력하세요.</DialogDescription>
+          <DialogTitle style={{ fontSize: 'var(--text-lg)', fontWeight: '600' }}>매매등록</DialogTitle>
+          <DialogDescription style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-500)' }}>매매 정보를 입력하세요.</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-5 mt-4">
           {/* Trade Type Selection */}
           <div className="space-y-2">
-            <Label style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-gray-700)' }}>선택</Label>
+            <Label style={{ fontSize: 'var(--text-sm)', fontWeight: '500', color: 'var(--color-gray-700)' }}>선택</Label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -73,7 +73,7 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
                   onChange={(e) => setTradeType(e.target.value as '매수' | '매도')}
                   className="w-4 h-4 text-[--color-primary] accent-[--color-primary]"
                 />
-                <span style={{ fontSize: '14px', color: 'var(--color-gray-900)' }}>매수</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-900)' }}>매수</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -84,14 +84,14 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
                   onChange={(e) => setTradeType(e.target.value as '매수' | '매도')}
                   className="w-4 h-4 text-[--color-primary] accent-[--color-primary]"
                 />
-                <span style={{ fontSize: '14px', color: 'var(--color-gray-900)' }}>매도</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-900)' }}>매도</span>
               </label>
             </div>
           </div>
 
           {/* Stock Name */}
           <div className="space-y-2">
-            <Label htmlFor="stockName" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-gray-700)' }}>
+            <Label htmlFor="stockName" style={{ fontSize: 'var(--text-sm)', fontWeight: '500', color: 'var(--color-gray-700)' }}>
               종목명
             </Label>
             <Input
@@ -100,13 +100,13 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
               onChange={(e) => setStockName(e.target.value)}
               placeholder="종목명을 입력하세요"
               className="border-[--color-gray-300]"
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: 'var(--text-sm)' }}
             />
           </div>
 
           {/* Ticker */}
           <div className="space-y-2">
-            <Label htmlFor="ticker" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-gray-700)' }}>
+            <Label htmlFor="ticker" style={{ fontSize: 'var(--text-sm)', fontWeight: '500', color: 'var(--color-gray-700)' }}>
               티커
             </Label>
             <Input
@@ -115,13 +115,13 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
               onChange={(e) => setTicker(e.target.value)}
               placeholder="티커를 입력하세요"
               className="border-[--color-gray-300]"
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: 'var(--text-sm)' }}
             />
           </div>
 
           {/* Quantity */}
           <div className="space-y-2">
-            <Label htmlFor="quantity" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-gray-700)' }}>
+            <Label htmlFor="quantity" style={{ fontSize: 'var(--text-sm)', fontWeight: '500', color: 'var(--color-gray-700)' }}>
               수량
             </Label>
             <Input
@@ -131,13 +131,13 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="수량을 입력하세요"
               className="border-[--color-gray-300]"
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: 'var(--text-sm)' }}
             />
           </div>
 
           {/* Price */}
           <div className="space-y-2">
-            <Label htmlFor="price" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-gray-700)' }}>
+            <Label htmlFor="price" style={{ fontSize: 'var(--text-sm)', fontWeight: '500', color: 'var(--color-gray-700)' }}>
               매매가
             </Label>
             <Input
@@ -147,7 +147,7 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
               onChange={(e) => setPrice(e.target.value)}
               placeholder="매매가를 입력하세요"
               className="border-[--color-gray-300]"
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: 'var(--text-sm)' }}
             />
           </div>
         </div>
@@ -158,14 +158,14 @@ export function TradeRegisterModal({ open, onClose, onSave }: TradeRegisterModal
             onClick={handleClose}
             variant="outline"
             className="flex-1 border-[--color-gray-300] text-black hover:bg-[--color-gray-100]"
-            style={{ fontSize: '14px', fontWeight: '500' }}
+            style={{ fontSize: 'var(--text-sm)', fontWeight: '500' }}
           >
             취소
           </Button>
           <Button
             onClick={handleSave}
             className="flex-1 bg-[--color-primary] hover:bg-[--color-primary-dark] text-black"
-            style={{ fontSize: '14px', fontWeight: '500' }}
+            style={{ fontSize: 'var(--text-sm)', fontWeight: '500' }}
           >
             저장
           </Button>

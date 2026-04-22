@@ -330,7 +330,7 @@ function Review2025({ isMobile }: { isMobile: boolean }) {
               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>합계 (추정)</span>
               <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-loss)' }}>{fmt(spending)} 이상</span>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 8 }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 8 }}>
               🎯 월 비정기 소비 80만원까지 줄이기 목표
             </p>
           </div>
@@ -348,7 +348,7 @@ function Review2025({ isMobile }: { isMobile: boolean }) {
           <SummaryCard label="3) 예적금 (비상금)" value="없음" />
           <SummaryCard label="4) 노랑우산공제" value="₩3,000,000" sub="월 25만 × 12" />
         </div>
-        <p style={{ marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
+        <p style={{ marginTop: 8, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
           ※ 의료실비가 2026년 오를 예정이므로 고정비용 증가 예상
         </p>
       </section>
@@ -467,7 +467,7 @@ function Review2026({ isMobile }: { isMobile: boolean }) {
             <p className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>
               {fmt(start2026 + planDeposit)}
             </p>
-            <p style={{ fontSize: 11, color: 'var(--text-quaternary)', marginTop: 4 }}>수익 제외 단순 합산</p>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 4 }}>수익 제외 단순 합산</p>
           </div>
         </div>
       </section>

@@ -396,7 +396,7 @@ export function Dividend() {
                           </div>
                         </td>
                         <td style={{ padding: "10px" }}>
-                          <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600, background: `${catColor}18`, color: catColor }}>{etf.category}</span>
+                          <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 'var(--text-xs)', fontWeight: 600, background: `${catColor}18`, color: catColor }}>{etf.category}</span>
                         </td>
                         <td className="toss-number" style={{ padding: "10px", textAlign: "right" }}>
                           <div style={{ color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{fmt(etf.price)}원</div>
@@ -417,7 +417,7 @@ export function Dividend() {
                         <td style={{ padding: "10px 8px", textAlign: "right" }}>
                           <button onClick={() => addFromRanking(etf)} disabled={alreadyAdded}
                             style={{ padding: "4px 10px", borderRadius: 6, border: "none", cursor: alreadyAdded ? "default" : "pointer",
-                              fontSize: 11, fontWeight: 600,
+                              fontSize: 'var(--text-xs)', fontWeight: 600,
                               background: alreadyAdded ? "var(--bg-tertiary)" : "rgba(49,130,246,0.1)",
                               color: alreadyAdded ? "var(--text-quaternary)" : "var(--accent-blue)" }}>
                             {alreadyAdded ? "추가됨" : "+ 담기"}
@@ -504,9 +504,9 @@ export function Dividend() {
                 <div style={{ padding: 14, borderRadius: 10, background: 'rgba(49,130,246,0.06)', border: '1px solid rgba(49,130,246,0.15)' }}>
                   <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--accent-blue)', marginBottom: 8 }}>월 {fmt(gap)}원 부족 — 추천 종목</div>
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>단일 종목으로 채우기</div>
+                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>단일 종목으로 채우기</div>
                     {suggestions.map(s => (
-                      <div key={s.ticker} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border-secondary)', fontSize: 12 }}>
+                      <div key={s.ticker} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border-secondary)', fontSize: 'var(--text-xs)' }}>
                         <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{s.name}</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({s.annualYield}%)</span></div>
                         <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{s.qtyNeeded}주</span>
@@ -517,14 +517,14 @@ export function Dividend() {
                   </div>
                   {mixSuggestions.length >= 2 && (
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>분산 투자로 채우기 (추천)</div>
+                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>분산 투자로 채우기 (추천)</div>
                       {mixSuggestions.map(m => (
-                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '5px 0' }}>
+                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0' }}>
                           <span style={{ color: 'var(--text-primary)' }}>{m.name}</span>
                           <span style={{ whiteSpace: 'nowrap' }}><span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span></span>
                         </div>
                       ))}
-                      <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(49,130,246,0.08)', fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(49,130,246,0.08)', fontSize: 'var(--text-xs)', display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>합계</span>
                         <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>투자 {fmt(mixTotalCost)}원</span><span style={{ color: 'var(--text-secondary)', marginLeft: 8 }}>→ 월 +{fmt(mixTotalDiv)}원</span></span>
                       </div>
@@ -563,7 +563,7 @@ export function Dividend() {
                 <MIcon name="add" size={14} /> 배당율 추가
               </button>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 16 }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 16 }}>
               수량은 계좌종목등록에서 자동으로 가져옵니다. 주당 배당금만 수정하세요.
             </div>
 
@@ -657,7 +657,7 @@ export function Dividend() {
                     );
                   })}
                   {effectiveStocks.length === 0 && (
-                    <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+                    <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
                       계좌 보유 종목 중 배당율이 등록된 종목이 없습니다.<br/>ETF 순위 탭에서 "+ 담기"로 추가하거나 위 "배당율 추가" 버튼을 사용하세요.
                     </td></tr>
                   )}

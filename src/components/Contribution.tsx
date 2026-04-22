@@ -62,17 +62,17 @@ function parseAmt(s: string) {
 }
 
 const TH: React.CSSProperties = {
-  padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)',
+  padding: '8px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)',
   background: 'var(--bg-secondary)', whiteSpace: 'nowrap', textAlign: 'right',
   borderBottom: '1px solid var(--border-primary)', position: 'sticky', top: 0, zIndex: 2,
 };
 const TH_LEFT: React.CSSProperties = { ...TH, textAlign: 'left', position: 'sticky', left: 0, zIndex: 3 };
 const TD: React.CSSProperties = {
-  padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', textAlign: 'right',
+  padding: '9px 12px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap', textAlign: 'right',
   borderBottom: '1px solid var(--border-secondary)', fontVariantNumeric: 'tabular-nums',
 };
 const TD_LEFT: React.CSSProperties = {
-  ...TD, textAlign: 'left', fontWeight: 500, fontSize: 13,
+  ...TD, textAlign: 'left', fontWeight: 500, fontSize: 'var(--text-sm)',
   position: 'sticky', left: 0, background: 'var(--bg-primary)', zIndex: 1,
 };
 const TD_LEFT_ALT: React.CSSProperties = { ...TD_LEFT, background: 'var(--bg-secondary)' };
@@ -152,14 +152,14 @@ export function Contribution() {
   const show2023 = visibleYears.has('2023');
 
   const inputStyle: React.CSSProperties = {
-    width: 90, padding: '3px 6px', fontSize: 12, textAlign: 'right',
+    width: 90, padding: '3px 6px', fontSize: 'var(--text-xs)', textAlign: 'right',
     background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)',
     borderRadius: 4, color: 'var(--text-primary)', outline: 'none',
     fontVariantNumeric: 'tabular-nums',
   };
 
   const yearBtnStyle = (active: boolean): React.CSSProperties => ({
-    padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+    padding: '5px 14px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 600,
     border: active ? 'none' : '1px solid var(--border-primary)',
     cursor: 'pointer', transition: 'all 0.15s',
     background: active ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
@@ -177,15 +177,15 @@ export function Contribution() {
         <h1 style={{ margin: 0, fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)' }}>납입</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           {!editing ? (
-            <button onClick={startEdit} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={startEdit} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer' }}>
               <MIcon name="edit" size={13} /> 편집
             </button>
           ) : (
             <>
-              <button onClick={cancelEdit} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={cancelEdit} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer' }}>
                 <MIcon name="close" size={13} /> 취소
               </button>
-              <button onClick={saveEdit} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={saveEdit} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer' }}>
                 <MIcon name="check" size={13} /> {saving ? '저장 중...' : '저장'}
               </button>
             </>
@@ -202,8 +202,8 @@ export function Contribution() {
           { label: '2026 계획', val: totals.deposit2026 },
         ].map(({ label, val }) => (
           <div key={label} className="toss-card" style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
               {f(val, isAmountHidden) || '—'}
             </div>
           </div>
@@ -216,7 +216,7 @@ export function Contribution() {
         <div style={{ display: 'flex', gap: 6 }}>
           {(['all', 'wife', 'husband', 'other'] as const).map(o => (
             <button key={o} onClick={() => setOwnerFilter(o)}
-              style={{ padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: ownerFilter === o ? 'var(--accent-blue)' : 'var(--bg-tertiary)', color: ownerFilter === o ? 'var(--accent-blue-fg)' : 'var(--text-secondary)' }}
+              style={{ padding: '6px 16px', borderRadius: 20, fontSize: 'var(--text-sm)', fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: ownerFilter === o ? 'var(--accent-blue)' : 'var(--bg-tertiary)', color: ownerFilter === o ? 'var(--accent-blue-fg)' : 'var(--text-secondary)' }}
             >
               {o === 'all' ? '전체' : o === 'wife' ? '👩 지윤' : o === 'husband' ? '👨 오빠' : '기타'}
             </button>
@@ -226,7 +226,7 @@ export function Contribution() {
         <div style={{ width: 1, height: 24, background: 'var(--border-primary)' }} />
         {/* 연도 토글 */}
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>연도</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginRight: 2 }}>연도</span>
           {(['2026', '2025', '2024', '2023'] as YearKey[]).map(y => (
             <button key={y} onClick={() => toggleYear(y)} style={yearBtnStyle(visibleYears.has(y))}>
               {y === '2023' ? '~2023' : y}
@@ -275,7 +275,7 @@ export function Contribution() {
                 <tr key={row.id}>
                   <td style={tdName}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 10, color: row.owner === 'wife' ? 'var(--color-profit)' : row.owner === 'husband' ? 'var(--accent-blue)' : 'var(--text-tertiary)', background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: row.owner === 'wife' ? 'var(--color-profit)' : row.owner === 'husband' ? 'var(--accent-blue)' : 'var(--text-tertiary)', background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 4, flexShrink: 0 }}>
                         {OWNER_LABELS[row.owner]}
                       </span>
                       {row.name}

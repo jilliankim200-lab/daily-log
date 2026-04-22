@@ -142,12 +142,12 @@ function BarCompareChart({
       grid: { top: 10, right: 24, bottom: 36, left: 70, containLabel: false },
       legend: {
         bottom: 0,
-        textStyle: { color: textPrimary, fontSize: 12 },
+        textStyle: { color: textPrimary, fontSize: 'var(--text-xs)' },
         itemWidth: 12, itemHeight: 12,
       },
       xAxis: {
         type: 'value',
-        axisLabel: { formatter: (v: number) => `${v}%`, color: textTertiary, fontSize: 11 },
+        axisLabel: { formatter: (v: number) => `${v}%`, color: textTertiary, fontSize: 'var(--text-xs)' },
         splitLine: { lineStyle: { color: borderPrimary, opacity: 0.5 } },
         axisLine: { show: false },
         axisTick: { show: false },
@@ -155,7 +155,7 @@ function BarCompareChart({
       yAxis: {
         type: 'category',
         data: data.map(d => d.name),
-        axisLabel: { color: textPrimary, fontSize: 12 },
+        axisLabel: { color: textPrimary, fontSize: 'var(--text-xs)' },
         axisLine: { show: false },
         axisTick: { show: false },
         inverse: false,
@@ -266,7 +266,7 @@ function DonutChart({
           show: true,
           formatter: (p: { name: string; percent: number }) => `${p.name} ${p.percent}%`,
           color: textTertiary,
-          fontSize: 11,
+          fontSize: 'var(--text-xs)',
         },
         labelLine: { lineStyle: { color: textTertiary } },
         data: data.map(d => ({
@@ -566,7 +566,7 @@ export function Rebalancing() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button
-              style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+              style={{ fontSize: 'var(--text-xs)', padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
                 border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)',
                 color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}
               onClick={() => {
@@ -1097,7 +1097,7 @@ export function Rebalancing() {
             <button
               onClick={() => setSelectedClass(null)}
               style={{
-                padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                padding: '4px 12px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 600,
                 cursor: 'pointer', transition: 'all 0.15s',
                 border: `1px solid ${selectedClass === null ? 'var(--accent-blue)' : 'var(--border-primary)'}`,
                 background: selectedClass === null ? 'color-mix(in srgb, var(--accent-blue) 15%, transparent)' : 'var(--bg-tertiary)',
@@ -1115,7 +1115,7 @@ export function Rebalancing() {
                   onClick={() => setSelectedClass(isActive ? null : cls)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    padding: '4px 12px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 600,
                     cursor: 'pointer', transition: 'all 0.15s',
                     border: `1px solid ${isActive ? color : 'var(--border-primary)'}`,
                     background: isActive ? `${color}22` : 'var(--bg-tertiary)',
@@ -1195,7 +1195,7 @@ export function Rebalancing() {
 
           return ownerGroups.map(group => (
             <div key={group.owner} style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>{group.owner === 'wife' ? '👩' : '👨'}</span> {group.label}
               </div>
               {group.accounts.map(acc => {
@@ -1208,7 +1208,7 @@ export function Rebalancing() {
                 const isDimmedAcc = selectedClass !== null && accHoldings.length === 0;
                 return (
                   <div key={acc.id} style={{ marginBottom: 16, opacity: isDimmedAcc ? 0.3 : 1, transition: 'opacity 0.2s' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, paddingLeft: 4 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, paddingLeft: 4 }}>
                       {acc.name}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 6 }}>
@@ -1230,7 +1230,7 @@ export function Rebalancing() {
                           }}>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                               <span style={{ fontWeight: "var(--font-medium)", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.name}</span>
-                              <span style={{ fontSize: 10, color, fontWeight: 600 }}>{cls}</span>
+                              <span style={{ fontSize: 'var(--text-xs)', color, fontWeight: 600 }}>{cls}</span>
                             </div>
                             <span className="toss-number" style={{ fontWeight: "var(--font-medium)", whiteSpace: "nowrap", flexShrink: 0 }}>
                               {formatAmount(val)}{!isAmountHidden && <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginLeft: 1 }}>원</span>}

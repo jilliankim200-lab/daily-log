@@ -67,7 +67,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
             }}>
               <MIcon name="lock" size={18} style={{ color: '#fff' }} />
             </div>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>
               금액 보기
             </span>
           </div>
@@ -84,7 +84,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
 
         {/* Body */}
         <div style={{ padding: 24 }}>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 20 }}>
             금액 정보를 보려면 비밀번호를 입력하세요.
           </p>
 
@@ -92,7 +92,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
             <div style={{ marginBottom: 20 }}>
               <label
                 htmlFor="password"
-                style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}
+                style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}
               >
                 비밀번호
               </label>
@@ -105,7 +105,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
                 autoFocus
                 maxLength={4}
                 style={{
-                  width: '100%', padding: '12px 14px', fontSize: 15,
+                  width: '100%', padding: '12px 14px', fontSize: 'var(--text-base)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   border: error ? '1.5px solid var(--color-loss)' : '1.5px solid var(--border-primary)',
                   borderRadius: 10, outline: 'none',
@@ -116,7 +116,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
                 onBlur={(e) => { if (!error) e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
               />
               {error && (
-                <p style={{ fontSize: 13, color: 'var(--color-loss)', marginTop: 8 }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-loss)', marginTop: 8 }}>
                   {error}
                 </p>
               )}
@@ -127,7 +127,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
                 type="button"
                 onClick={onClose}
                 style={{
-                  flex: 1, padding: '12px 0', fontSize: 15, fontWeight: 600,
+                  flex: 1, padding: '12px 0', fontSize: 'var(--text-base)', fontWeight: 600,
                   background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                   border: 'none', borderRadius: 10, cursor: 'pointer',
                   transition: 'background 0.15s',
@@ -140,7 +140,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
               <button
                 type="submit"
                 style={{
-                  flex: 1, padding: '12px 0', fontSize: 15, fontWeight: 600,
+                  flex: 1, padding: '12px 0', fontSize: 'var(--text-base)', fontWeight: 600,
                   background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)',
                   border: 'none', borderRadius: 10, cursor: 'pointer',
                   transition: 'background 0.15s',

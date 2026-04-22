@@ -76,7 +76,7 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
         <Button
           className="gap-2 bg-[--color-primary] hover:bg-[--color-primary-dark] text-white border-0 shadow-sm"
           onClick={onAddAsset}
-          style={{ fontSize: '14px', fontWeight: '600', lineHeight: '16.8px' }}
+          style={{ fontSize: 'var(--text-sm)', fontWeight: '600', lineHeight: '16.8px' }}
         >
           <MIcon name="add" size={16} />
           자산 추가
@@ -91,7 +91,7 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="mb-1">{account.name}</h3>
-                  <p className="text-[--color-gray-600]" style={{ fontSize: '13px' }}>{account.institution}</p>
+                  <p className="text-[--color-gray-600]" style={{ fontSize: 'var(--text-sm)' }}>{account.institution}</p>
                 </div>
                 <button className="text-[--color-gray-600] hover:text-[--color-gray-900] transition-colors">
                   {expandedAccount === account.id ? (
@@ -111,7 +111,7 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
                   <small className="text-[--color-gray-600]">수익률</small>
                   <span className={`${
                     account.return > 0 ? 'text-[--color-success]' : 'text-[--color-danger]'
-                  }`} style={{ fontSize: '15px', fontWeight: '600' }}>
+                  }`} style={{ fontSize: 'var(--text-base)', fontWeight: '600' }}>
                     {account.return > 0 ? '+' : ''}{account.return}%
                   </span>
                 </div>
@@ -121,7 +121,7 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
             {/* Expanded Asset List */}
             {expandedAccount === account.id && (
               <div className="mt-6 pt-6 border-t border-[--color-gray-200]">
-                <p className="mb-4" style={{ fontSize: '14px', fontWeight: '600' }}>보유 자산</p>
+                <p className="mb-4" style={{ fontSize: 'var(--text-sm)', fontWeight: '600' }}>보유 자산</p>
                 <div className="space-y-3">
                   {account.assets.map((asset) => {
                     const returnRate = calculateReturn(asset.currentPrice, asset.purchasePrice);
@@ -130,13 +130,13 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
                     return (
                       <div key={asset.id} className="flex items-center justify-between p-3 bg-[--color-gray-50] rounded-xl">
                         <div className="flex-1">
-                          <p className="mb-1" style={{ fontSize: '14px', fontWeight: '500' }}>{asset.name}</p>
+                          <p className="mb-1" style={{ fontSize: 'var(--text-sm)', fontWeight: '500' }}>{asset.name}</p>
                           <small className="text-[--color-gray-600]">
                             {asset.quantity}주 × {asset.currentPrice.toLocaleString()}원
                           </small>
                         </div>
                         <div className="text-right">
-                          <p className="mb-1" style={{ fontSize: '15px', fontWeight: '600' }}>{(asset.quantity * asset.currentPrice).toLocaleString()}원</p>
+                          <p className="mb-1" style={{ fontSize: 'var(--text-base)', fontWeight: '600' }}>{(asset.quantity * asset.currentPrice).toLocaleString()}원</p>
                           <small className={isPositive ? 'text-[--color-success]' : 'text-[--color-danger]'} style={{ fontWeight: '500' }}>
                             {isPositive ? '+' : ''}{returnRate}%
                           </small>
@@ -155,11 +155,11 @@ export function AccountManagement({ accountType, onAddAsset }: AccountManagement
       <Card className="p-6 bg-[--color-gray-50] border border-[--color-gray-200]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[--color-gray-600] mb-2" style={{ fontSize: '13px' }}>총 자산 (전체 계좌)</p>
+            <p className="text-[--color-gray-600] mb-2" style={{ fontSize: 'var(--text-sm)' }}>총 자산 (전체 계좌)</p>
             <div className="number-large text-[--color-gray-900]">52,000,000원</div>
           </div>
           <div className="text-right">
-            <p className="text-[--color-gray-600] mb-2" style={{ fontSize: '13px' }}>총 수익률</p>
+            <p className="text-[--color-gray-600] mb-2" style={{ fontSize: 'var(--text-sm)' }}>총 수익률</p>
             <div className="number text-[--color-success]">+6.8%</div>
           </div>
         </div>

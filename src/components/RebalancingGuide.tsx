@@ -125,7 +125,7 @@ function SummaryCards({
     const row: React.CSSProperties = {
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       padding: '5px 0', borderBottom: '1px solid var(--border-secondary)',
-      fontSize: 12, gap: 8,
+      fontSize: 'var(--text-xs)', gap: 8,
     };
     const last: React.CSSProperties = { ...row, borderBottom: 'none' };
 
@@ -133,14 +133,14 @@ function SummaryCards({
       // 전체 계좌 목록
       return (
         <div style={base}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>계좌 목록</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>계좌 목록</div>
           {accounts.map((a, i) => {
             const tv = a.holdings.reduce((s, h) => s + hVal(h, prices), 0) + (a.cash || 0);
             const isRet = isRetirementAcc(a);
             return (
               <div key={i} style={i === accounts.length - 1 ? last : row}>
                 <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                  {isRet && <span style={{ fontSize: 10, color: 'var(--color-warning)', marginRight: 4 }}>퇴직</span>}
+                  {isRet && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-warning)', marginRight: 4 }}>퇴직</span>}
                   {a.ownerName} · {a.alias || a.institution}
                 </span>
                 <span style={{ color: 'var(--text-secondary)', fontWeight: 600, flexShrink: 0 }}>{fmtKrw(tv)}</span>
@@ -155,20 +155,20 @@ function SummaryCards({
       // 30%룰 퇴직 계좌 전체
       return (
         <div style={base}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>퇴직/IRP 안전자산 현황</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>퇴직/IRP 안전자산 현황</div>
           {retirementStatus.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>퇴직/IRP 계좌 없음</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>퇴직/IRP 계좌 없음</div>
           )}
           {retirementStatus.map(({ acc, safePct, safeVal, totalVal, ok }, i) => (
             <div key={i} style={i === retirementStatus.length - 1 ? last : row}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{acc.ownerName} · {acc.alias || acc.institution}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>
                   안전자산 {fmtKrw(safeVal)} / {fmtKrw(totalVal)}
                 </div>
               </div>
               <span style={{
-                fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, flexShrink: 0,
+                fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 8, flexShrink: 0,
                 background: ok ? 'color-mix(in srgb, var(--color-profit) 15%, transparent)' : 'color-mix(in srgb, var(--color-loss) 15%, transparent)',
                 color: ok ? 'var(--color-profit)' : 'var(--color-loss)',
               }}>{safePct.toFixed(1)}% {ok ? '✓' : '⚠'}</span>
@@ -182,7 +182,7 @@ function SummaryCards({
       // 중복 종목 목록
       return (
         <div style={{ ...base, maxHeight: 320, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>중복 종목 목록</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>중복 종목 목록</div>
           {duplicateInfo.map((d, i) => {
             const best = [...d.accounts].sort((a, b) => b.val - a.val)[0];
             return (
@@ -190,12 +190,12 @@ function SummaryCards({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{d.name}</span>
                   <span style={{
-                    fontSize: 10, padding: '1px 5px', borderRadius: 5,
+                    fontSize: 'var(--text-xs)', padding: '1px 5px', borderRadius: 5,
                     background: `color-mix(in srgb, ${ASSET_COLORS[d.cls]} 15%, transparent)`,
                     color: ASSET_COLORS[d.cls],
                   }}>{d.cls}</span>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                   {d.accounts.length}개 계좌 → <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{best.accAlias}</span>으로 통합 추천
                 </div>
               </div>
@@ -209,12 +209,12 @@ function SummaryCards({
       // 고수익 종목 목록
       return (
         <div style={{ ...base, maxHeight: 320, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>고수익 유지 종목</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8 }}>고수익 유지 종목</div>
           {highReturnHoldings.map(({ acc, h, ret, pct }, i) => (
             <div key={i} style={i === highReturnHoldings.length - 1 ? last : row}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 12 }}>{h.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 'var(--text-xs)' }}>{h.name}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 1 }}>
                   {acc.ownerName} · {acc.alias || acc.institution} · 비중 {pct.toFixed(1)}%
                 </div>
               </div>
@@ -263,7 +263,7 @@ function SummaryCards({
               <MIcon name={c.icon} size={18} style={{ color: c.color }} />
             </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{c.label}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{c.label}</div>
               <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: c.color }}>{c.value}</div>
             </div>
           </div>
@@ -309,7 +309,7 @@ function AccountCard({
           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 18px',
           background: 'color-mix(in srgb, var(--color-loss) 10%, transparent)',
           borderBottom: '1px solid color-mix(in srgb, var(--color-loss) 20%, transparent)',
-          fontSize: 12, color: 'var(--color-loss)', fontWeight: 600,
+          fontSize: 'var(--text-xs)', color: 'var(--color-loss)', fontWeight: 600,
         }}>
           <MIcon name="warning" size={14} />
           안전자산 {safePct.toFixed(1)}% — 30% 미달! 채권·금 비중 확대 필요
@@ -320,7 +320,7 @@ function AccountCard({
           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 18px',
           background: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
           borderBottom: '1px solid color-mix(in srgb, var(--color-warning) 20%, transparent)',
-          fontSize: 12, color: 'var(--color-warning)', fontWeight: 600,
+          fontSize: 'var(--text-xs)', color: 'var(--color-warning)', fontWeight: 600,
         }}>
           <MIcon name="arrow_upward" size={14} />
           안전자산 {safePct.toFixed(1)}% — 35% 초과! 주식 ETF 비중 확대 검토
@@ -331,7 +331,7 @@ function AccountCard({
           display: 'flex', alignItems: 'center', gap: 8, padding: '6px 18px',
           background: 'color-mix(in srgb, var(--color-profit) 8%, transparent)',
           borderBottom: '1px solid color-mix(in srgb, var(--color-profit) 15%, transparent)',
-          fontSize: 11, color: 'var(--color-profit)',
+          fontSize: 'var(--text-xs)', color: 'var(--color-profit)',
         }}>
           <MIcon name="shield" size={13} />
           안전자산 {safePct.toFixed(1)}% — 목표 구간 달성 (30~35%)
@@ -351,12 +351,12 @@ function AccountCard({
                 {account.alias || account.institution}
               </span>
               <span style={{
-                fontSize: 11, fontWeight: 600, padding: '1px 7px', borderRadius: 10,
+                fontSize: 'var(--text-xs)', fontWeight: 600, padding: '1px 7px', borderRadius: 10,
                 background: isRetirement ? 'color-mix(in srgb, var(--color-warning) 15%, transparent)' : 'var(--bg-tertiary)',
                 color: isRetirement ? 'var(--color-warning)' : 'var(--text-tertiary)',
               }}>{account.accountType}{isRetirement ? ' · 30%룰' : ''}</span>
               <span style={{
-                fontSize: 11, fontWeight: 600, padding: '1px 7px', borderRadius: 10,
+                fontSize: 'var(--text-xs)', fontWeight: 600, padding: '1px 7px', borderRadius: 10,
                 background: `color-mix(in srgb, ${status.color} var(--badge-mix), transparent)`,
                 color: status.color,
               }}>{account.holdings.length}개 · {status.label}</span>
@@ -365,7 +365,7 @@ function AccountCard({
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>{fmtKrw(totalVal)}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{account.ownerName}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{account.ownerName}</div>
         </div>
       </div>
 
@@ -393,8 +393,8 @@ function AccountCard({
               }} />
               <div style={{ position: 'absolute', left: '30%', top: 0, width: 1, height: 8, background: 'var(--color-profit)' }} />
               <div style={{ position: 'absolute', left: '35%', top: 0, width: 1, height: 8, background: 'var(--color-warning)' }} />
-              <span style={{ position: 'absolute', left: 'calc(30% + 2px)', top: -3, fontSize: 9, color: 'var(--color-profit)' }}>30%</span>
-              <span style={{ position: 'absolute', left: 'calc(35% + 2px)', top: -3, fontSize: 9, color: 'var(--color-warning)' }}>35%</span>
+              <span style={{ position: 'absolute', left: 'calc(30% + 2px)', top: -3, fontSize: 'var(--text-xs)', color: 'var(--color-profit)' }}>30%</span>
+              <span style={{ position: 'absolute', left: 'calc(35% + 2px)', top: -3, fontSize: 'var(--text-xs)', color: 'var(--color-warning)' }}>35%</span>
             </div>
           )}
         </div>
@@ -406,12 +406,12 @@ function AccountCard({
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'left', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>종목</th>
-                <th style={{ padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'center', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>분류</th>
-                {!isMobile && <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>평가금액</th>}
-                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>비중</th>
-                <th style={{ padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>수익률</th>
-                <th style={{ padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'center', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>메모</th>
+                <th style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'left', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>종목</th>
+                <th style={{ padding: '8px 10px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'center', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>분류</th>
+                {!isMobile && <th style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>평가금액</th>}
+                <th style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>비중</th>
+                <th style={{ padding: '8px 10px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'right', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>수익률</th>
+                <th style={{ padding: '8px 10px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textAlign: 'center', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-secondary)' }}>메모</th>
               </tr>
             </thead>
             <tbody>
@@ -437,11 +437,11 @@ function AccountCard({
                         {safeRemoveWarning && <MIcon name="lock" size={12} style={{ color: 'var(--color-warning)', flexShrink: 0 }} title="제거 시 30% 룰 위반" />}
                         <span>{h.name}</span>
                       </div>
-                      {h.ticker && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{h.ticker}</div>}
+                      {h.ticker && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 1 }}>{h.ticker}</div>}
                     </td>
                     <td style={{ padding: '10px 10px', textAlign: 'center' }}>
                       <span style={{
-                        fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
+                        fontSize: 'var(--text-xs)', fontWeight: 600, padding: '2px 6px', borderRadius: 6,
                         background: `color-mix(in srgb, ${ASSET_COLORS[h.cls]} 15%, transparent)`,
                         color: ASSET_COLORS[h.cls],
                       }}>{h.cls}</span>
@@ -454,7 +454,7 @@ function AccountCard({
                     <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {h.pct.toFixed(1)}%
                     </td>
-                    <td style={{ padding: '10px 10px', textAlign: 'right', fontSize: 12, fontWeight: 600,
+                    <td style={{ padding: '10px 10px', textAlign: 'right', fontSize: 'var(--text-xs)', fontWeight: 600,
                       color: h.ret === null ? 'var(--text-quaternary)'
                         : h.ret >= 40 ? 'var(--color-profit)'
                         : h.ret >= 0 ? 'var(--color-profit)'
@@ -466,21 +466,21 @@ function AccountCard({
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
                         {highReturn && (
                           <span style={{
-                            fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                            fontSize: 'var(--text-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 8,
                             background: 'color-mix(in srgb, var(--color-profit) 15%, transparent)',
                             color: 'var(--color-profit)',
                           }}>유지↑</span>
                         )}
                         {isDup && (
                           <span style={{
-                            fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
+                            fontSize: 'var(--text-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 8,
                             background: 'color-mix(in srgb, var(--color-warning) 15%, transparent)',
                             color: 'var(--color-warning)',
                           }}>중복</span>
                         )}
                         {safeRemoveWarning && (
                           <span style={{
-                            fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                            fontSize: 'var(--text-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 8,
                             background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)',
                             color: 'var(--color-loss)',
                           }}>30%필수</span>
@@ -494,7 +494,7 @@ function AccountCard({
                 <tr>
                   <td style={{ padding: '10px 14px', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>현금</td>
                   <td style={{ padding: '10px 10px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>현금</span>
+                    <span style={{ fontSize: 'var(--text-xs)', padding: '2px 6px', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>현금</span>
                   </td>
                   {!isMobile && <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{fmtFull(account.cash!)}</td>}
                   <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
@@ -685,7 +685,7 @@ export function RebalancingGuide() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <MIcon name="shield" size={16} style={{ color: 'var(--color-warning)' }} />
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
-              퇴직/IRP 안전자산 현황 <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>— 목표 구간 30~35% (채권·금·현금)</span>
+              퇴직/IRP 안전자산 현황 <span style={{ fontSize: 'var(--text-xs)', fontWeight: 400, color: 'var(--text-tertiary)' }}>— 목표 구간 30~35% (채권·금·현금)</span>
             </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 10 }}>
@@ -709,10 +709,10 @@ export function RebalancingGuide() {
                       <span style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
                         {acc.alias || acc.institution}
                       </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{acc.ownerName} · {acc.accountType}</span>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 6 }}>{acc.ownerName} · {acc.accountType}</span>
                     </div>
                     <span style={{
-                      fontSize: 13, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                      fontSize: 'var(--text-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
                       background: `color-mix(in srgb, ${badgeColor} 15%, transparent)`,
                       color: badgeColor,
                     }}>
@@ -732,7 +732,7 @@ export function RebalancingGuide() {
                       <div style={{ position: 'absolute', top: -3, left: '30%', width: 2, height: 16, background: 'var(--color-profit)', borderRadius: 1 }} />
                       <div style={{ position: 'absolute', top: -3, left: '35%', width: 2, height: 16, background: 'var(--color-warning)', borderRadius: 1 }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: 'var(--text-tertiary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                       <span>안전자산 {fmtKrw(safeVal)} / 총 {fmtKrw(totalVal)}</span>
                       <span>
                         <span style={{ color: 'var(--color-profit)' }}>|30%</span>
@@ -748,7 +748,7 @@ export function RebalancingGuide() {
                       const cls = classify(h.name);
                       return (
                         <span key={i} style={{
-                          fontSize: 11, padding: '2px 8px', borderRadius: 8,
+                          fontSize: 'var(--text-xs)', padding: '2px 8px', borderRadius: 8,
                           background: `color-mix(in srgb, ${ASSET_COLORS[cls]} 15%, transparent)`,
                           color: ASSET_COLORS[cls],
                         }}>
@@ -757,15 +757,15 @@ export function RebalancingGuide() {
                       );
                     })}
                     {(acc.cash || 0) > 0 && (
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', padding: '2px 8px', borderRadius: 8, background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)' }}>
                         현금 {((acc.cash! / totalVal) * 100).toFixed(1)}%
                       </span>
                     )}
                     {safeHoldings.length === 0 && (acc.cash || 0) === 0 && (
-                      <span style={{ fontSize: 11, color: 'var(--color-loss)' }}>안전자산 없음 — 채권·금 추가 필요</span>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-loss)' }}>안전자산 없음 — 채권·금 추가 필요</span>
                     )}
                     {!ok && (
-                      <span style={{ fontSize: 11, color: 'var(--color-loss)', fontWeight: 600 }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-loss)', fontWeight: 600 }}>
                         → 추가 필요: {fmtKrw(totalVal * 0.3 - safeVal)} ({(30 - safePct).toFixed(1)}%p)
                       </span>
                     )}
@@ -783,7 +783,7 @@ export function RebalancingGuide() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <MIcon name="trending_up" size={16} style={{ color: 'var(--color-profit)' }} />
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
-              고수익 유지 종목 <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>— 수익률 40%↑, 통합·매도 시 신중 검토</span>
+              고수익 유지 종목 <span style={{ fontSize: 'var(--text-xs)', fontWeight: 400, color: 'var(--text-tertiary)' }}>— 수익률 40%↑, 통합·매도 시 신중 검토</span>
             </span>
           </div>
           <div style={{ borderRadius: 12, border: '1px solid var(--border-primary)', overflow: 'hidden' }}>
@@ -792,7 +792,7 @@ export function RebalancingGuide() {
                 <tr>
                   {['종목', '계좌', '수익률', '계좌 내 비중', '비고'].map((h, i) => (
                     <th key={i} style={{
-                      padding: '9px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)',
+                      padding: '9px 14px', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)',
                       textAlign: i === 0 ? 'left' : 'right', background: 'var(--bg-secondary)',
                       borderBottom: '1px solid var(--border-primary)',
                     }}>{h}</th>
@@ -804,9 +804,9 @@ export function RebalancingGuide() {
                   <tr key={i}>
                     <td style={{ padding: '10px 14px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 600 }}>
                       {h.name}
-                      {h.ticker && <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 4 }}>{h.ticker}</span>}
+                      {h.ticker && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 4 }}>{h.ticker}</span>}
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       {acc.ownerName} · {acc.alias || acc.institution}
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)' }}>
@@ -817,7 +817,7 @@ export function RebalancingGuide() {
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                       <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                        fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 8,
                         background: 'color-mix(in srgb, var(--color-profit) 15%, transparent)',
                         color: 'var(--color-profit)',
                       }}>유지 권장</span>
@@ -837,7 +837,7 @@ export function RebalancingGuide() {
             <MIcon name="content_copy" size={16} style={{ color: 'var(--color-warning)' }} />
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
               중복 종목 — 한 계좌로 통합 검토
-              {selectedAccKey !== 'all' && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)', marginLeft: 8 }}>({selectedAccKey} 관련)</span>}
+              {selectedAccKey !== 'all' && <span style={{ fontSize: 'var(--text-xs)', fontWeight: 400, color: 'var(--text-tertiary)', marginLeft: 8 }}>({selectedAccKey} 관련)</span>}
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -867,18 +867,18 @@ export function RebalancingGuide() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                         <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{d.name}</span>
                         <span style={{
-                          fontSize: 10, padding: '1px 6px', borderRadius: 6,
+                          fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 6,
                           background: `color-mix(in srgb, ${ASSET_COLORS[d.cls]} 15%, transparent)`,
                           color: ASSET_COLORS[d.cls],
                         }}>{d.cls}</span>
-                        {isSafe && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)' }}>안전자산</span>}
+                        {isSafe && <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 6, background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)' }}>안전자산</span>}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {d.accounts.map((a, i) => {
                           const hasWarning = safeWarnings.includes(a.accAlias);
                           return (
                             <span key={i} style={{
-                              fontSize: 11, padding: '2px 8px', borderRadius: 8,
+                              fontSize: 'var(--text-xs)', padding: '2px 8px', borderRadius: 8,
                               background: hasWarning ? 'color-mix(in srgb, var(--color-loss) 15%, transparent)' : 'var(--bg-tertiary)',
                               color: hasWarning ? 'var(--color-loss)' : 'var(--text-secondary)',
                               fontWeight: hasWarning ? 700 : 400,
@@ -889,12 +889,12 @@ export function RebalancingGuide() {
                         })}
                       </div>
                       {safeWarnings.length > 0 && (
-                        <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-loss)', fontWeight: 600 }}>
+                        <div style={{ marginTop: 6, fontSize: 'var(--text-xs)', color: 'var(--color-loss)', fontWeight: 600 }}>
                           ⚠ {safeWarnings.join(', ')} — 안전자산 이동 시 30% 룰 위반 가능. 보충 후 이동 권장
                         </div>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: 12, color: 'var(--color-warning)', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: 'var(--text-xs)', color: 'var(--color-warning)', fontWeight: 600 }}>
                       <MIcon name="arrow_forward" size={14} />
                       <span>→ <strong>{best.accAlias}</strong>({fmtKrw(totalVal)})으로 통합 추천</span>
                     </div>
@@ -916,10 +916,10 @@ export function RebalancingGuide() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 8 }}>
             {filteredSimilarGroups.map(g => (
               <div key={g.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px', border: `1px solid color-mix(in srgb, ${g.color} 20%, var(--border-primary))` }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: g.color, marginBottom: 8 }}>{g.label}</div>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: g.color, marginBottom: 8 }}>{g.label}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {g.matched.map((m, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       <span>{m.accName} · {m.holdName}</span>
                       <span style={{ fontWeight: 600 }}>{fmtKrw(m.val)}</span>
                     </div>
@@ -942,7 +942,7 @@ export function RebalancingGuide() {
             <div style={{ display: 'flex', gap: 6 }}>
               {owners.map(o => (
                 <button key={o.id} onClick={() => setOwnerFilter(o.id)} style={{
-                  padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  padding: '4px 12px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 600,
                   border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                   background: ownerFilter === o.id ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
                   color: ownerFilter === o.id ? 'var(--accent-blue-fg)' : 'var(--text-secondary)',
@@ -955,7 +955,7 @@ export function RebalancingGuide() {
         {/* 범례 */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, alignItems: 'center' }}>
           {(Object.entries(ASSET_COLORS) as [AssetClass, string][]).map(([cls, color]) => (
-            <span key={cls} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span key={cls} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: 'inline-block' }} />
               {cls}{(cls === '채권' || cls === '금') ? ' (안전)' : cls === '커버드콜' ? ' (주식)' : ''}
             </span>

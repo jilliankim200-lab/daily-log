@@ -702,7 +702,7 @@ export function RetirementCalc() {
                   <XAxis
                     dataKey="age"
                     tick={{
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       fill: "var(--text-tertiary)",
                     }}
                     tickLine={false}
@@ -712,7 +712,7 @@ export function RetirementCalc() {
                       position: "insideBottomRight",
                       offset: -5,
                       style: {
-                        fontSize: 11,
+                        fontSize: 'var(--text-xs)',
                         fill: "var(--text-tertiary)",
                       },
                     }}
@@ -720,7 +720,7 @@ export function RetirementCalc() {
                   <YAxis
                     tickFormatter={formatAxisKRW}
                     tick={{
-                      fontSize: 11,
+                      fontSize: 'var(--text-xs)',
                       fill: "var(--text-tertiary)",
                     }}
                     tickLine={false}
@@ -737,7 +737,7 @@ export function RetirementCalc() {
                       value: `은퇴 (${retirementAge}세)`,
                       position: "top",
                       style: {
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                         fill: "var(--accent-blue)",
                         fontWeight: 600,
                       },
@@ -753,7 +753,7 @@ export function RetirementCalc() {
                         value: `소진 (${Math.floor(results.depletionAge)}세)`,
                         position: "top",
                         style: {
-                          fontSize: 11,
+                          fontSize: 'var(--text-xs)',
                           fill: "var(--color-profit)",
                           fontWeight: 600,
                         },

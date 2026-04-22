@@ -69,7 +69,7 @@ export function Header({ userName = "사용자", onMenuClick, lastUpdated, onRef
             onClick={onRefresh}
             disabled={isRefreshing}
             className="relative bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 hover:shadow-xl hover:scale-110 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg px-[8px] py-[4px] rounded-[4px] border border-purple-600"
-            style={{ fontSize: '13px', fontWeight: '600' }}
+            style={{ fontSize: 'var(--text-sm)', fontWeight: '600' }}
           >
             <div className="absolute inset-0 bg-white/20 rounded-[4px] blur-sm"></div>
             <MIcon name="sync" size={16} style={isRefreshing ? { animation: 'spin 1s linear infinite' } : undefined} />

@@ -52,11 +52,11 @@ export function RightSidebar() {
         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        <span style={{ fontSize: 15, color: 'var(--text-primary)' }}>
+        <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>
           보유종목
         </span>
         <span style={{
-          fontSize: 12, color: 'var(--text-tertiary)',
+          fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)',
           background: 'var(--bg-secondary)', padding: '3px 10px', borderRadius: 20,
         }}>
           {holdingSummary.length}종목
@@ -87,15 +87,15 @@ export function RightSidebar() {
               {/* Left: name + owner */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: 14, color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {h.name}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>
                   {Array.from(h.owners).join(' · ')}
                   {h.isFund && <span style={{
-                    marginLeft: 4, fontSize: 10, padding: '1px 5px', borderRadius: 4,
+                    marginLeft: 4, fontSize: 'var(--text-xs)', padding: '1px 5px', borderRadius: 4,
                     background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
                   }}>펀드</span>}
                 </div>
@@ -105,15 +105,15 @@ export function RightSidebar() {
               <div style={{ textAlign: 'right', marginLeft: 8, flexShrink: 0 }}>
                 {!h.isFund && currentPrice ? (
                   <>
-                    <div className="toss-number" style={{ fontSize: 14, color: 'var(--text-primary)' }}>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
                       {fmt(currentPrice)}원
                     </div>
-                    <div className="toss-number" style={{ fontSize: 11, color: rateColor, marginTop: 2 }}>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-xs)', color: rateColor, marginTop: 2 }}>
                       {dailyRate != null ? `${dailyRate > 0 ? '+' : ''}${dailyRate.toFixed(2)}%` : '-'}
                     </div>
                   </>
                 ) : (
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>펀드</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>펀드</div>
                 )}
               </div>
             </div>
@@ -121,7 +121,7 @@ export function RightSidebar() {
         })}
 
         {holdingSummary.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
             보유종목이 없습니다
           </div>
         )}

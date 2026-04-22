@@ -185,7 +185,7 @@ export function NewDashboard() {
                     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
                     {item.label}
                     {(item as any).isTotal && (
                       <MIcon name="info" size={13} style={{ cursor: 'pointer', opacity: 0.5 }} onClick={() => setShowAssetDetail(true)} />
@@ -199,7 +199,7 @@ export function NewDashboard() {
                       {item.displayValue}
                     </span>
                     {item.subValue && (
-                      <span className="toss-number" style={{ fontSize: 13, color: item.color, whiteSpace: 'nowrap' }}>
+                      <span className="toss-number" style={{ fontSize: 'var(--text-sm)', color: item.color, whiteSpace: 'nowrap' }}>
                         {item.subValue}
                       </span>
                     )}
@@ -260,10 +260,10 @@ export function NewDashboard() {
                           }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                               <span style={{ fontSize: 'var(--text-sm)', fontWeight: isToday ? 'var(--font-semibold)' : 'var(--font-medium)', color: isToday ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                                {snap.date}{isToday && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent-blue)', fontWeight: 700 }}>TODAY</span>}
+                                {snap.date}{isToday && <span style={{ marginLeft: 6, fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', fontWeight: 700 }}>TODAY</span>}
                               </span>
                               {change !== 0 && (
-                                <span className="toss-number" style={{ fontSize: 11, fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : 'var(--color-loss)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                <span className="toss-number" style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : 'var(--color-loss)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
                                   {change > 0 ? <MIcon name="arrow_outward" size={11} /> : <MIcon name="south_east" size={11} />}
                                   {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
                                 </span>
@@ -274,7 +274,7 @@ export function NewDashboard() {
                                 {hide(`${fmt(snap.totalAsset)}원`)}
                               </span>
                               {rate !== 0 && (
-                                <span style={{ display: 'inline-flex', padding: '1px 7px', borderRadius: 20, fontSize: 11, fontWeight: 'var(--font-semibold)', background: rate > 0 ? 'var(--color-profit-bg)' : 'var(--color-loss-bg)', color: rate > 0 ? 'var(--color-profit)' : 'var(--color-loss)', whiteSpace: 'nowrap' }}>
+                                <span style={{ display: 'inline-flex', padding: '1px 7px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', background: rate > 0 ? 'var(--color-profit-bg)' : 'var(--color-loss-bg)', color: rate > 0 ? 'var(--color-profit)' : 'var(--color-loss)', whiteSpace: 'nowrap' }}>
                                   {isAmountHidden ? '••••' : `${rate > 0 ? '+' : ''}${rate.toFixed(2)}%`}
                                 </span>
                               )}
@@ -346,7 +346,7 @@ export function NewDashboard() {
               padding: '12px 16px', borderBottom: '1px solid var(--border-primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>총자산 상세</span>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>총자산 상세</span>
               <button onClick={() => setShowAssetDetail(false)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-tertiary)',
               }}>
@@ -359,7 +359,7 @@ export function NewDashboard() {
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '6px 0', borderBottom: '2px solid var(--border-primary)',
-                fontSize: 14, fontWeight: 700,
+                fontSize: 'var(--text-sm)', fontWeight: 700,
               }}>
                 <span style={{ color: 'var(--text-primary)' }}>총자산</span>
                 <span className="toss-number" style={{ color: 'var(--text-primary)' }}>
@@ -369,15 +369,15 @@ export function NewDashboard() {
 
               {/* 소유자별 소계 */}
               <div style={{ display: 'flex', gap: 16, padding: '6px 0', borderBottom: '1px solid var(--border-secondary)' }}>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)' }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-blue)' }}>
                   <span>지윤</span>
                   <span className="toss-number">{hide(`${fmt(wifeHoldings)}원`)}</span>
                 </div>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--color-profit)' }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-profit)' }}>
                   <span>오빠</span>
                   <span className="toss-number">{hide(`${fmt(husbandHoldings)}원`)}</span>
                 </div>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
                   <span>기타</span>
                   <span className="toss-number">{hide(`${fmt(otherTotal)}원`)}</span>
                 </div>
@@ -385,7 +385,7 @@ export function NewDashboard() {
 
               {/* 계좌별 내역 */}
               <div style={{ marginTop: 6 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>계좌</div>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>계좌</div>
                 {accounts.map(acc => {
                   const holdingsVal = (acc.cash || 0) + acc.holdings.reduce((s, h) => s + holdingValue(h, prices[h.ticker]), 0);
                   return (
@@ -393,13 +393,13 @@ export function NewDashboard() {
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '4px 0', borderBottom: '1px solid var(--border-secondary)',
                     }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
                         {acc.alias || acc.institution}
-                        <span style={{ fontSize: 10, color: 'var(--text-quaternary)', marginLeft: 4 }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginLeft: 4 }}>
                           {acc.accountType} · {acc.owner === 'wife' ? '지윤' : '오빠'}
                         </span>
                       </span>
-                      <span className="toss-number" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
+                      <span className="toss-number" style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>
                         {hide(`${fmt(holdingsVal)}원`)}
                       </span>
                     </div>
@@ -410,19 +410,19 @@ export function NewDashboard() {
               {/* 기타자산 */}
               {otherAssets.length > 0 && (
                 <div style={{ marginTop: 6 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>기타 자산</div>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 4 }}>기타 자산</div>
                   {otherAssets.map(asset => (
                     <div key={asset.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '4px 0', borderBottom: '1px solid var(--border-secondary)',
                     }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
                         {asset.name}
-                        <span style={{ fontSize: 10, color: 'var(--text-quaternary)', marginLeft: 4 }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginLeft: 4 }}>
                           {asset.owner === 'wife' ? '지윤' : asset.owner === 'husband' ? '오빠' : '공동'}
                         </span>
                       </span>
-                      <span className="toss-number" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
+                      <span className="toss-number" style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>
                         {hide(`${fmt(asset.amount)}원`)}
                       </span>
                     </div>
@@ -450,7 +450,7 @@ function OtherAssetSummary({ otherAssets, grandTotal, isHidden }: {
     <div className="toss-card" style={{ padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>📦</span>
+          <span style={{ fontSize: 'var(--text-xl)' }}>📦</span>
           <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>기타</span>
         </div>
         <span className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>
@@ -468,7 +468,7 @@ function OtherAssetSummary({ otherAssets, grandTotal, isHidden }: {
             }}>
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                 {a.name}
-                {ownerLabel && <span style={{ fontSize: 10, color: 'var(--text-quaternary)', marginLeft: 4 }}>{ownerLabel}</span>}
+                {ownerLabel && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginLeft: 4 }}>{ownerLabel}</span>}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
@@ -495,7 +495,7 @@ function OwnerSummary({ label, emoji, accounts, total, grandTotal, isHidden }: {
     <div className="toss-card" style={{ padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>{emoji}</span>
+          <span style={{ fontSize: 'var(--text-xl)' }}>{emoji}</span>
           <span style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>{label}</span>
         </div>
         <span className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>

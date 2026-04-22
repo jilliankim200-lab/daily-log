@@ -167,28 +167,28 @@ function MonthlyReportModal({
         {/* 헤더 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>월간 증감 리포트</div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 2 }}>월간 증감 리포트</div>
+            <h2 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
               {year}년 {month}월
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 22, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 'var(--text-xl)', lineHeight: 1 }}>✕</button>
         </div>
 
         {/* 총 증감 요약 */}
         <div style={{
           background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', marginBottom: 16,
         }}>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>총 증감</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 6 }}>총 증감</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontSize: 26, fontWeight: 700, color: sign(row.assetChange), fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: sign(row.assetChange), fontVariantNumeric: 'tabular-nums' }}>
               {fmtSigned(row.assetChange)}원
             </span>
-            <span style={{ fontSize: 14, color: sign(row.changeRate), fontWeight: 600 }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: sign(row.changeRate), fontWeight: 600 }}>
               {row.changeRate >= 0 ? '+' : ''}{row.changeRate.toFixed(2)}%
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 4 }}>
             기말 총 자산 {fmt(row.totalAsset)}원 (기초 {fmt(row.startTotal)}원)
           </div>
         </div>
@@ -200,11 +200,11 @@ function MonthlyReportModal({
             { label: '오빠', change: row.husbandChange, total: row.husbandTotal },
           ].map(({ label, change, total }) => (
             <div key={label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: sign(change), fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: sign(change), fontVariantNumeric: 'tabular-nums' }}>
                 {fmtSigned(change)}원
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>
                 기말 {fmt(total)}원
               </div>
             </div>
@@ -214,7 +214,7 @@ function MonthlyReportModal({
         {/* 자동 분석 텍스트 */}
         <div style={{
           background: 'var(--accent-blue-bg)', borderRadius: 10, padding: '12px 14px', marginBottom: 16,
-          fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6,
+          fontSize: 'var(--text-sm)', color: 'var(--text-primary)', lineHeight: 1.6,
         }}>
           💬 {mainCause()}
         </div>
@@ -222,7 +222,7 @@ function MonthlyReportModal({
         {/* 현재 기준 손실 종목 */}
         {losers.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
               📉 현재 손실 상위 종목 <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(현재 시세 기준)</span>
             </div>
             {losers.map(h => (
@@ -231,14 +231,14 @@ function MonthlyReportModal({
                 padding: '8px 0', borderBottom: '1px solid var(--border-secondary)',
               }}>
                 <div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{h.name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{h.account}</span>
+                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>{h.name}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 6 }}>{h.account}</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-loss)', fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-loss)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtSigned(h.pnl)}원
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-loss)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-loss)' }}>
                     {h.pnlRate.toFixed(2)}%
                   </div>
                 </div>
@@ -250,7 +250,7 @@ function MonthlyReportModal({
         {/* 현재 기준 수익 종목 */}
         {gainers.length > 0 && (
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
               📈 현재 수익 상위 종목 <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(현재 시세 기준)</span>
             </div>
             {gainers.map(h => (
@@ -259,14 +259,14 @@ function MonthlyReportModal({
                 padding: '8px 0', borderBottom: '1px solid var(--border-secondary)',
               }}>
                 <div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{h.name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>{h.account}</span>
+                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>{h.name}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 6 }}>{h.account}</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-profit)', fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtSigned(h.pnl)}원
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-profit)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-profit)' }}>
                     +{h.pnlRate.toFixed(2)}%
                   </div>
                 </div>
@@ -276,12 +276,12 @@ function MonthlyReportModal({
         )}
 
         {row.lastDividend > 0 && (
-          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 13, color: 'var(--accent-blue)' }}>
+          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 'var(--text-sm)', color: 'var(--accent-blue)' }}>
             💰 이 달 수령 배당금: {fmt(row.lastDividend)}원
           </div>
         )}
 
-        <div style={{ marginTop: 16, fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+        <div style={{ marginTop: 16, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
           ※ 종목 손익은 현재 시세 기준이며, 과거 월의 실제 원인과 다를 수 있습니다.
         </div>
       </div>
@@ -632,7 +632,7 @@ export function AssetChange() {
               <XAxis
                 dataKey="date"
                 tick={{
-                  fontSize: 12,
+                  fontSize: 'var(--text-xs)',
                   fill: "var(--text-tertiary)",
                 }}
                 tickLine={false}
@@ -640,7 +640,7 @@ export function AssetChange() {
               />
               <YAxis
                 tick={{
-                  fontSize: 12,
+                  fontSize: 'var(--text-xs)',
                   fill: "var(--text-tertiary)",
                 }}
                 tickLine={false}
@@ -763,13 +763,13 @@ export function AssetChange() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>총 자산</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 2 }}>총 자산</div>
                       <div className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>
                         {formatAmount(totalAsset, isAmountHidden)}원
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>증감</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 2 }}>증감</div>
                       <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: getChangeColor(assetChange) }}>
                         {assetChange > 0 ? '+' : ''}{formatAmount(assetChange, isAmountHidden)}원
                       </div>
@@ -799,7 +799,7 @@ export function AssetChange() {
                       <td style={{ padding: "10px 12px", color: "var(--text-primary)", whiteSpace: "nowrap", fontWeight: "var(--font-medium)" }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {row.date.replace('-', '년 ')}월
-                          <button onClick={() => setReportMonth(row)} title="월간 리포트 보기" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 6, color: 'var(--text-tertiary)', fontSize: 13, lineHeight: 1, transition: 'color 0.15s' }}
+                          <button onClick={() => setReportMonth(row)} title="월간 리포트 보기" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 6, color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', lineHeight: 1, transition: 'color 0.15s' }}
                             onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-blue)'}
                             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}>
                             📋

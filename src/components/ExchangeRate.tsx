@@ -38,14 +38,7 @@ export function ExchangeRate() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-white border border-[--color-gray-200] rounded-lg shadow-sm">
-        <MIcon name="progress_activity" size={16} style={{ color: 'var(--color-gray-600)', animation: 'spin 1s linear infinite' }} />
-        <span style={{ fontSize: '14px', color: '#86868b' }}>환율 로딩 중...</span>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
     <div className="flex items-center gap-3 px-4 py-2">

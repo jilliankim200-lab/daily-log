@@ -398,7 +398,7 @@ export function HouseholdBudget() {
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{card.label}</span>
               </div>
               <div className="toss-number" style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: card.color }}>{card.value}</div>
-              {card.sub && <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{card.sub}</div>}
+              {card.sub && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 3 }}>{card.sub}</div>}
             </div>
           ))}
         </div>
