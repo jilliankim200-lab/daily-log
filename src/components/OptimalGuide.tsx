@@ -1941,42 +1941,72 @@ export function OptimalGuide() {
           const rows = ASSET_CLASSES.filter(c => (tgts[c] || 0) > 0 || (currentAlloc[c] || 0) > 0);
           const totalGap = rows.reduce((s, c) => s + Math.abs((currentAlloc[c] || 0) - (tgts[c] || 0)), 0);
           const overallScore = Math.max(0, Math.round(100 - totalGap / 2));
+          const maxVal = Math.max(...rows.map(c => Math.max(tgts[c] || 0, currentAlloc[c] || 0)), 10) * 1.15;
           return (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{label}</span>
                 <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: overallScore >= 80 ? 'var(--color-profit)' : overallScore >= 60 ? 'var(--accent-blue)' : 'var(--color-loss)' }}>
-                  비중 달성도 {overallScore}%
+                  달성도 {overallScore}%
                 </span>
               </div>
               {rows.map(cls => {
                 const tgt = tgts[cls] || 0;
                 const cur = currentAlloc[cls] || 0;
-                const diff = cur - tgt;
-                const barPct = Math.min(100, tgt > 0 ? Math.max(0, Math.round(100 - Math.abs(diff) / tgt * 100)) : 100);
+                const diff = parseFloat((cur - tgt).toFixed(1));
+                const isDone = Math.abs(diff) <= 2;
+                const isOver = diff > 2;
+                // badge
+                const badge = isDone
+                  ? { text: '달성', bg: 'rgba(0,184,148,0.15)', color: 'var(--color-profit)' }
+                  : isOver
+                  ? { text: '초과 · 매도 고려', bg: 'rgba(255,71,87,0.12)', color: 'var(--color-loss)' }
+                  : { text: '부족 · 매수 고려', bg: 'rgba(49,130,246,0.12)', color: 'var(--accent-blue)' };
+                // bar: 두 구간 — 목표까지(파랑) + 초과분(빨강) or 목표 미달(회색 공백)
+                const tgtPct = (tgt / maxVal) * 100;
+                const curPct = (cur / maxVal) * 100;
+                const fillPct = Math.min(tgtPct, curPct);   // 목표 이하 부분
+                const excessPct = Math.max(0, curPct - tgtPct); // 초과분
                 return (
-                  <div key={cls} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3, fontSize: 'var(--text-xs)' }}>
+                  <div key={cls} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5, fontSize: 'var(--text-xs)', flexWrap: 'wrap', gap: 4 }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: clsColor[cls], display: 'inline-block', flexShrink: 0 }} />
                         {cls}
                       </span>
-                      <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         <span style={{ color: 'var(--text-tertiary)' }}>목표 <b style={{ color: 'var(--text-primary)' }}>{tgt}%</b></span>
-                        <span style={{ color: 'var(--text-tertiary)' }}>현재 <b style={{ color: Math.abs(diff) <= 2 ? 'var(--color-profit)' : 'var(--accent-blue)' }}>{cur}%</b></span>
-                        <span style={{ minWidth: 40, textAlign: 'right', fontWeight: 700, color: diff > 2 ? 'var(--color-profit)' : diff < -2 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
-                          {diff > 0 ? '+' : ''}{diff.toFixed(1)}%p
+                        <span style={{ color: 'var(--text-tertiary)' }}>현재 <b style={{ color: isDone ? 'var(--color-profit)' : isOver ? 'var(--color-loss)' : 'var(--accent-blue)' }}>{cur}%</b></span>
+                        <span style={{ fontWeight: 700, color: isDone ? 'var(--color-profit)' : isOver ? 'var(--color-loss)' : 'var(--accent-blue)' }}>
+                          {diff > 0 ? '+' : ''}{diff}%p
+                        </span>
+                        <span style={{ padding: '1px 6px', borderRadius: 10, fontSize: '10px', fontWeight: 700, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>
+                          {badge.text}
                         </span>
                       </span>
                     </div>
-                    <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 3, width: `${barPct}%`, background: barPct >= 80 ? 'var(--color-profit)' : barPct >= 50 ? 'var(--accent-blue)' : 'var(--color-loss)', transition: 'width 0.3s' }} />
+                    {/* 듀얼 바: 파랑(목표달성분) + 빨강(초과분), 목표 위치 마커 */}
+                    <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'visible' }}>
+                      {/* 달성 구간 (파랑) */}
+                      <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: '4px 0 0 4px', width: `${fillPct}%`, background: isDone ? 'var(--color-profit)' : 'var(--accent-blue)', transition: 'width 0.3s' }} />
+                      {/* 초과 구간 (빨강) */}
+                      {excessPct > 0 && (
+                        <div style={{ position: 'absolute', left: `${fillPct}%`, top: 0, height: '100%', borderRadius: '0 4px 4px 0', width: `${excessPct}%`, background: 'var(--color-loss)', transition: 'width 0.3s' }} />
+                      )}
+                      {/* 목표 마커 (세로선) */}
+                      <div style={{ position: 'absolute', left: `${tgtPct}%`, top: -3, bottom: -3, width: 2, borderRadius: 1, background: 'var(--text-primary)', opacity: 0.5, transform: 'translateX(-50%)' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-quaternary)', marginTop: 3 }}>
+                      <span>0%</span>
+                      <span style={{ marginLeft: `${tgtPct - 4}%` }}>↑목표({tgt}%)</span>
                     </div>
                   </div>
                 );
               })}
-              <div style={{ marginTop: 6, fontSize: '10px', color: 'var(--text-quaternary)' }}>
-                ※ 비중 달성도 = 목표 대비 현재 비중 근접도 (±2%p 이내 달성)
+              <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'var(--bg-elevated)', fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.7 }}>
+                <b style={{ color: 'var(--color-profit)' }}>달성</b> ±2%p 이내 &nbsp;·&nbsp;
+                <b style={{ color: 'var(--color-loss)' }}>초과</b> 목표보다 많이 보유 중 → 일부 매도 고려 &nbsp;·&nbsp;
+                <b style={{ color: 'var(--accent-blue)' }}>부족</b> 목표보다 적게 보유 중 → 추가 매수 고려
               </div>
             </div>
           );
