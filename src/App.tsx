@@ -13,6 +13,7 @@ import { OptimalGuide } from "./components/OptimalGuide";
 import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
 import { StockDailyRecord } from "./components/StockDailyRecord";
+import { MonthlyStrategy } from "./components/MonthlyStrategy";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -66,6 +67,7 @@ const MENU_ITEMS = [
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "stock-daily-record", label: "개별종목기록", materialIcon: "table_chart" },
+  { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
 ];
 
 const FONT_SIZES = [
@@ -228,6 +230,7 @@ export default function App() {
       case "chart": return <ChartPage />;
       case "account-return": return <AccountReturn />;
       case "stock-daily-record": return <StockDailyRecord />;
+      case "monthly-strategy": return <MonthlyStrategy />;
     }
   };
 
