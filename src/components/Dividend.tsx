@@ -569,12 +569,26 @@ export function Dividend() {
                 </div>
               );
               const ownedTickers = new Set(effectiveStocks.map(s => s.ticker));
-              const candidates = rankingData.filter(r => !ownedTickers.has(r.ticker) && r.recentDividend > 0).sort((a, b) => b.annualYield - a.annualYield).slice(0, 5);
+              const allCandidates = rankingData
+                .filter(r => !ownedTickers.has(r.ticker) && r.recentDividend > 0 && !r.name.includes('혼합'))
+                .sort((a, b) => b.annualYield - a.annualYield);
+              const candidates = allCandidates.slice(0, 5);
               const suggestions = candidates.map(c => ({ ...c, qtyNeeded: Math.ceil(gap / c.recentDividend), investNeeded: Math.ceil(gap / c.recentDividend) * c.price }));
-              const topMix = candidates.slice(0, 3);
-              const mixSuggestions = topMix.map(c => {
-                const qty = Math.ceil(gap / topMix.length / c.recentDividend);
-                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield };
+              // 분산: 카테고리당 최대 2개, 총 7개
+              const MIX_TARGET = 7;
+              const MAX_PER_CAT = 2;
+              const catCount = new Map<string, number>();
+              const mixPicks: typeof allCandidates = [];
+              for (const c of allCandidates) {
+                if (mixPicks.length >= MIX_TARGET) break;
+                const n = catCount.get(c.category) ?? 0;
+                if (n >= MAX_PER_CAT) continue;
+                catCount.set(c.category, n + 1);
+                mixPicks.push(c);
+              }
+              const mixSuggestions = mixPicks.map(c => {
+                const qty = Math.ceil(gap / MIX_TARGET / c.recentDividend);
+                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category };
               });
               const mixTotalCost = mixSuggestions.reduce((s, m) => s + m.cost, 0);
               const mixTotalDiv = mixSuggestions.reduce((s, m) => s + m.monthlyDiv, 0);
@@ -597,9 +611,12 @@ export function Dividend() {
                     <div>
                       <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>분산 투자로 채우기 (추천)</div>
                       {mixSuggestions.map(m => (
-                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0' }}>
-                          <span style={{ color: 'var(--text-primary)' }}>{m.name}</span>
-                          <span style={{ whiteSpace: 'nowrap' }}><span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span></span>
+                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0', alignItems: 'flex-start' }}>
+                          <div>
+                            <span style={{ color: 'var(--text-primary)' }}>{m.name}</span>
+                            <span style={{ color: 'var(--text-quaternary)', marginLeft: 4, fontSize: '10px' }}>[{m.category}]</span>
+                          </div>
+                          <span style={{ whiteSpace: 'nowrap', marginLeft: 8 }}><span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span></span>
                         </div>
                       ))}
                       <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(49,130,246,0.08)', fontSize: 'var(--text-xs)', display: 'flex', justifyContent: 'space-between' }}>
