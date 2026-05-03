@@ -1074,6 +1074,11 @@ function daysUntil(iso: string): number {
   const b = new Date(iso).getTime();
   return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
 }
+function getPrevCycleStart(cycleStart: string): string {
+  const d = new Date(cycleStart);
+  if (d.getDate() === 15) return toIso(new Date(d.getFullYear(), d.getMonth(), 1));
+  return toIso(new Date(d.getFullYear(), d.getMonth() - 1, 15));
+}
 
 // 구 포맷(문자열 날짜) → 신 포맷(ExecutionRecord) 마이그레이션
 function migrateExecutedMap(raw: unknown): Record<string, ExecutionRecord> {
@@ -1239,6 +1244,7 @@ export function OptimalGuide() {
   const [showDivDetail, setShowDivDetail] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1450);
   const [showComparison, setShowComparison] = useState(false);
+  const [showExecReport, setShowExecReport] = useState(false);
   const [execMode, setExecMode] = useState(false);
   const [expandAll, setExpandAll] = useState<boolean | null>(null);
   const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
@@ -1880,12 +1886,19 @@ export function OptimalGuide() {
           다음 재조정 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{nextCycle}</span>
           <span style={{ color: 'var(--text-tertiary)' }}> ({daysUntil(nextCycle)}일 후)</span>
         </span>
-        {executedInCycle.size > 0 && (
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <MIcon name="check_circle" size={13} style={{ color: 'var(--color-profit)' }} />
-            이번 사이클 실행 <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{executedInCycle.size}</span>건
-          </span>
-        )}
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {executedInCycle.size > 0 && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <MIcon name="check_circle" size={13} style={{ color: 'var(--color-profit)' }} />
+              이번 사이클 실행 <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{executedInCycle.size}</span>건
+            </span>
+          )}
+          <button onClick={() => setShowExecReport(true)} style={{
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+            borderRadius: 6, padding: '2px 8px', fontSize: 'var(--text-xs)',
+            color: 'var(--text-secondary)', cursor: 'pointer', lineHeight: 1.6,
+          }}>실천 현황 ···</button>
+        </span>
       </div>
 
       {filteredPlans.map(plan => (
@@ -1905,6 +1918,112 @@ export function OptimalGuide() {
             navigateTo('chart');
           }} />
       ))}
+
+      {/* 실천 현황 팝업 */}
+      {showExecReport && (() => {
+        const prevStart = getPrevCycleStart(cycleStart);
+        // 이번 사이클 기록
+        const curRecs = Object.entries(executedMap).filter(([, r]) => r.date >= cycleStart);
+        // 지난 사이클 기록
+        const prevRecs = Object.entries(executedMap).filter(([, r]) => r.date >= prevStart && r.date < cycleStart);
+
+        // 계좌/종목 이름 조회 맵
+        const holdingNameMap = new Map<string, string>();
+        const accNameMap = new Map<string, string>();
+        for (const acc of accounts) {
+          accNameMap.set(acc.id, accLabel(acc));
+          for (const h of acc.holdings) holdingNameMap.set(`${acc.id}__${h.id}`, h.name);
+        }
+
+        function renderRecords(recs: [string, ExecutionRecord][], label: string) {
+          if (recs.length === 0) return (
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', padding: '8px 0' }}>실행 기록 없음</div>
+          );
+          // 그룹 by accId
+          const byAcc = new Map<string, [string, ExecutionRecord][]>();
+          for (const r of recs) {
+            const accId = r[0].split('__')[0];
+            if (!byAcc.has(accId)) byAcc.set(accId, []);
+            byAcc.get(accId)!.push(r);
+          }
+          const totalAmt = recs.reduce((s, [, r]) => s + r.amount, 0);
+          const totalRec = recs.reduce((s, [, r]) => s + r.recommendedAmount, 0);
+          const totalPct = totalRec > 0 ? Math.round(totalAmt / totalRec * 100) : 100;
+          return (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{label}</span>
+                <span style={{ fontSize: 'var(--text-xs)', color: totalPct >= 80 ? 'var(--color-profit)' : totalPct >= 50 ? 'var(--accent-blue)' : 'var(--color-loss)', fontWeight: 700 }}>
+                  전체 실천율 {totalPct}%
+                </span>
+              </div>
+              {Array.from(byAcc.entries()).map(([accId, rows]) => {
+                const aName = accNameMap.get(accId) || accId;
+                return (
+                  <div key={accId} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, padding: '4px 8px', background: 'var(--bg-elevated)', borderRadius: 4 }}>{aName}</div>
+                    {rows.map(([key, rec]) => {
+                      const hName = holdingNameMap.get(key) || key.split('__')[1];
+                      const pct = rec.recommendedAmount > 0 ? Math.round(rec.amount / rec.recommendedAmount * 100) : 100;
+                      const isSell = rec.type === 'sell';
+                      return (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 8px', borderBottom: '1px solid var(--border-secondary)', fontSize: 'var(--text-xs)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ padding: '1px 5px', borderRadius: 4, fontSize: '10px', fontWeight: 700, background: isSell ? 'rgba(255,71,87,0.12)' : 'rgba(49,130,246,0.12)', color: isSell ? 'var(--color-loss)' : 'var(--accent-blue)' }}>
+                              {isSell ? '매도' : '매수'}
+                            </span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{hName}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                            <span style={{ color: 'var(--text-tertiary)' }}>
+                              {rec.isFund ? `${(rec.amount / 10000).toFixed(0)}만` : `${rec.shares}주`}
+                              {rec.recommendedAmount > 0 && rec.amount !== rec.recommendedAmount && (
+                                <span style={{ color: 'var(--text-quaternary)', marginLeft: 2 }}>
+                                  / {rec.isFund ? `${(rec.recommendedAmount / 10000).toFixed(0)}만` : `${rec.recommendedShares}주`}
+                                </span>
+                              )}
+                            </span>
+                            <span style={{ fontWeight: 700, minWidth: 36, textAlign: 'right', color: pct >= 80 ? 'var(--color-profit)' : pct >= 50 ? 'var(--accent-blue)' : 'var(--color-loss)' }}>
+                              {pct}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 6, background: 'var(--bg-elevated)', fontSize: 'var(--text-xs)', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>실행 금액 합계</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {(totalAmt / 10000).toFixed(0)}만원
+                  {totalRec > 0 && totalRec !== totalAmt && <span style={{ color: 'var(--text-tertiary)', marginLeft: 4 }}>/ 추천 {(totalRec / 10000).toFixed(0)}만원</span>}
+                </span>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)' }}
+            onClick={e => { if (e.target === e.currentTarget) setShowExecReport(false); }}>
+            <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: isMobile ? 20 : 28, width: isMobile ? '92vw' : 480, maxWidth: '95vw', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>사이클 실천 현황</span>
+                <button onClick={() => setShowExecReport(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 18, lineHeight: 1 }}>✕</button>
+              </div>
+              {renderRecords(curRecs, `이번 사이클 (${cycleStart} ~)`)}
+              {prevRecs.length > 0 && renderRecords(prevRecs, `지난 사이클 (${prevStart} ~ ${cycleStart})`)}
+              {curRecs.length === 0 && prevRecs.length === 0 && (
+                <div style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)', textAlign: 'center', padding: '24px 0' }}>
+                  아직 실행 기록이 없습니다.<br />
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 6, display: 'block' }}>계좌 플랜에서 매매를 실행하면 여기에 기록됩니다.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
