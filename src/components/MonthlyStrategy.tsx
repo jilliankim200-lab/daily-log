@@ -308,6 +308,96 @@ export function MonthlyStrategy() {
         ))}
       </div>
 
+      {/* 종목 심층 분석 */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MIcon name="search" size={16} style={{ color: 'var(--accent-blue)' }} />
+          종목 심층 분석
+        </div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 16 }}>5월 전략 관점에서 보유 종목을 개별 분석합니다.</div>
+
+        {/* KODEX 200타겟위클리커버드콜 */}
+        <div style={{ borderRadius: 10, border: '1px solid var(--border-secondary)', overflow: 'hidden' }}>
+          {/* 종목 헤더 */}
+          <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)', marginBottom: 2 }}>KODEX 200타겟위클리커버드콜</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>498400 · 코스피200 기반 주간 커버드콜</div>
+            </div>
+            <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(0,184,148,0.12)', color: 'var(--color-profit)', fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+              ✓ 5월 유지 추천
+            </span>
+          </div>
+
+          {/* 보유 현황 */}
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-secondary)' }}>
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>보유 현황</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[
+                { owner: '지윤', acc: '펀슈(일반)', qty: 327, avg: 16241 },
+                { owner: '지윤', acc: 'ISA', qty: 265, avg: 16973 },
+                { owner: '오빠', acc: '미래퇴직', qty: 72, avg: 11828 },
+                { owner: '오빠', acc: '미래연금', qty: 1035, avg: 10979 },
+              ].map((row, i) => {
+                const val = row.qty * row.avg;
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-xs)' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      <b style={{ color: 'var(--text-primary)' }}>{row.owner}</b> · {row.acc}
+                    </span>
+                    <span style={{ display: 'flex', gap: 12, color: 'var(--text-tertiary)' }}>
+                      <span>{row.qty}주 · 평단 {row.avg.toLocaleString()}원</span>
+                      <b style={{ color: 'var(--text-primary)' }}>{fmtM(val)}</b>
+                    </span>
+                  </div>
+                );
+              })}
+              <div style={{ borderTop: '1px solid var(--border-secondary)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+                <span style={{ color: 'var(--text-secondary)' }}>합계</span>
+                <span style={{ color: 'var(--text-primary)' }}>1,699주 · 약 {fmtM(1699 * 13500)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 분석 */}
+          <div style={{ padding: '12px 16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>5월 전략 분석</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                {
+                  icon: 'thumb_up', color: 'var(--color-profit)',
+                  title: '5월~10월 횡보장에 유리한 구조',
+                  desc: '커버드콜은 코스피200이 횡보하거나 소폭 하락해도 매주 옵션 프리미엄을 배당으로 수취. 여름 지지부진 시즌에 최적.',
+                },
+                {
+                  icon: 'thumb_up', color: 'var(--color-profit)',
+                  title: '오빠 미래연금 평단 10,979원 — 수익 구간',
+                  desc: '현재가 대비 평단이 낮아 이미 수익 중. 커버드콜 구조상 추가 상승 제한은 있지만, 배당 수취하며 안정적 보유 가능.',
+                },
+                {
+                  icon: 'info', color: 'var(--accent-blue)',
+                  title: '매도 자금의 이동처로도 적합',
+                  desc: '고위험 종목 매도 후 현금을 단기채 외에 이 ETF로 일부 이동하면 주간 배당 + 어느 정도의 주가 참여 가능.',
+                },
+                {
+                  icon: 'warning', color: '#f59e0b',
+                  title: '급락장에선 방어 한계',
+                  desc: '코스피200이 10% 이상 급락하면 커버드콜 프리미엄으로 방어가 어려움. 지윤 ISA·펀슈 평단(16,000원대)은 현재가에 따라 손실 가능성 확인 필요.',
+                },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-secondary)' : undefined }}>
+                  <MIcon name={item.icon} size={15} style={{ color: item.color, flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 'var(--text-xs)', color: 'var(--text-primary)', marginBottom: 2 }}>{item.title}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 면책 */}
       <div style={{ fontSize: '10px', color: 'var(--text-quaternary)', textAlign: 'center', lineHeight: 1.6, padding: '8px 0' }}>
         이 분석은 평단가 기준 데이터이며 현재 수익률과 다를 수 있습니다.<br />
