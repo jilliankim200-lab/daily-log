@@ -30,6 +30,7 @@ export function Sidebar({ currentPage, onNavigate, isCollapsed = false, onToggle
     { id: "retirement-calculator", label: "은퇴계산기", icon: "calculate", gradient: "from-blue-500 to-indigo-600" },
     { id: "retirement-plan", label: "은퇴설계", icon: "description", gradient: "from-teal-500 to-cyan-500" },
     { id: "cash-flow", label: "현금흐름", icon: "attach_money", gradient: "from-emerald-500 to-green-500" },
+    { id: "stock-daily-record", label: "개별종목기록", icon: "table_chart", gradient: "from-sky-500 to-blue-500" },
   ];
 
   return (

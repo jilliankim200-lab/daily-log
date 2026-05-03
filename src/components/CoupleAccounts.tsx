@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MIcon } from './MIcon';
 import { useAppContext } from "../App";
-import { saveAccounts } from "../api";
+import { saveAccounts, kvGet, kvSet } from "../api";
 import type { Account, Holding, OtherAsset } from "../types";
 import { holdingValue, holdingCost } from "../types";
 
@@ -956,6 +956,160 @@ export function CoupleAccounts() {
   );
 }
 
+/* ── 기타증권 상세 팝업 ── */
+interface SecurityItem { name: string; amount: string; }
+
+const DEFAULT_SECURITIES: SecurityItem[] = [
+  { name: '한화', amount: '' }, { name: 'KB', amount: '' }, { name: '대신', amount: '' },
+  { name: '신한', amount: '' }, { name: '미래', amount: '' }, { name: '교보', amount: '' },
+  { name: '대신', amount: '' }, { name: 'NH', amount: '' }, { name: '우리', amount: '' },
+  { name: '카페', amount: '' }, { name: 'IBK', amount: '' }, { name: '키움', amount: '' },
+  { name: '토스', amount: '' }, { name: '삼성', amount: '' }, { name: '신한', amount: '' },
+  { name: '하나', amount: '' }, { name: '카뱅', amount: '' }, { name: '삼성', amount: '' },
+  { name: 'SK', amount: '' }, { name: '노란우산', amount: '' },
+];
+
+function SecuritiesBreakdownModal({
+  onClose, onSave,
+}: {
+  onClose: () => void;
+  onSave: (total: number) => void;
+}) {
+  const [items, setItems] = useState<SecurityItem[]>(DEFAULT_SECURITIES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    kvGet<SecurityItem[]>('other_securities_breakdown').then(data => {
+      if (data && data.length > 0) setItems(data);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const parseAmt = (v: string) => {
+    const n = parseInt(v.replace(/,/g, ''), 10);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const total = items.reduce((s, i) => s + parseAmt(i.amount), 0);
+
+  const update = (idx: number, field: keyof SecurityItem, value: string) => {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
+  };
+
+  const handleAmountChange = (idx: number, raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, '');
+    update(idx, 'amount', digits ? parseInt(digits, 10).toLocaleString('ko-KR') : '');
+  };
+
+  const addRow = () => setItems(prev => [...prev, { name: '', amount: '' }]);
+  const removeRow = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
+    await kvSet('other_securities_breakdown', items);
+    onSave(total);
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16,
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        background: 'var(--bg-primary)', borderRadius: 16,
+        width: '100%', maxWidth: 400, maxHeight: '85vh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+        border: '1px solid var(--border-primary)',
+      }}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>기타증권 상세</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>각 기관별 금액을 입력하세요</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)' }}>
+            <MIcon name="close" size={20} />
+          </button>
+        </div>
+
+        {/* 목록 */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-tertiary)' }}>불러오는 중...</div>
+          ) : (
+            <>
+              {items.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <input
+                    value={item.name}
+                    onChange={e => update(idx, 'name', e.target.value)}
+                    placeholder="기관명"
+                    style={{
+                      flex: '0 0 90px', padding: '8px 10px', borderRadius: 8,
+                      border: '1px solid var(--border-primary)',
+                      background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                      fontSize: 13,
+                    }}
+                  />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 10, color: 'var(--text-tertiary)', fontSize: 13 }}>₩</span>
+                    <input
+                      value={item.amount}
+                      onChange={e => handleAmountChange(idx, e.target.value)}
+                      placeholder="0"
+                      style={{
+                        width: '100%', padding: '8px 10px 8px 24px', borderRadius: 8,
+                        border: '1px solid var(--border-primary)',
+                        background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                        fontSize: 13, textAlign: 'right',
+                      }}
+                    />
+                  </div>
+                  <button onClick={() => removeRow(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                    <MIcon name="remove_circle_outline" size={16} />
+                  </button>
+                </div>
+              ))}
+              <button onClick={addRow} style={{
+                width: '100%', padding: '8px 0', borderRadius: 8,
+                border: '1px dashed var(--border-primary)',
+                background: 'none', cursor: 'pointer',
+                color: 'var(--text-tertiary)', fontSize: 13,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                marginTop: 4,
+              }}>
+                <MIcon name="add" size={14} /> 행 추가
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* 합계 + 저장 */}
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-primary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>합계</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>
+              ₩{total.toLocaleString('ko-KR')}
+            </span>
+          </div>
+          <button
+            onClick={handleSave}
+            style={{
+              width: '100%', padding: '12px 0', borderRadius: 10,
+              background: 'var(--accent-blue)', color: '#fff',
+              border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14,
+            }}
+          >
+            저장 (기타증권에 합계 반영)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── 기타 자산 섹션 ── */
 function OtherAssetsSection({
   assets, onUpdate, isAmountHidden,
@@ -964,6 +1118,8 @@ function OtherAssetsSection({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdownTargetId, setBreakdownTargetId] = useState<string | null>(null);
 
   const wifeAssets = assets.filter(a => a.owner === 'wife');
   const husbandAssets = assets.filter(a => a.owner === 'husband');
@@ -1005,7 +1161,18 @@ function OtherAssetsSection({
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px',
               borderBottom: i < items.length - 1 ? '1px solid var(--border-secondary)' : 'none',
             }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>{item.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)' }}>{item.name}</span>
+                {item.name === '기타증권' && (
+                  <button
+                    onClick={() => { setBreakdownTargetId(item.id); setBreakdownOpen(true); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center' }}
+                    title="상세 입력"
+                  >
+                    <MIcon name="table_view" size={15} />
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)' }}>
                   {isAmountHidden ? '••••' : `${fmt(item.amount)}원`}
@@ -1045,6 +1212,15 @@ function OtherAssetsSection({
 
       {renderGroup('지윤', 'face', wifeAssets, wifeTotal, 'wife')}
       {renderGroup('오빠', 'person', husbandAssets, husbandTotal, 'husband')}
+
+      {breakdownOpen && breakdownTargetId && (
+        <SecuritiesBreakdownModal
+          onClose={() => { setBreakdownOpen(false); setBreakdownTargetId(null); }}
+          onSave={(total) => {
+            onUpdate(assets.map(a => a.id === breakdownTargetId ? { ...a, amount: total } : a));
+          }}
+        />
+      )}
 
       {adding ? (
         <OtherAssetForm owner="wife" onSave={handleSave} onCancel={() => setAdding(false)} />

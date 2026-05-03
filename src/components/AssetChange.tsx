@@ -290,7 +290,8 @@ function MonthlyReportModal({
 }
 
 export function AssetChange() {
-  const { accounts, prices, isAmountHidden, isMobile } = useAppContext();
+  const { accounts, prices, isAmountHidden, isMobile, isHappyMode } = useAppContext();
+  const HAPPY_AMOUNT = 1_124_565_712;
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [period, setPeriod] = useState<PeriodKey>("1m");
   const [sortNewest, setSortNewest] = useState(true);
@@ -332,8 +333,22 @@ export function AssetChange() {
     };
   }, [totalAsset]);
 
+  const effectiveSnapshots = useMemo(() =>
+    isHappyMode
+      ? snapshots.map((s, i, arr) => {
+          const newTotal = s.totalAsset + HAPPY_AMOUNT;
+          const newHusband = s.husbandAsset + HAPPY_AMOUNT;
+          const prev = arr[i + 1];
+          const prevTotal = prev ? prev.totalAsset + HAPPY_AMOUNT : newTotal - s.assetChange;
+          const change = newTotal - prevTotal;
+          const rate = prevTotal > 0 ? (change / prevTotal) * 100 : 0;
+          return { ...s, totalAsset: newTotal, husbandAsset: newHusband, assetChange: change, changeRate: rate };
+        })
+      : snapshots,
+  [snapshots, isHappyMode]);
+
   const filteredSnapshots = useMemo(() => {
-    const sorted = [...snapshots].sort((a, b) => b.date.localeCompare(a.date));
+    const sorted = [...effectiveSnapshots].sort((a, b) => b.date.localeCompare(a.date));
     // 연도 필터
     if (period === "2025" || period === "2026") {
       return sorted.filter((s) => s.date.startsWith(period));

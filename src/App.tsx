@@ -12,6 +12,7 @@ import { RebalancingGuide } from "./components/RebalancingGuide";
 import { OptimalGuide } from "./components/OptimalGuide";
 import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
+import { StockDailyRecord } from "./components/StockDailyRecord";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -38,6 +39,7 @@ interface AppContextType {
   loadPrices: () => Promise<void>;
   navigateTo: (page: string) => void;
   isMobile: boolean;
+  isHappyMode: boolean;
 }
 export const AppContext = createContext<AppContextType>({
   accounts: [], setAccounts: () => {}, reloadAccounts: async () => {}, isAmountHidden: true,
@@ -45,6 +47,7 @@ export const AppContext = createContext<AppContextType>({
   prices: {}, loadPrices: async () => {},
   navigateTo: () => {},
   isMobile: false,
+  isHappyMode: false,
 });
 export const useAppContext = () => useContext(AppContext);
 
@@ -62,6 +65,7 @@ const MENU_ITEMS = [
   { id: "account-return", label: "계좌수익률", materialIcon: "percent" },
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
+  { id: "stock-daily-record", label: "개별종목기록", materialIcon: "table_chart" },
 ];
 
 const FONT_SIZES = [
@@ -75,12 +79,13 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(() => window.innerWidth >= 768);
-  const [isAmountHidden, setIsAmountHidden] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isAmountHidden, setIsAmountHidden] = useState(true);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
+  const [isHappyMode, setIsHappyMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
@@ -92,8 +97,9 @@ export default function App() {
   });
 
   const setOtherAssets = (assets: OtherAsset[]) => {
-    setOtherAssetsState(assets);
-    saveOtherAssets(assets);
+    const real = assets.filter(a => a.id !== '__happy_bonus__');
+    setOtherAssetsState(real);
+    saveOtherAssets(real);
   };
 
   useEffect(() => {
@@ -221,11 +227,15 @@ export default function App() {
       case "optimal-guide": return <OptimalGuide />;
       case "chart": return <ChartPage />;
       case "account-return": return <AccountReturn />;
+      case "stock-daily-record": return <StockDailyRecord />;
     }
   };
 
+  const HAPPY_BONUS: OtherAsset = { id: '__happy_bonus__', name: '오빠주식', owner: 'husband', amount: 1_124_565_712 };
+  const effectiveOtherAssets = isHappyMode ? [...otherAssets, HAPPY_BONUS] : otherAssets;
+
   return (
-    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile }}>
+    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets: effectiveOtherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile, isHappyMode }}>
       <div style={{ display: 'flex', height: `${100 / fontScale}vh`, background: 'var(--bg-primary)', zoom: fontScale }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (
@@ -378,6 +388,23 @@ export default function App() {
           </div>
 
         </div>
+
+        {/* HAPPY 모드 버튼 — 좌측 하단 고정 */}
+        <button
+          onClick={() => setIsHappyMode(p => !p)}
+          style={{
+            position: 'fixed', bottom: 24, left: 24, zIndex: 999,
+            width: 40, height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: isHappyMode ? '#f59e0b' : 'var(--bg-secondary)',
+            color: isHappyMode ? '#fff' : 'var(--text-tertiary)',
+            boxShadow: isHappyMode ? '0 2px 12px rgba(245,158,11,0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s',
+          }}
+          title={isHappyMode ? 'HAPPY 모드 해제' : 'HAPPY 모드 (오빠주식 +1,124,565,712)'}
+        >
+          <MIcon name="celebration" size={20} />
+        </button>
 
         <PasswordModal
           open={isPasswordModalOpen}

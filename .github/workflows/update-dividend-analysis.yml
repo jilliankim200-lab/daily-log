@@ -1,0 +1,320 @@
+name: Update Dividend Analysis
+
+on:
+  schedule:
+    - cron: '0 2 * * 6'  # 매주 토요일 UTC 02:00 (KST 11:00)
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Analyze covered call holdings and store to KV
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_URL: https://asset-dashboard-api.jilliankim200.workers.dev
+          KV_NAMESPACE_ID: c6cd88ef715c479ca351563f21421e6e
+        run: |
+          python3 << 'PYEOF'
+          import json, os, sys, time
+          import urllib.request, urllib.error
+          from datetime import datetime, timezone, timedelta
+          from concurrent.futures import ThreadPoolExecutor, as_completed
+
+          WORKER_URL = os.environ['WORKER_URL']
+          ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
+          CLOUDFLARE_API_TOKEN = os.environ['CLOUDFLARE_API_TOKEN']
+          CLOUDFLARE_ACCOUNT_ID = os.environ['CLOUDFLARE_ACCOUNT_ID']
+          KV_NAMESPACE_ID = os.environ['KV_NAMESPACE_ID']
+
+          kst = timezone(timedelta(hours=9))
+          now = datetime.now(kst)
+          updated_at = f"{now.year}년 {now.month}월 {now.day}일"
+
+          # ── KV 조회 ──
+          def kv_get(key):
+              req = urllib.request.Request(f'{WORKER_URL}/kv/{key}')
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      return json.loads(resp.read())
+              except Exception as e:
+                  print(f'KV GET {key} 실패: {e}')
+                  return None
+
+          # ── Naver 주가 이력으로 30일 수익률(방어력) 계산 ──
+          def fetch_monthly_return(ticker):
+              """Worker의 /stock-chart 엔드포인트로 35일치 종가 조회 → 30일 수익률 반환"""
+              try:
+                  url = f'{WORKER_URL}/stock-chart/{ticker}?days=35'
+                  req = urllib.request.Request(url)
+                  with urllib.request.urlopen(req, timeout=15) as resp:
+                      prices = json.loads(resp.read())  # [{"date": "...", "price": ...}, ...]
+                  if not prices or len(prices) < 5:
+                      return None
+                  # 가장 최근 30거래일 범위
+                  current = prices[-1]['price']
+                  base = prices[0]['price']  # 35일치 중 가장 오래된 값 (≈30일 전)
+                  if base <= 0:
+                      return None
+                  return round((current / base - 1) * 100, 2)
+              except Exception as e:
+                  return None
+
+          # ── 1. 계좌 데이터 로드 ──
+          print('계좌 데이터 로드 중...')
+          accounts = kv_get('accounts') or []
+          print(f'계좌 {len(accounts)}개 로드됨')
+
+          # ── 2. ETF 랭킹 데이터 로드 ──
+          print('ETF 랭킹 데이터 로드 중...')
+          etf_ranking_raw = kv_get('etf_ranking') or {}
+          etf_list = etf_ranking_raw.get('data', [])
+          print(f'ETF {len(etf_list)}개 로드됨')
+
+          # ── 3. 커버드콜 보유 종목 수집 ──
+          CC_KEYWORDS = ['커버드콜', '커버드 콜']
+          cc_map = {}
+          for acc in accounts:
+              for h in acc.get('holdings', []):
+                  name = h.get('name', '')
+                  if not any(kw in name for kw in CC_KEYWORDS):
+                      continue
+                  ticker = h.get('ticker') or name
+                  if ticker not in cc_map:
+                      cc_map[ticker] = {'name': name, 'qty': 0, 'accs': []}
+                  if not h.get('isFund', False):
+                      cc_map[ticker]['qty'] += h.get('quantity', 0)
+                  label = f"{acc.get('ownerName', '')}·{acc.get('alias') or acc.get('institution', '')}"
+                  if label not in cc_map[ticker]['accs']:
+                      cc_map[ticker]['accs'].append(label)
+
+          print(f'커버드콜 종목 {len(cc_map)}개: {list(cc_map.keys())}')
+          etf_by_ticker = {e['ticker']: e for e in etf_list}
+
+          # ── 4. 방어력(30일 수익률) 병렬 조회 ──
+          # 대상: 보유 CC + ETF 랭킹 상위 50개
+          top50_tickers = [e['ticker'] for e in etf_list[:50]]
+          all_tickers = list(set(list(cc_map.keys()) + top50_tickers))
+          # 6자리 숫자 티커만 (펀드코드 제외)
+          valid_tickers = [t for t in all_tickers if t and len(t) == 6 and t.isdigit()]
+
+          print(f'방어력 조회 대상: {len(valid_tickers)}개 티커 (병렬 10개씩)')
+          defense_rates = {}  # ticker → 30일수익률%
+
+          with ThreadPoolExecutor(max_workers=10) as executor:
+              future_to_ticker = {executor.submit(fetch_monthly_return, t): t for t in valid_tickers}
+              done = 0
+              for future in as_completed(future_to_ticker):
+                  ticker = future_to_ticker[future]
+                  result = future.result()
+                  if result is not None:
+                      defense_rates[ticker] = result
+                  done += 1
+                  if done % 10 == 0:
+                      print(f'  {done}/{len(valid_tickers)} 완료...')
+
+          print(f'방어력 데이터 수집: {len(defense_rates)}개')
+          # 방어력 상위/하위 출력 (디버그)
+          sorted_dr = sorted(defense_rates.items(), key=lambda x: -x[1])
+          print(f'  방어력 상위3: {sorted_dr[:3]}')
+          print(f'  방어력 하위3: {sorted_dr[-3:]}')
+
+          # ── 5. 프롬프트 구성 ──
+          def fmt_defense(ticker):
+              d = defense_rates.get(ticker)
+              if d is None:
+                  return '방어력 미집계'
+              sign = '+' if d >= 0 else ''
+              return f'30일수익률 {sign}{d:.1f}%'
+
+          # 보유 CC 종목 라인
+          holdings_lines = []
+          for ticker, v in sorted(cc_map.items(), key=lambda x: -x[1]['qty']):
+              etf = etf_by_ticker.get(ticker, {})
+              monthly = etf.get('singleDividendRate') or (etf.get('annualYield', 0) / 12)
+              annual = etf.get('annualYield', 0)
+              holdings_lines.append(
+                  f"- {v['name']} ({ticker}): {v['qty']}주, "
+                  f"연배당률 {annual:.1f}%, 월배당률 {monthly:.2f}%, "
+                  f"{fmt_defense(ticker)}, "
+                  f"계좌: {', '.join(v['accs'])}"
+              )
+
+          # ETF 랭킹 상위 40개 라인 (커버드콜 여부 표시)
+          top40 = etf_list[:40]
+          etf_lines = []
+          for e in top40:
+              t = e['ticker']
+              is_cc = any(kw in e.get('name', '') for kw in CC_KEYWORDS)
+              cc_mark = '[CC]' if is_cc else '    '
+              d = defense_rates.get(t)
+              d_str = f', 30일수익률 {("+" if d>=0 else "")}{d:.1f}%' if d is not None else ''
+              etf_lines.append(
+                  f"- {cc_mark} {e['name']} ({t}): "
+                  f"연배당률 {e.get('annualYield', 0):.1f}%, "
+                  f"월배당률 {e.get('singleDividendRate', 0):.2f}%"
+                  f"{d_str}, "
+                  f"퇴직연금 {'가능' if e.get('retirementOk') else '불가'}"
+              )
+
+          prompt = f"""당신은 ETF 배당/커버드콜 전문 분석가입니다.
+아래 보유 현황과 시장 데이터를 기반으로 분석하고, 정확히 다음 JSON 형식만 반환하세요.
+
+[보유 커버드콜 종목] (수량 많은 순)
+{chr(10).join(holdings_lines) if holdings_lines else '없음'}
+
+[월배당 ETF 시장 데이터 상위 40개] ([CC]=커버드콜)
+{chr(10).join(etf_lines)}
+
+분석 관점:
+1. 집중 리스크: 전체 CC 보유 중 단일 종목 30% 이상이면 고위험
+2. 기초자산 리스크: 단일 종목 기초(팔란티어·테슬라 등) vs 지수 기초
+3. 배당 지속성: 연 20% 이상은 원금 잠식 가능성, 22% 이상은 고위험
+4. 방어력(30일수익률): 플러스이면 방어 성공, 마이너스 폭이 클수록 취약
+5. 추천 기준: 방어력 양호(0% 이상 또는 낙폭 작음) + 연배당률 15% 이상 + 지수 기초 선호
+
+작성 규칙 (반드시 지킬 것):
+- issues의 title: 반드시 종목명을 포함하세요. 티커 숫자코드(예: 498400)는 절대 사용 금지. 예) "TIGER 미국배당커버드콜 집중 위험", "팔란티어 기초자산 위험"
+- issues의 detail: 투자 초보자도 이해할 수 있게 쉬운 말로 설명. 숫자와 퍼센트를 활용해 구체적으로. 왜 문제인지, 어떤 상황이 발생할 수 있는지 설명. (100자 이내)
+- holdingsAnalysis의 summary: 현재 상태를 구체적인 수치와 함께 설명 (방어력 수치 필수 포함)
+- recommendations의 reason: 왜 좋은지를 구체적 근거(방어력%, 배당률%, 기초자산 특성)와 함께 설명
+
+반드시 아래 JSON만 반환 (다른 텍스트 없이):
+{{
+  "holdingsAnalysis": [
+    {{
+      "ticker": "종목코드",
+      "name": "종목명",
+      "totalQty": 수량,
+      "riskLevel": "high 또는 medium 또는 low",
+      "summary": "현황 한줄 요약 — 방어력 수치와 현재 상황 포함 (70자 이내)",
+      "action": "권장 행동 (30자 이내)"
+    }}
+  ],
+  "issues": [
+    {{
+      "level": "red 또는 yellow 또는 green",
+      "title": "종목명 포함 문제 제목 — 티커코드 금지 (25자 이내)",
+      "detail": "초보자도 이해 가능한 쉬운 설명 — 구체적 수치와 위험 상황 포함 (100자 이내)"
+    }}
+  ],
+  "recommendations": [
+    {{
+      "rank": 순위숫자,
+      "ticker": "종목코드",
+      "name": "종목명",
+      "monthlyRate": 월배당률숫자,
+      "annualYield": 연배당률숫자,
+      "defenseRate": 30일수익률숫자,
+      "reason": "추천 이유 — 방어력%, 배당률%, 기초자산 특성 근거 포함 (80자 이내)"
+    }}
+  ],
+  "improvementPlan": "개선 시나리오 (현재 → 개선, 줄바꿈 가능, 구체적 수치 근거 포함)"
+}}"""
+
+          # ── 6. Claude API 호출 ──
+          print('Claude API 호출 중...')
+          api_payload = json.dumps({
+              'model': 'claude-sonnet-4-6',
+              'max_tokens': 2500,
+              'messages': [{'role': 'user', 'content': prompt}]
+          })
+
+          api_req = urllib.request.Request(
+              'https://api.anthropic.com/v1/messages',
+              data=api_payload.encode('utf-8'),
+              headers={
+                  'Content-Type': 'application/json',
+                  'x-api-key': ANTHROPIC_API_KEY,
+                  'anthropic-version': '2023-06-01',
+              },
+              method='POST'
+          )
+
+          try:
+              with urllib.request.urlopen(api_req, timeout=90) as resp:
+                  result = json.loads(resp.read())
+          except urllib.error.HTTPError as e:
+              print(f'Anthropic API 오류: HTTP {e.code}')
+              print(e.read().decode('utf-8')[:500])
+              sys.exit(1)
+
+          analysis_text = result['content'][0]['text'].strip()
+          print(f'API 응답 길이: {len(analysis_text)}자')
+
+          # JSON 추출
+          start = analysis_text.find('{')
+          end = analysis_text.rfind('}') + 1
+          if start == -1 or end == 0:
+              print(f'JSON 파싱 실패. 응답:\n{analysis_text[:500]}')
+              sys.exit(1)
+
+          try:
+              analysis_json = json.loads(analysis_text[start:end])
+          except json.JSONDecodeError as e:
+              print(f'JSON 파싱 오류: {e}')
+              print(f'원문:\n{analysis_text[start:end][:500]}')
+              sys.exit(1)
+
+          # 수량 보정 + 방어력 데이터 보정
+          for item in analysis_json.get('holdingsAnalysis', []):
+              t = item.get('ticker', '')
+              if t in cc_map:
+                  item['totalQty'] = cc_map[t]['qty']
+              if t in defense_rates:
+                  item['defenseRate'] = defense_rates[t]
+
+          # 추천 종목 방어력 보정 (Claude가 누락 시)
+          for rec in analysis_json.get('recommendations', []):
+              t = rec.get('ticker', '')
+              if t in defense_rates and 'defenseRate' not in rec:
+                  rec['defenseRate'] = defense_rates[t]
+
+          output = {
+              'updatedAt': updated_at,
+              'defenseRatesUpdatedAt': updated_at,
+              **analysis_json,
+          }
+
+          print('분석 결과:')
+          print(f"  - 보유종목 분석: {len(output.get('holdingsAnalysis', []))}개")
+          print(f"  - 문제점: {len(output.get('issues', []))}개")
+          print(f"  - 추천종목: {len(output.get('recommendations', []))}개")
+
+          # ── 7. Cloudflare KV REST API로 저장 ──
+          payload_bytes = json.dumps(output, ensure_ascii=False).encode('utf-8')
+          cf_url = (
+              f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}'
+              f'/storage/kv/namespaces/{KV_NAMESPACE_ID}/values/dividend_analysis'
+          )
+
+          cf_req = urllib.request.Request(
+              cf_url,
+              data=payload_bytes,
+              headers={
+                  'Authorization': f'Bearer {CLOUDFLARE_API_TOKEN}',
+                  'Content-Type': 'application/json',
+              },
+              method='PUT'
+          )
+
+          try:
+              with urllib.request.urlopen(cf_req, timeout=30) as resp:
+                  cf_result = json.loads(resp.read())
+                  if cf_result.get('success'):
+                      print(f'KV 저장 성공: dividend_analysis ({updated_at})')
+                  else:
+                      print(f'KV 저장 실패: {cf_result}')
+                      sys.exit(1)
+          except urllib.error.HTTPError as e:
+              print(f'Cloudflare KV API 오류: HTTP {e.code}')
+              print(e.read().decode('utf-8')[:500])
+              sys.exit(1)
+          except Exception as e:
+              print(f'KV 저장 실패: {e}')
+              sys.exit(1)
+
+          print(f'완료: {updated_at}')
+          PYEOF

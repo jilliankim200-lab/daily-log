@@ -9,7 +9,8 @@ import { MIcon } from "./MIcon";
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
 
 export function NewDashboard() {
-  const { accounts, isAmountHidden, otherAssets, prices, isMobile } = useAppContext();
+  const { accounts, isAmountHidden, otherAssets, prices, isMobile, isHappyMode } = useAppContext();
+  const HAPPY_AMOUNT = 1_124_565_712;
   const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
   const [savingSnapshot, setSavingSnapshot] = useState(false);
   const [marketData, setMarketData] = useState<MarketIndexData[]>([]);
@@ -38,24 +39,35 @@ export function NewDashboard() {
   const wifeTotal = wifeHoldings + wifeOther;
   const husbandTotal = husbandHoldings + husbandOther;
 
-  // 스냅샷은 Cloudflare Worker cron(KST 16:00)이 저장 — 프론트엔드는 저장 안 함
+  // HAPPY 모드: 스냅샷 totalAsset/husbandAsset에 10억 반영
+  const effectiveSnapshots: DailySnapshot[] = isHappyMode
+    ? snapshots.map((s, i, arr) => {
+        const newTotal = s.totalAsset + HAPPY_AMOUNT;
+        const newHusband = s.husbandAsset + HAPPY_AMOUNT;
+        const prev = arr[i + 1];
+        const prevTotal = prev ? prev.totalAsset + HAPPY_AMOUNT : s.totalAsset + HAPPY_AMOUNT - s.assetChange;
+        const change = newTotal - prevTotal;
+        const rate = prevTotal > 0 ? (change / prevTotal) * 100 : 0;
+        return { ...s, totalAsset: newTotal, husbandAsset: newHusband, assetChange: change, changeRate: rate };
+      })
+    : snapshots;
 
   // 스냅샷 기반 증감 계산 (KST 기준 — toISOString()은 UTC라 KST 새벽 0~9시에 날짜가 비는 버그 방지)
   const today = (() => { const kst = new Date(Date.now() + 9 * 60 * 60 * 1000); return kst.toISOString().slice(0, 10); })();
-  const todaySnap = snapshots.find(s => s.date === today);
-  const latestSnap = snapshots[0];
-  const prevSnap = snapshots[1];
+  const todaySnap = effectiveSnapshots.find(s => s.date === today);
+  const latestSnap = effectiveSnapshots[0];
+  const prevSnap = effectiveSnapshots[1];
 
   const dailyChange = latestSnap && prevSnap ? latestSnap.totalAsset - prevSnap.totalAsset : 0;
   const dailyRate = prevSnap && prevSnap.totalAsset > 0 ? (dailyChange / prevSnap.totalAsset) * 100 : 0;
 
   // 월간/연간 증감
   const thisMonth = today.slice(0, 7);
-  const monthStart = snapshots.filter(s => s.date.startsWith(thisMonth)).pop();
+  const monthStart = effectiveSnapshots.filter(s => s.date.startsWith(thisMonth)).pop();
   const monthlyChange = monthStart ? totalAsset - monthStart.totalAsset : 0;
 
   const thisYear = today.slice(0, 4);
-  const yearStart = snapshots.filter(s => s.date.startsWith(thisYear)).pop();
+  const yearStart = effectiveSnapshots.filter(s => s.date.startsWith(thisYear)).pop();
   const yearlyChange = yearStart ? totalAsset - yearStart.totalAsset : 0;
 
   const handleSaveSnapshot = async () => {
@@ -225,11 +237,11 @@ export function NewDashboard() {
                 </span>
               </div>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', background: 'var(--bg-secondary)', padding: '4px 10px', borderRadius: 20 }}>
-                최근 {Math.min(snapshots.length, 14)}일
+                최근 {Math.min(effectiveSnapshots.length, 14)}일
               </span>
             </div>
 
-            {snapshots.length === 0 ? (
+            {effectiveSnapshots.length === 0 ? (
               <div style={{ padding: 48, textAlign: 'center' }}>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
                   스냅샷 데이터가 없습니다. "오늘 스냅샷 저장" 버튼을 눌러 기록을 시작하세요.
@@ -241,8 +253,8 @@ export function NewDashboard() {
                   assetChange: 0, changeRate: 0,
                 };
                 const allRows = todaySnap
-                  ? [{ ...todaySnap, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal }, ...snapshots.filter(s => s.date !== today).slice(0, 13)]
-                  : [todayRow, ...snapshots.slice(0, 13)];
+                  ? [{ ...todaySnap, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal }, ...effectiveSnapshots.filter(s => s.date !== today).slice(0, 13)]
+                  : [todayRow, ...effectiveSnapshots.slice(0, 13)];
 
                 if (isMobile) {
                   return (

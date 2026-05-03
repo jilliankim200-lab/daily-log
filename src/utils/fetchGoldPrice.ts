@@ -1,8 +1,10 @@
-// 네이버 금시세에서 금 1g 가격(KRW) 조회
+// 네이버 금시세에서 금 1돈 가격(KRW) 조회 — Worker 경유 (로컬/프로덕션 동일)
 // 1돈 = 3.75g
 
 const GOLD_CACHE_KEY = 'gold_price_cache';
 const GOLD_CACHE_TTL = 30 * 60 * 1000; // 30분 캐시
+
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 interface GoldCache {
   pricePerDon: number;
@@ -24,16 +26,11 @@ export async function fetchGoldPricePerDon(): Promise<number | null> {
   if (cache) return cache.pricePerDon;
 
   try {
-    const res = await fetch('/api/gold');
+    const res = await fetch(`${WORKER_URL}/api/gold`);
     if (!res.ok) return null;
-    const html = await res.text();
-
-    // 첫 번째 <td class="num">xxx,xxx.xx 가 금 1g 가격
-    const match = html.match(/<td class="num">([\d,]+\.\d+)/);
-    if (!match) return null;
-
-    const pricePerGram = parseFloat(match[1].replace(/,/g, ''));
-    const pricePerDon = Math.round(pricePerGram * 3.75);
+    const data: any = await res.json();
+    if (!data.pricePerDon) return null;
+    const pricePerDon = data.pricePerDon as number;
 
     localStorage.setItem(GOLD_CACHE_KEY, JSON.stringify({
       pricePerDon,

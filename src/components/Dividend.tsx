@@ -11,7 +11,7 @@ interface DividendRate {
   ticker: string;
   name: string;
   dividendPerShare: number;
-  frequency: "monthly" | "quarterly" | "yearly";
+  frequency: "monthly" | "quarterly" | "yearly" | "weekly";
   exDividendDay: number;
   paymentDay: number;
 }
@@ -25,7 +25,7 @@ interface EffectiveDividendStock {
   owner: "wife" | "husband";
   accLabel: string;
   dividendPerShare: number;
-  frequency: "monthly" | "quarterly" | "yearly";
+  frequency: "monthly" | "quarterly" | "yearly" | "weekly";
   exDividendDay: number;
   paymentDay: number;
   isUSD: boolean;
@@ -73,8 +73,17 @@ function fmt(n: number): string {
   return Math.round(n).toLocaleString("ko-KR");
 }
 
-function getNextExDividendDate(exDay: number): Date {
+function getNextExDividendDate(exDay: number, frequency?: string): Date {
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  if (frequency === "weekly") {
+    // YieldMax weekly ex-div: every Thursday (day 4)
+    const target = new Date(now);
+    const dow = target.getDay();
+    const daysToThursday = (4 - dow + 7) % 7 || 7; // 0 means today is Thu → next Thu
+    target.setDate(target.getDate() + daysToThursday);
+    return target;
+  }
   const year = now.getFullYear();
   const month = now.getMonth();
   if (exDay === 0) {
@@ -149,8 +158,14 @@ export function Dividend() {
     ticker: '', name: '', dividendPerShare: 0, frequency: 'monthly', exDividendDay: 0, paymentDay: 5,
   });
   const [targetMonthly, setTargetMonthly] = useState(() => {
+    const migrated = localStorage.getItem("dividend_target_migrated_v1");
+    if (!migrated) {
+      localStorage.setItem("dividend_target_monthly", "7000000");
+      localStorage.setItem("dividend_target_migrated_v1", "1");
+      return 7000000;
+    }
     const saved = localStorage.getItem("dividend_target_monthly");
-    return saved ? Number(saved) : 1000000;
+    return saved ? Number(saved) : 7000000;
   });
   const [rankingData, setRankingData] = useState<RankingETF[]>([]);
   const [rankingLoading, setRankingLoading] = useState(true);
@@ -279,7 +294,8 @@ export function Dividend() {
       const details: { name: string; amount: number }[] = [];
       for (const s of effectiveStocks) {
         let amount = 0;
-        if (s.frequency === "monthly") amount = divAmount(s, exchangeRate);
+        if (s.frequency === "weekly") amount = divAmount(s, exchangeRate) * 4.33;
+        else if (s.frequency === "monthly") amount = divAmount(s, exchangeRate);
         else if (s.frequency === "quarterly" && m % 3 === 2) amount = divAmount(s, exchangeRate);
         else if (s.frequency === "yearly" && m === 11) amount = divAmount(s, exchangeRate);
         if (amount > 0) { details.push({ name: s.name, amount }); total += amount; }
@@ -289,6 +305,7 @@ export function Dividend() {
   }, [effectiveStocks, exchangeRate]);
 
   const totalMonthlyEstimate = useMemo(() => effectiveStocks.reduce((sum, s) => {
+    if (s.frequency === "weekly") return sum + divAmount(s, exchangeRate) * 4.33;
     if (s.frequency === "monthly") return sum + divAmount(s, exchangeRate);
     if (s.frequency === "quarterly") return sum + divAmount(s, exchangeRate) / 3;
     if (s.frequency === "yearly") return sum + divAmount(s, exchangeRate) / 12;
@@ -296,6 +313,7 @@ export function Dividend() {
   }, 0), [effectiveStocks, exchangeRate]);
 
   const wifeMonthly = useMemo(() => effectiveStocks.filter(s => s.owner === 'wife').reduce((t, s) => {
+    if (s.frequency === "weekly") return t + divAmount(s, exchangeRate) * 4.33;
     if (s.frequency === "monthly") return t + divAmount(s, exchangeRate);
     if (s.frequency === "quarterly") return t + divAmount(s, exchangeRate) / 3;
     return t + divAmount(s, exchangeRate) / 12;
@@ -340,8 +358,68 @@ export function Dividend() {
   const accountTickers = useMemo(() => new Set(accounts.flatMap(a => a.holdings.map(h => h.ticker))), [accounts]);
   const manualRates = useMemo(() => rates.filter(r => !accountTickers.has(r.ticker)), [rates, accountTickers]);
 
+  // 티커별 계좌 목록 (툴팁용)
+  const tickerAccountMap = useMemo(() => {
+    const map = new Map<string, { owner: string; accLabel: string; quantity: number }[]>();
+    for (const s of effectiveStocks) {
+      if (!map.has(s.ticker)) map.set(s.ticker, []);
+      map.get(s.ticker)!.push({ owner: s.owner === 'wife' ? '지윤' : '오빠', accLabel: s.accLabel, quantity: s.quantity });
+    }
+    return map;
+  }, [effectiveStocks]);
+
+  // 중복 티커 합산 (티커 기준 1행)
+  const mergedStocks = useMemo(() => {
+    const map = new Map<string, EffectiveDividendStock>();
+    for (const s of effectiveStocks) {
+      if (map.has(s.ticker)) {
+        map.get(s.ticker)!.quantity += s.quantity;
+      } else {
+        map.set(s.ticker, { ...s });
+      }
+    }
+    return Array.from(map.values());
+  }, [effectiveStocks]);
+
+  const [tooltip, setTooltip] = useState<{ ticker: string; x: number; y: number } | null>(null);
+
   return (
     <div style={{ padding: isMobile ? '16px' : '24px' }}>
+      {/* 툴팁 — fixed 포지션으로 overflow 무관하게 렌더 */}
+      {tooltip && (() => {
+        const accs = tickerAccountMap.get(tooltip.ticker) || [];
+        const total = accs.reduce((s, a) => s + a.quantity, 0);
+        const TOOLTIP_W = 200;
+        const left = Math.min(tooltip.x + 8, window.innerWidth - TOOLTIP_W - 8);
+        const top = tooltip.y - 8;
+        return (
+          <div style={{
+            position: 'fixed', left, top, zIndex: 9999,
+            background: 'var(--bg-primary)', border: '1px solid var(--border-primary)',
+            borderRadius: 10, padding: '10px 14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+            minWidth: TOOLTIP_W, whiteSpace: 'nowrap',
+            fontSize: 'var(--text-xs)', color: 'var(--text-secondary)',
+            pointerEvents: 'none',
+            transform: 'translateY(-100%)',
+          }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8, fontSize: 'var(--text-sm)' }}>보유 계좌</div>
+            {accs.map((a, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+                <span style={{ color: 'var(--text-tertiary)' }}>{a.owner} · {a.accLabel}</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fmt(a.quantity)}</span>
+              </div>
+            ))}
+            {accs.length > 1 && (
+              <div style={{ borderTop: '1px solid var(--border-primary)', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                <span style={{ color: 'var(--text-tertiary)' }}>합계</span>
+                <span style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{fmt(total)}</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--text-primary)', margin: 0 }}>배당</h1>
@@ -556,7 +634,7 @@ export function Dividend() {
           <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>
-                내 배당 종목 ({effectiveStocks.length}종목)
+                내 배당 종목 ({mergedStocks.length}종목)
               </h2>
               <button className="toss-btn-primary" style={{ fontSize: "var(--text-sm)", padding: "6px 14px", display: "flex", alignItems: "center", gap: 4 }}
                 onClick={() => setShowAddForm(!showAddForm)}>
@@ -596,10 +674,10 @@ export function Dividend() {
                   </tr>
                 </thead>
                 <tbody>
-                  {effectiveStocks.map((stock) => {
+                  {mergedStocks.map((stock) => {
                     const rawAmount = divAmount(stock, exchangeRate);
-                    const monthlyAmount = stock.frequency === "monthly" ? rawAmount : stock.frequency === "quarterly" ? rawAmount / 3 : rawAmount / 12;
-                    const nextEx = getNextExDividendDate(stock.exDividendDay);
+                    const monthlyAmount = stock.frequency === "weekly" ? rawAmount * 4.33 : stock.frequency === "monthly" ? rawAmount : stock.frequency === "quarterly" ? rawAmount / 3 : rawAmount / 12;
+                    const nextEx = getNextExDividendDate(stock.exDividendDay, stock.frequency);
                     const dLeft = daysUntil(nextEx);
                     const isEditing = editingTicker === stock.ticker;
                     return (
@@ -609,11 +687,35 @@ export function Dividend() {
                           <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>{stock.ticker}</div>
                         </td>
                         <td style={{ padding: "10px 12px", fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
-                          <div>{stock.owner === 'wife' ? '지윤' : '오빠'}</div>
-                          <div style={{ color: 'var(--text-quaternary)' }}>{stock.accLabel}</div>
+                          {(() => {
+                            const accs = tickerAccountMap.get(stock.ticker) || [];
+                            const owners = [...new Set(accs.map(a => a.owner))];
+                            if (accs.length === 1) {
+                              return <>
+                                <div>{accs[0].owner}</div>
+                                <div style={{ color: 'var(--text-quaternary)' }}>{accs[0].accLabel}</div>
+                              </>;
+                            }
+                            return <>
+                              <div>{owners.join('·')}</div>
+                              <div style={{ color: 'var(--text-quaternary)' }}>{accs.length}개 계좌</div>
+                            </>;
+                          })()}
                         </td>
                         <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-secondary)" }}>
-                          {fmt(stock.quantity)}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            {fmt(stock.quantity)}
+                            <span
+                              onMouseEnter={(e) => {
+                                const r = e.currentTarget.getBoundingClientRect();
+                                setTooltip({ ticker: stock.ticker, x: r.right, y: r.top });
+                              }}
+                              onMouseLeave={() => setTooltip(null)}
+                              style={{ display: 'inline-flex', alignItems: 'center', cursor: 'default' }}
+                            >
+                              <MIcon name="info" size={13} style={{ color: 'var(--text-quaternary)', verticalAlign: 'middle' }} />
+                            </span>
+                          </div>
                         </td>
                         <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right" }}>
                           {isEditing ? (
@@ -629,7 +731,7 @@ export function Dividend() {
                           <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: "var(--text-xs)", fontWeight: "var(--font-medium)",
                             background: stock.frequency === "monthly" ? "rgba(49,130,246,0.1)" : "rgba(0,184,148,0.1)",
                             color: stock.frequency === "monthly" ? "var(--accent-blue)" : "#00b894" }}>
-                            {stock.frequency === "monthly" ? "월" : stock.frequency === "quarterly" ? "분기" : "연"}
+                            {stock.frequency === "weekly" ? "주" : stock.frequency === "monthly" ? "월" : stock.frequency === "quarterly" ? "분기" : "연"}
                           </span>
                         </td>
                         <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>

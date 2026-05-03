@@ -414,7 +414,8 @@ async function runDailySnapshot(env: Env) {
     }));
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = kstNow.toISOString().slice(0, 10);
 
   // 타이밍 신호 계산 (3개씩 배치)
   const currentSignals: SignalSnapshot = {};
@@ -455,6 +456,18 @@ async function runDailySnapshot(env: Env) {
 
   // 스냅샷 저장 먼저 — 이메일/신호 실패가 스냅샷을 날리지 않도록 분리
   await kv.put('snapshots', JSON.stringify(sorted));
+
+  // 기타 자산 일별 스냅샷 저장
+  const existingOtherSnaps: any[] = JSON.parse(await kv.get('other_asset_snapshots') || '[]');
+  const otherSnap = { date: today, assets: otherAssets.map((a: any) => ({ id: a.id, name: a.name, owner: a.owner, amount: a.amount })) };
+  const otherIdx = existingOtherSnaps.findIndex((s: any) => s.date === today);
+  if (otherIdx >= 0) existingOtherSnaps[otherIdx] = otherSnap;
+  else existingOtherSnaps.push(otherSnap);
+  const sortedOtherSnaps = existingOtherSnaps
+    .filter((s: any) => s && s.date)
+    .sort((a: any, b: any) => b.date.localeCompare(a.date))
+    .slice(0, 365);
+  await kv.put('other_asset_snapshots', JSON.stringify(sortedOtherSnaps));
 
   // 이메일·신호 저장은 실패해도 스냅샷에 영향 없음
   const sellItems = collectSellSignals(accounts, prices);
@@ -502,6 +515,24 @@ export default {
     if (request.method === 'POST' && url.pathname === '/etf-ranking/refresh') {
       const result = await fetchAndStoreEtfRanking(env);
       return json({ ok: true, result });
+    }
+
+    // GET /api/gold — 금 1돈 시세 (KRW)
+    if (request.method === 'GET' && url.pathname === '/api/gold') {
+      try {
+        const res = await fetch('https://finance.naver.com/marketindex/goldDailyQuote.naver', {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+        });
+        if (!res.ok) return json({ error: 'fetch failed' }, 500);
+        const html = await res.text();
+        const match = html.match(/<td class="num">([\d,]+\.\d+)/);
+        if (!match) return json({ error: 'parse failed' }, 500);
+        const pricePerGram = parseFloat(match[1].replace(/,/g, ''));
+        const pricePerDon = Math.round(pricePerGram * 3.75);
+        return json({ pricePerDon });
+      } catch {
+        return json({ error: 'error' }, 500);
+      }
     }
 
     // GET /exchange-rates
@@ -619,7 +650,7 @@ export default {
       return json(result);
     }
 
-    // GET /stock-detail/:ticker — MA20, MA60, 70일 고저점
+    // GET /stock-detail/:ticker — MA20, MA60, 60일 고저점
     if (request.method === 'GET' && url.pathname.startsWith('/stock-detail/')) {
       const ticker = url.pathname.slice('/stock-detail/'.length).split('?')[0];
       if (!/^[0-9A-Z]{6}$/i.test(ticker)) return json({ error: 'invalid ticker' }, 400);
