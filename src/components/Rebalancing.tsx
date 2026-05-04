@@ -1090,23 +1090,30 @@ export function Rebalancing() {
       {/* Per-holding breakdown */}
       <div className="toss-card" style={{ padding: 20 }}>
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: isMobile ? 10 : 0, marginBottom: showHoldingDetail ? 16 : 0 }}>
-          {/* 탭 + 펼치기 버튼 */}
+          {/* 탭 (아이콘 포함 — 클릭 시 해당 뷰 펼침, 이미 활성+펼침이면 접기) */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button
-              className={`toss-tab ${holdingViewMode === 'byClass' ? 'toss-tab-active' : ''}`}
-              onClick={() => { setHoldingViewMode('byClass'); setShowHoldingDetail(true); }}
-            >자산군별</button>
-            <button
-              className={`toss-tab ${holdingViewMode === 'byAccount' ? 'toss-tab-active' : ''}`}
-              onClick={() => { setHoldingViewMode('byAccount'); setShowHoldingDetail(true); }}
-            >계좌별</button>
-            <button
-              onClick={() => setShowHoldingDetail(v => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
-              title={showHoldingDetail ? '접기' : '펼치기'}
-            >
-              <span className="material-icons" style={{ fontSize: 18 }}>{showHoldingDetail ? 'expand_less' : 'expand_more'}</span>
-            </button>
+            {([{ mode: 'byClass', label: '자산군별' }, { mode: 'byAccount', label: '계좌별' }] as const).map(({ mode, label }) => {
+              const isActive = holdingViewMode === mode;
+              const isOpen = isActive && showHoldingDetail;
+              return (
+                <button
+                  key={mode}
+                  className={`toss-tab ${isActive ? 'toss-tab-active' : ''}`}
+                  onClick={() => {
+                    if (isActive) {
+                      setShowHoldingDetail(v => !v);
+                    } else {
+                      setHoldingViewMode(mode);
+                      setShowHoldingDetail(true);
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  {label}
+                  <span className="material-icons" style={{ fontSize: 15 }}>{isOpen ? 'expand_less' : 'expand_more'}</span>
+                </button>
+              );
+            })}
           </div>
           {/* 카테고리 필터 */}
           {showHoldingDetail && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
