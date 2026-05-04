@@ -113,12 +113,23 @@ function fmtP(n: number): string {
 
 function TimingBadge({ timing }: { timing: { label: string; color: string; desc: string; range?: [number, number] } }) {
   const [show, setShow] = useState(false);
+  const [tipDir, setTipDir] = useState<'up' | 'down'>('up');
+  const wrapRef = React.useRef<HTMLDivElement>(null);
   const hasRange = timing.range && timing.range[0] > 0 && timing.range[1] > 0;
   const rMin = hasRange ? Math.min(timing.range![0], timing.range![1]) : 0;
   const rMax = hasRange ? Math.max(timing.range![0], timing.range![1]) : 0;
+
+  const handleEnter = () => {
+    if (wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect();
+      setTipDir(rect.top < 180 ? 'down' : 'up');
+    }
+    setShow(true);
+  };
+
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}
-      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+    <div ref={wrapRef} style={{ position: 'relative', flexShrink: 0 }}
+      onMouseEnter={handleEnter} onMouseLeave={() => setShow(false)}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default',
         background: `color-mix(in srgb, ${timing.color} var(--badge-mix), transparent)`,
         borderRadius: 5, padding: hasRange ? '2px 6px 3px' : '2px 6px' }}>
@@ -136,7 +147,10 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
         )}
       </div>
       {show && (
-        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 300,
+        <div style={{
+          position: 'absolute',
+          ...(tipDir === 'up' ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }),
+          right: 0, zIndex: 300,
           background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
           borderRadius: 10, padding: '9px 14px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
           width: 280, lineHeight: 1.55, boxShadow: 'var(--shadow-tooltip)',
