@@ -305,6 +305,7 @@ export function Rebalancing() {
   const [showPieChart, setShowPieChart] = useState(true);
   const [selectedClass, setSelectedClass] = useState<AssetClass | null>(null);
   const [holdingViewMode, setHoldingViewMode] = useState<'byClass' | 'byAccount'>('byClass');
+  const [showHoldingDetail, setShowHoldingDetail] = useState(false);
 
   // KV에서 targets 로드 (마운트 시 1회)
   useEffect(() => {
@@ -840,7 +841,7 @@ export function Rebalancing() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  거래 금액
+                  매매할금액
                 </th>
               </tr>
             </thead>
@@ -1081,20 +1082,27 @@ export function Rebalancing() {
 
       {/* Per-holding breakdown */}
       <div className="toss-card" style={{ padding: 20 }}>
-        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: isMobile ? 10 : 0, marginBottom: 16 }}>
-          {/* 탭 */}
-          <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: isMobile ? 10 : 0, marginBottom: showHoldingDetail ? 16 : 0 }}>
+          {/* 탭 + 펼치기 버튼 */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button
               className={`toss-tab ${holdingViewMode === 'byClass' ? 'toss-tab-active' : ''}`}
-              onClick={() => setHoldingViewMode('byClass')}
+              onClick={() => { setHoldingViewMode('byClass'); setShowHoldingDetail(true); }}
             >자산군별</button>
             <button
               className={`toss-tab ${holdingViewMode === 'byAccount' ? 'toss-tab-active' : ''}`}
-              onClick={() => setHoldingViewMode('byAccount')}
+              onClick={() => { setHoldingViewMode('byAccount'); setShowHoldingDetail(true); }}
             >계좌별</button>
+            <button
+              onClick={() => setShowHoldingDetail(v => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
+              title={showHoldingDetail ? '접기' : '펼치기'}
+            >
+              <span className="material-icons" style={{ fontSize: 18 }}>{showHoldingDetail ? 'expand_less' : 'expand_more'}</span>
+            </button>
           </div>
           {/* 카테고리 필터 */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {showHoldingDetail && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* 전체 버튼 */}
             <button
               onClick={() => setSelectedClass(null)}
@@ -1129,10 +1137,10 @@ export function Rebalancing() {
                 </button>
               );
             })}
-          </div>
+          </div>}
         </div>
-        {/* ── 자산군별 뷰 ── */}
-        {holdingViewMode === 'byClass' && (<>
+        {/* ── 자산군별 뷰 / 계좌별 뷰 ── */}
+        {showHoldingDetail && holdingViewMode === 'byClass' && (<>
           {assetClasses.map((cls) => {
             const holdings = filteredHoldings.filter((h) => h.assetClass === cls);
             if (holdings.length === 0) return null;
@@ -1186,7 +1194,7 @@ export function Rebalancing() {
         </>)}
 
         {/* ── 계좌별 뷰 ── */}
-        {holdingViewMode === 'byAccount' && (() => {
+        {showHoldingDetail && holdingViewMode === 'byAccount' && (() => {
           const filteredAccounts = accounts.filter(acc =>
             selectedOwner === 'all' || acc.owner === selectedOwner
           );
