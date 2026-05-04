@@ -8,7 +8,6 @@ import { Dividend } from "./components/Dividend";
 import { Contribution } from "./components/Contribution";
 import { FinancialReview } from "./components/FinancialReview";
 import { HouseholdBudget } from "./components/HouseholdBudget";
-import { RebalancingGuide } from "./components/RebalancingGuide";
 import { OptimalGuide } from "./components/OptimalGuide";
 import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
@@ -57,7 +56,6 @@ const MENU_ITEMS = [
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
   { id: "dividend", label: "배당", materialIcon: "paid" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
-  { id: "rebalancing-guide", label: "리밸런싱 가이드", materialIcon: "auto_fix_high" },
   { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars" },
   { id: "chart", label: "차트", materialIcon: "candlestick_chart" },
   { id: "holdings", label: "보유종목", materialIcon: "list" },
@@ -229,7 +227,6 @@ export default function App() {
       case "contribution": return <Contribution />;
       case "financial-review": return <FinancialReview />;
       case "household-budget": return <HouseholdBudget />;
-      case "rebalancing-guide": return <RebalancingGuide />;
       case "optimal-guide": return <OptimalGuide />;
       case "chart": return <ChartPage />;
       case "account-return": return <AccountReturn />;
