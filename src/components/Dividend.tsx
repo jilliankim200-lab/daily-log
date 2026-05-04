@@ -147,6 +147,7 @@ export function Dividend() {
   const { isAmountHidden, accounts, isMobile } = useAppContext();
   const [activeTab, setActiveTab] = useState<"ranking" | "my">("my");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showDistribution, setShowDistribution] = useState(false);
 
   // KV에서 배당률 로드
   const [rates, setRates] = useState<DividendRate[]>([]);
@@ -691,6 +692,84 @@ export function Dividend() {
             })()}
           </div>
 
+          {/* 분산 현황 팝업 */}
+          {showDistribution && (() => {
+            // 계좌 유형별 집계
+            const accTypeOrder = ['ISA', 'IRP', '연금저축', '일반', 'CMA'];
+            type AccGroup = { type: string; accLabel: string; owner: string; stocks: string[]; monthlyDiv: number };
+            const groups: AccGroup[] = accounts.map(acc => {
+              const stocks = effectiveStocks.filter(s => s.accLabel === acc.alias && s.owner === acc.owner);
+              const monthlyDiv = stocks.reduce((sum, s) => {
+                if (s.frequency === 'weekly') return sum + divAmount(s, exchangeRate) * 4.33;
+                if (s.frequency === 'monthly') return sum + divAmount(s, exchangeRate);
+                if (s.frequency === 'quarterly') return sum + divAmount(s, exchangeRate) / 3;
+                return sum + divAmount(s, exchangeRate) / 12;
+              }, 0);
+              return { type: acc.accountType, accLabel: acc.alias, owner: acc.ownerName, stocks: stocks.map(s => s.name), monthlyDiv };
+            }).filter(g => g.stocks.length > 0)
+              .sort((a, b) => (accTypeOrder.indexOf(a.type) - accTypeOrder.indexOf(b.type)) || a.owner.localeCompare(b.owner));
+
+            // 소유자별 합산
+            const ownerMap = new Map<string, number>();
+            groups.forEach(g => ownerMap.set(g.owner, (ownerMap.get(g.owner) ?? 0) + g.monthlyDiv));
+            const totalDiv = groups.reduce((s, g) => s + g.monthlyDiv, 0);
+
+            return (
+              <div onClick={() => setShowDistribution(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '85vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                  {/* 헤더 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <div>
+                      <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>배당 종목 분산 현황</h2>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{mergedStocks.length}종목 · 월 예상 {hide(`${fmt(totalDiv)}원`)}</p>
+                    </div>
+                    <button onClick={() => setShowDistribution(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}><MIcon name="close" size={20} /></button>
+                  </div>
+
+                  {/* 소유자별 바 */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 6 }}>소유자별 월 배당</div>
+                    <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', marginBottom: 8 }}>
+                      {[...ownerMap.entries()].map(([owner, val], i) => (
+                        <div key={owner} style={{ width: `${totalDiv > 0 ? val / totalDiv * 100 : 0}%`, background: i === 0 ? 'var(--accent-blue)' : 'var(--color-profit)', transition: 'width 0.3s' }} />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      {[...ownerMap.entries()].map(([owner, val], i) => (
+                        <span key={owner} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? 'var(--accent-blue)' : 'var(--color-profit)', display: 'inline-block' }} />
+                          {owner} <b style={{ color: 'var(--text-primary)' }}>{hide(`${fmt(val)}원`)}</b>
+                          <span style={{ color: 'var(--text-tertiary)' }}>({totalDiv > 0 ? (val / totalDiv * 100).toFixed(0) : 0}%)</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 계좌별 상세 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {groups.map((g, i) => (
+                      <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 6, background: 'var(--bg-elevated)', color: 'var(--text-tertiary)', fontWeight: 600 }}>{g.type}</span>
+                            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{g.owner} · {g.accLabel}</span>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{g.stocks.length}종목</span>
+                          </div>
+                          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--accent-blue)' }}>{hide(`${fmt(g.monthlyDiv)}원/월`)}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {g.stocks.map((name, j) => (
+                            <span key={j} style={{ fontSize: 'var(--text-xs)', padding: '2px 7px', borderRadius: 10, background: 'var(--bg-primary)', border: '1px solid var(--border-secondary)', color: 'var(--text-secondary)' }}>{name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 월별 배당 캘린더 팝업 */}
           {showCalendar && (
             <div onClick={() => setShowCalendar(false)} style={{
@@ -726,9 +805,15 @@ export function Dividend() {
           {/* 배당 종목 리스트 (계좌 보유 기준) */}
           <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>
-                내 배당 종목 ({mergedStocks.length}종목)
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>
+                  내 배당 종목 ({mergedStocks.length}종목)
+                </h2>
+                <button onClick={() => setShowDistribution(true)}
+                  style={{ background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  <MIcon name="pie_chart" size={13} /> 분산 현황
+                </button>
+              </div>
               <button className="toss-btn-primary" style={{ fontSize: "var(--text-sm)", padding: "6px 14px", display: "flex", alignItems: "center", gap: 4 }}
                 onClick={() => setShowAddForm(!showAddForm)}>
                 <MIcon name="add" size={14} /> 배당율 추가
