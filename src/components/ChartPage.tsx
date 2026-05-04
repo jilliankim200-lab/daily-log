@@ -176,7 +176,6 @@ export function ChartPage() {
   const [fromPage, setFromPage] = useState<string | null>(null);
   const [fromTicker, setFromTicker] = useState<string | null>(null);
   const [customInput, setCustomInput] = useState('');
-  const isCustomTicker = selectedTicker && !allHoldings.find(h => h.ticker === selectedTicker);
 
   // 전체 고유 종목 목록 (6자리 티커)
   const allHoldings = useMemo(() => {
@@ -196,6 +195,8 @@ export function ChartPage() {
     }
     return result;
   }, [accounts]);
+
+  const isCustomTicker = selectedTicker && !allHoldings.find(h => h.ticker === selectedTicker);
 
   // sessionStorage에서 진입 컨텍스트 읽기
   useEffect(() => {
