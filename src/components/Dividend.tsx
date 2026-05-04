@@ -616,24 +616,40 @@ export function Dividend() {
               }
               // 티커별 추천 계좌: 보유 계좌 우선, 없으면 절세 순 + ISA 한도(1억) 체크
               const ISA_LIMIT = 100_000_000;
+              // avgPrice가 0이면 rankingData 현재가로 보완해 ISA 잔여 한도 추정
+              const rankingPriceMap = new Map(rankingData.map(r => [r.ticker, r.price]));
               const accValue = (acc: typeof accounts[0]) =>
-                acc.holdings.reduce((s, h) => s + (h.isFund ? (h.amount || 0) : (h.avgPrice * h.quantity)), 0);
+                acc.holdings.reduce((s, h) => {
+                  if (h.isFund) return s + (h.amount || 0);
+                  const price = h.avgPrice > 0 ? h.avgPrice : (rankingPriceMap.get(h.ticker) ?? 0);
+                  return s + price * h.quantity;
+                }, 0);
               const taxOrder = (t: string) => t === 'ISA' ? 0 : (t === 'IRP' || t === '연금저축') ? 1 : 2;
+
+              // 추천 진행 중 ISA에 누적 배정된 비용 추적 (순차 배정으로 1억 초과 방지)
+              const isaRunning = new Map<string, number>(
+                accounts.filter(a => a.accountType === 'ISA').map(a => [a.id, accValue(a)])
+              );
 
               const getRecommendedAccounts = (ticker: string, purchaseCost: number) => {
                 const holding = accounts.filter(a => a.holdings.some(h => h.ticker === ticker));
                 if (holding.length > 0) {
                   return { type: 'holding' as const, accounts: holding.map(a => ({ label: `${a.ownerName} ${a.alias}`, type: a.accountType })) };
                 }
-                // ISA는 잔여 한도(1억 - 현재 총액) >= 매수비용인 계좌만 허용
+                // ISA: 누적 배정액 + 이번 매수비용이 1억 이하인 계좌만 허용
                 const available = [...accounts].filter(a => {
-                  if (a.accountType === 'ISA') return accValue(a) + purchaseCost <= ISA_LIMIT;
+                  if (a.accountType === 'ISA') return (isaRunning.get(a.id) ?? 0) + purchaseCost <= ISA_LIMIT;
                   return true;
                 }).sort((a, b) => taxOrder(a.accountType) - taxOrder(b.accountType));
 
                 // 가능한 계좌가 없으면 한도 상관없이 순위 첫번째 반환
                 const pool = available.length > 0 ? available : [...accounts].sort((a, b) => taxOrder(a.accountType) - taxOrder(b.accountType));
-                return { type: 'suggest' as const, accounts: pool.slice(0, 1).map(a => ({ label: `${a.ownerName} ${a.alias}`, type: a.accountType })) };
+                const best = pool[0];
+                // ISA에 배정됐으면 누적액 갱신
+                if (best && best.accountType === 'ISA') {
+                  isaRunning.set(best.id, (isaRunning.get(best.id) ?? 0) + purchaseCost);
+                }
+                return { type: 'suggest' as const, accounts: [{ label: `${best.ownerName} ${best.alias}`, type: best.accountType }] };
               };
               const mixSuggestions = mixPicks.map(c => {
                 const qty = Math.ceil(gap / MIX_TARGET / c.recentDividend);
