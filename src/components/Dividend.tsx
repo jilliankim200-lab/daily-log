@@ -658,14 +658,13 @@ export function Dividend() {
                           {/* 추천 계좌 행 */}
                           {m.recAccounts && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <MIcon name={m.recAccounts.type === 'holding' ? 'account_balance_wallet' : 'recommend'} size={11} style={{ color: m.recAccounts.type === 'holding' ? 'var(--accent-blue)' : 'var(--color-profit)', flexShrink: 0 }} />
+                              <MIcon name={m.recAccounts.type === 'holding' ? 'account_balance_wallet' : 'recommend'} size={11} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
                               <span style={{ color: 'var(--text-tertiary)' }}>
                                 {m.recAccounts.type === 'holding' ? '이미 보유' : '추천 계좌'}:
                               </span>
                               {m.recAccounts.accounts.map((a, i) => (
                                 <span key={i} style={{ padding: '1px 6px', borderRadius: 8, fontWeight: 600,
-                                  background: m.recAccounts!.type === 'holding' ? 'rgba(49,130,246,0.1)' : 'rgba(0,184,148,0.1)',
-                                  color: m.recAccounts!.type === 'holding' ? 'var(--accent-blue)' : 'var(--color-profit)' }}>
+                                  background: 'rgba(49,130,246,0.1)', color: 'var(--accent-blue)' }}>
                                   {a.label}
                                 </span>
                               ))}
