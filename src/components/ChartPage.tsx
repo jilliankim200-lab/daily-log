@@ -175,6 +175,8 @@ export function ChartPage() {
   const [showGuide, setShowGuide] = useState(false);
   const [fromPage, setFromPage] = useState<string | null>(null);
   const [fromTicker, setFromTicker] = useState<string | null>(null);
+  const [customInput, setCustomInput] = useState('');
+  const isCustomTicker = selectedTicker && !allHoldings.find(h => h.ticker === selectedTicker);
 
   // 전체 고유 종목 목록 (6자리 티커)
   const allHoldings = useMemo(() => {
@@ -269,6 +271,14 @@ export function ChartPage() {
   const yMin = allPrices.length > 0 ? Math.floor(Math.min(...allPrices) * 0.98) : 0;
   const yMax = allPrices.length > 0 ? Math.ceil(Math.max(...allPrices) * 1.02) : 100;
 
+  function handleCustomSearch() {
+    const t = customInput.trim().toUpperCase();
+    if (!/^[0-9A-Z]{4,6}$/.test(t)) return;
+    setSelectedTicker(t);
+    setSelectedName(t);
+    setCustomInput('');
+  }
+
   const p = isMobile ? '16px 12px' : '24px';
 
   // X축 라벨 간격 (데이터 많으면 듬성듬성)
@@ -282,7 +292,7 @@ export function ChartPage() {
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>차트</div>
-          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>보유 종목의 주가와 이동평균선을 확인합니다.</div>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>보유 종목 또는 티커를 직접 입력해 주가와 이동평균선을 확인합니다.</div>
         </div>
         {fromPage && (
           <button
@@ -304,7 +314,7 @@ export function ChartPage() {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, alignItems: 'center' }}>
         {/* 종목 선택 */}
         <select
-          value={selectedTicker}
+          value={isCustomTicker ? '' : selectedTicker}
           onChange={e => {
             const h = allHoldings.find(h => h.ticker === e.target.value);
             setSelectedTicker(e.target.value);
@@ -316,12 +326,40 @@ export function ChartPage() {
             padding: '7px 12px', fontSize: 'var(--text-sm)', cursor: 'pointer', minWidth: 200,
           }}
         >
+          {isCustomTicker && <option value="">— 보유 종목 선택 —</option>}
           {allHoldings.map(h => (
             <option key={h.ticker} value={h.ticker}>
               {h.name} ({h.ticker})
             </option>
           ))}
         </select>
+
+        {/* 티커 직접 입력 */}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <input
+            value={customInput}
+            onChange={e => setCustomInput(e.target.value.toUpperCase())}
+            onKeyDown={e => { if (e.key === 'Enter') handleCustomSearch(); }}
+            placeholder="티커 직접 입력"
+            maxLength={6}
+            style={{
+              background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+              border: '1px solid var(--border-primary)', borderRadius: 8,
+              padding: '7px 12px', fontSize: 'var(--text-sm)', width: 130,
+              outline: 'none',
+            }}
+          />
+          <button
+            onClick={handleCustomSearch}
+            style={{
+              background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+              borderRadius: 8, padding: '6px 10px', cursor: 'pointer',
+              color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
+            }}
+          >
+            <MIcon name="search" size={16} />
+          </button>
+        </div>
 
         {/* 기간 선택 */}
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
