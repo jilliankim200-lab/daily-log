@@ -857,9 +857,56 @@ export function AssetChange() {
               );
             })}
           </div>
+        ) : isYearFilter ? (
+          /* ── PC 월별: 2열 카드 그리드 ── */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+            {(sortNewest ? monthlySummary : [...monthlySummary].reverse()).map(row => (
+              <div key={row.date} style={{
+                background: 'var(--bg-secondary)', borderRadius: 12,
+                padding: '16px 18px', border: '1px solid var(--border-primary)',
+              }}>
+                {/* 헤더: 월 + 수익률 + 리포트 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {row.date.replace('-', '년 ')}월
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: getChangeColor(row.changeRate) }}>
+                      {formatRate(row.changeRate, isAmountHidden)}
+                    </span>
+                    <button onClick={() => setReportMonth(row)} title="월간 리포트" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 6, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>
+                      <MIcon name="description" size={15} style={{ color: 'var(--accent-blue)' }} />
+                    </button>
+                  </div>
+                </div>
+                {/* 총 자산 */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 3 }}>총 자산</div>
+                  <div className="toss-number" style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {formatAmount(row.totalAsset, isAmountHidden)}원
+                  </div>
+                </div>
+                {/* 증감 + 배당 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--border-secondary)' }}>
+                  <div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 2 }}>증감</div>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: getChangeColor(row.assetChange) }}>
+                      {row.assetChange > 0 ? '+' : ''}{formatAmount(row.assetChange, isAmountHidden)}원
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 2 }}>배당금</div>
+                    <div className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: row.lastDividend ? 'var(--accent-blue)' : 'var(--text-quaternary)' }}>
+                      {row.lastDividend ? formatAmount(row.lastDividend, isAmountHidden) + '원' : '—'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
-          /* ── PC: 기존 테이블 ── */
-          <div style={{ overflowX: "auto" }}>
+          /* ── PC 일별: 테이블 (maxWidth 제한) ── */
+          <div style={{ overflowX: "auto", maxWidth: 760 }}>
             <table className="toss-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border-primary)" }}>
