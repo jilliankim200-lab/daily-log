@@ -613,23 +613,31 @@ export function Dividend() {
                 catCount.set(c.category, n + 1);
                 mixPicks.push(c);
               }
-              // 티커별 추천 계좌: 보유 계좌 우선, 없으면 절세 순 (ISA → 연금 → 일반)
-              const getRecommendedAccounts = (ticker: string) => {
+              // 티커별 추천 계좌: 보유 계좌 우선, 없으면 절세 순 + ISA 한도(1억) 체크
+              const ISA_LIMIT = 100_000_000;
+              const accValue = (acc: typeof accounts[0]) =>
+                acc.holdings.reduce((s, h) => s + (h.isFund ? (h.amount || 0) : (h.avgPrice * h.quantity)), 0);
+              const taxOrder = (t: string) => t === 'ISA' ? 0 : (t === 'IRP' || t === '연금저축') ? 1 : 2;
+
+              const getRecommendedAccounts = (ticker: string, purchaseCost: number) => {
                 const holding = accounts.filter(a => a.holdings.some(h => h.ticker === ticker));
                 if (holding.length > 0) {
                   return { type: 'holding' as const, accounts: holding.map(a => ({ label: `${a.ownerName} ${a.alias}`, type: a.accountType })) };
                 }
-                const taxOrder = (t: string) => {
-                  if (t === 'ISA') return 0;
-                  if (t === 'IRP' || t === '연금저축') return 1;
-                  return 2;
-                };
-                const best = [...accounts].sort((a, b) => taxOrder(a.accountType) - taxOrder(b.accountType))[0];
-                return best ? { type: 'suggest' as const, accounts: [{ label: `${best.ownerName} ${best.alias}`, type: best.accountType }] } : null;
+                // ISA는 잔여 한도(1억 - 현재 총액) >= 매수비용인 계좌만 허용
+                const available = [...accounts].filter(a => {
+                  if (a.accountType === 'ISA') return accValue(a) + purchaseCost <= ISA_LIMIT;
+                  return true;
+                }).sort((a, b) => taxOrder(a.accountType) - taxOrder(b.accountType));
+
+                // 가능한 계좌가 없으면 한도 상관없이 순위 첫번째 반환
+                const pool = available.length > 0 ? available : [...accounts].sort((a, b) => taxOrder(a.accountType) - taxOrder(b.accountType));
+                return { type: 'suggest' as const, accounts: pool.slice(0, 1).map(a => ({ label: `${a.ownerName} ${a.alias}`, type: a.accountType })) };
               };
               const mixSuggestions = mixPicks.map(c => {
                 const qty = Math.ceil(gap / MIX_TARGET / c.recentDividend);
-                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category, changeRate: c.priceChangeRate ?? 0, recAccounts: getRecommendedAccounts(c.ticker) };
+                const cost = qty * c.price;
+                return { name: c.name, ticker: c.ticker, qty, cost, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category, changeRate: c.priceChangeRate ?? 0, recAccounts: getRecommendedAccounts(c.ticker, cost) };
               });
               const mixTotalCost = mixSuggestions.reduce((s, m) => s + m.cost, 0);
               const mixTotalDiv = mixSuggestions.reduce((s, m) => s + m.monthlyDiv, 0);
