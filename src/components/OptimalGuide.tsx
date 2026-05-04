@@ -1259,6 +1259,11 @@ export function OptimalGuide() {
   const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [sellConfig, setSellConfig] = useState<SellConfig>(loadSellConfig);
+  const [sellEngineEnabled, setSellEngineEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sell_engine_enabled');
+    return saved === null ? true : saved === 'true';
+  });
+  const [showFilterTip, setShowFilterTip] = useState(false);
 
   const handleSellConfigChange = (key: keyof SellConfig, delta: number) => {
     setSellConfig(prev => {
@@ -1354,9 +1359,9 @@ export function OptimalGuide() {
     computeAllPlans(accounts, prices, targets, new Set(), executedInCycle),
     [accounts, prices, targets, executedInCycle]);
 
-  // sellEngine 게이트: signals 로드 완료 전에는 필터 안 함
+  // sellEngine 게이트: 비활성화 시 rawAccountPlans 그대로 사용
   const accountPlans = useMemo(() => {
-    if (Object.keys(signals).length === 0) return rawAccountPlans;
+    if (!sellEngineEnabled || Object.keys(signals).length === 0) return rawAccountPlans;
     return rawAccountPlans.map(plan => ({
       ...plan,
       sells: plan.sells.filter(s => {
@@ -1374,7 +1379,7 @@ export function OptimalGuide() {
         return decision.action !== 'hold';
       }),
     }));
-  }, [rawAccountPlans, signals, sellConfig]);
+  }, [rawAccountPlans, signals, sellConfig, sellEngineEnabled]);
 
   const totalSells = useMemo(
     () => accountPlans.reduce((s, p) => s + p.sells.length, 0),
@@ -1634,7 +1639,55 @@ export function OptimalGuide() {
               style={{ background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 4, color: 'var(--text-secondary)', width: 20, height: 20, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
           </div>
         </div>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 'auto' }}>자동 저장</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>자동 저장</span>
+          <div style={{ position: 'relative' }}
+            onMouseEnter={() => setShowFilterTip(true)}
+            onMouseLeave={() => setShowFilterTip(false)}>
+            <button
+              onClick={() => {
+                const next = !sellEngineEnabled;
+                setSellEngineEnabled(next);
+                localStorage.setItem('sell_engine_enabled', String(next));
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px',
+                borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 700,
+                background: sellEngineEnabled ? 'var(--color-profit)' : 'var(--bg-tertiary)',
+                color: sellEngineEnabled ? '#fff' : 'var(--text-tertiary)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <MIcon name={sellEngineEnabled ? 'check_circle' : 'radio_button_unchecked'} size={13} />
+              필터 {sellEngineEnabled ? 'ON' : 'OFF'}
+            </button>
+            {showFilterTip && (
+              <div style={{
+                position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 400,
+                background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
+                borderRadius: 10, padding: '10px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)',
+                width: 260, lineHeight: 1.65, boxShadow: 'var(--shadow-tooltip)',
+                whiteSpace: 'normal', wordBreak: 'keep-all', pointerEvents: 'none',
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 'var(--text-sm)' }}>매도 기준 필터</div>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, color: 'var(--color-profit)' }}>ON</span>
+                  {' — '}매도 엔진 4가지 조건을 모두 검사합니다.
+                  <ul style={{ margin: '4px 0 0 0', paddingLeft: 16, color: 'var(--text-secondary)' }}>
+                    <li>상승 추세(MA20{'>'} MA60)이면 매도 제외</li>
+                    <li>손절 기준 이상이면 매도 포함</li>
+                    <li>수익실현 기준 이상이고 추세 약화 시 매도</li>
+                    <li>Veto: 주가{'>'} MA20이면 홀드</li>
+                  </ul>
+                </div>
+                <div>
+                  <span style={{ fontWeight: 700, color: 'var(--text-tertiary)' }}>OFF</span>
+                  {' — '}기본 수익률 기준만 적용. 매도 신호 종목을 모두 표시합니다.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 요약 카드 */}
