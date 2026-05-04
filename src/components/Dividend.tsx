@@ -613,9 +613,23 @@ export function Dividend() {
                 catCount.set(c.category, n + 1);
                 mixPicks.push(c);
               }
+              // 티커별 추천 계좌: 보유 계좌 우선, 없으면 절세 순 (ISA → 연금 → 일반)
+              const getRecommendedAccounts = (ticker: string) => {
+                const holding = accounts.filter(a => a.holdings.some(h => h.ticker === ticker));
+                if (holding.length > 0) {
+                  return { type: 'holding' as const, accounts: holding.map(a => ({ label: `${a.ownerName} ${a.alias}`, type: a.accountType })) };
+                }
+                const taxOrder = (t: string) => {
+                  if (t === 'ISA') return 0;
+                  if (t === 'IRP' || t === '연금저축') return 1;
+                  return 2;
+                };
+                const best = [...accounts].sort((a, b) => taxOrder(a.accountType) - taxOrder(b.accountType))[0];
+                return best ? { type: 'suggest' as const, accounts: [{ label: `${best.ownerName} ${best.alias}`, type: best.accountType }] } : null;
+              };
               const mixSuggestions = mixPicks.map(c => {
                 const qty = Math.ceil(gap / MIX_TARGET / c.recentDividend);
-                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category, changeRate: c.priceChangeRate ?? 0 };
+                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category, changeRate: c.priceChangeRate ?? 0, recAccounts: getRecommendedAccounts(c.ticker) };
               });
               const mixTotalCost = mixSuggestions.reduce((s, m) => s + m.cost, 0);
               const mixTotalDiv = mixSuggestions.reduce((s, m) => s + m.monthlyDiv, 0);
@@ -624,17 +638,39 @@ export function Dividend() {
                   {mixSuggestions.length >= 2 && (
                     <div>
                       {mixSuggestions.map(m => (
-                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0', alignItems: 'center', borderBottom: '1px solid var(--border-secondary)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{m.name}</span>
-                            <span style={{ color: 'var(--text-quaternary)', fontSize: '10px', flexShrink: 0 }}>[{m.category}]</span>
-                            {m.changeRate !== 0 && (
-                              <span style={{ flexShrink: 0, fontWeight: 700, color: m.changeRate > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
-                                {m.changeRate > 0 ? '▲' : '▼'}{Math.abs(m.changeRate).toFixed(2)}%
-                              </span>
-                            )}
+                        <div key={m.ticker} style={{ fontSize: 'var(--text-xs)', padding: '8px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+                          {/* 종목명 행 */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{m.name}</span>
+                              <span style={{ color: 'var(--text-quaternary)', fontSize: '10px', flexShrink: 0 }}>[{m.category}]</span>
+                              {m.changeRate !== 0 && (
+                                <span style={{ flexShrink: 0, fontWeight: 700, color: m.changeRate > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                                  {m.changeRate > 0 ? '▲' : '▼'}{Math.abs(m.changeRate).toFixed(2)}%
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ whiteSpace: 'nowrap', marginLeft: 8 }}>
+                              <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span>
+                              <span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span>
+                            </span>
                           </div>
-                          <span style={{ whiteSpace: 'nowrap', marginLeft: 8 }}><span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span></span>
+                          {/* 추천 계좌 행 */}
+                          {m.recAccounts && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <MIcon name={m.recAccounts.type === 'holding' ? 'account_balance_wallet' : 'recommend'} size={11} style={{ color: m.recAccounts.type === 'holding' ? 'var(--accent-blue)' : 'var(--color-profit)', flexShrink: 0 }} />
+                              <span style={{ color: 'var(--text-tertiary)' }}>
+                                {m.recAccounts.type === 'holding' ? '이미 보유' : '추천 계좌'}:
+                              </span>
+                              {m.recAccounts.accounts.map((a, i) => (
+                                <span key={i} style={{ padding: '1px 6px', borderRadius: 8, fontWeight: 600,
+                                  background: m.recAccounts!.type === 'holding' ? 'rgba(49,130,246,0.1)' : 'rgba(0,184,148,0.1)',
+                                  color: m.recAccounts!.type === 'holding' ? 'var(--accent-blue)' : 'var(--color-profit)' }}>
+                                  {a.label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                       <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(49,130,246,0.08)', fontSize: 'var(--text-xs)', display: 'flex', justifyContent: 'space-between' }}>
