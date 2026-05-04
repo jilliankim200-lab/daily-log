@@ -204,23 +204,23 @@ export function MonthlyStrategy() {
   };
 
   return (
-    <div style={{ padding: isMobile ? '16px 16px 80px' : '24px 24px 80px', maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
 
       {/* 헤더 */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>2026년 5월 전략</span>
-          <span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(255,71,87,0.12)', color: 'var(--color-loss)', fontSize: 13, fontWeight: 700 }}>Sell in May</span>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>2026년 5월 전략</h1>
+          <span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(255,71,87,0.12)', color: 'var(--color-loss)', fontSize: 'var(--text-sm)', fontWeight: 700 }}>Sell in May</span>
         </div>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-          5월~10월은 역사적으로 주식 수익률이 낮은 시기입니다. 고위험 종목을 선별 매도하고 안전자산 비중을 높이는 전략을 분석했습니다.<br />
-          <span style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>※ 현금화 = 계좌 내 매도 후 단기채·MMF 이동 (계좌 외부 인출 아님)</span>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.6, margin: 0 }}>
+          5월~10월은 역사적으로 주식 수익률이 낮은 시기. 고위험 종목을 선별 매도하고 안전자산 비중을 높이는 전략을 분석했습니다.<br />
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}>※ 현금화 = 계좌 내 매도 후 단기채·MMF 이동 (계좌 외부 인출 아님)</span>
         </p>
       </div>
 
       {/* 현재 자산군 비중 요약 */}
       <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>현재 자산군 비중</div>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 14px 0', paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>현재 자산군 비중</div>
         <div style={{ display: 'flex', gap: 0, height: 12, borderRadius: 6, overflow: 'hidden', marginBottom: 10 }}>
           {(['주식', '커버드콜', '채권', '금', '기타'] as AssetClass[]).map(cls => (
             <div key={cls} style={{ width: `${allocation.pct[cls]}%`, background: ALLOC_COLORS[cls], transition: 'width 0.3s' }} />
@@ -228,14 +228,14 @@ export function MonthlyStrategy() {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
           {(['주식', '커버드콜', '채권', '금', '기타'] as AssetClass[]).map(cls => (
-            <span key={cls} style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span key={cls} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: ALLOC_COLORS[cls], display: 'inline-block' }} />
               {cls} <b style={{ color: 'var(--text-primary)' }}>{allocation.pct[cls]}%</b>
               <span style={{ color: 'var(--text-tertiary)' }}>({fmt(allocation.byClass[cls])})</span>
             </span>
           ))}
         </div>
-        <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text-tertiary)' }}>
+        <div style={{ marginTop: 10, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
           총 자산 <b style={{ color: 'var(--text-primary)' }}>{fmtM(allocation.total)}</b>
           &nbsp;·&nbsp;주식 비중이 높을수록 Sell in May 영향 큼
         </div>
@@ -243,7 +243,7 @@ export function MonthlyStrategy() {
 
       {/* 전략 요약 박스 */}
       <div style={{ ...cardStyle, background: 'rgba(255,71,87,0.05)', border: '1px solid rgba(255,71,87,0.2)' }}>
-        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-loss)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-loss)', margin: '0 0 14px 0', paddingBottom: 8, borderBottom: '2px solid var(--color-loss)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <MIcon name="insights" size={16} /> 5월 전략 요약
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 10 }}>
@@ -253,9 +253,9 @@ export function MonthlyStrategy() {
             { label: '목표 주식 비중', value: '35~38%', sub: `현재 ${allocation.pct['주식']}%` },
           ].map(s => (
             <div key={s.label} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
-              <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 2 }}>{s.label}</div>
               <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>{s.value}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-quaternary)' }}>{s.sub}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-quaternary)' }}>{s.sub}</div>
             </div>
           ))}
         </div>
@@ -270,12 +270,12 @@ export function MonthlyStrategy() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MIcon name={group.icon} size={16} style={{ color: group.color }} />
-                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: group.color }}>{group.label}</span>
-                <span style={{ fontSize: 13, padding: '1px 7px', borderRadius: 10, background: `${group.color}20`, color: group.color, fontWeight: 700 }}>{group.items.length}종목</span>
+                <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: group.color }}>{group.label}</span>
+                <span style={{ fontSize: 'var(--text-sm)', padding: '1px 7px', borderRadius: 10, background: `${group.color}20`, color: group.color, fontWeight: 700 }}>{group.items.length}종목</span>
               </div>
-              <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>합계 {fmtM(groupTotal)}</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>합계 {fmtM(groupTotal)}</span>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 12 }}>{group.desc}</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 12 }}>{group.desc}</div>
 
             {group.items.map((c, i) => (
               <div key={`${c.accId}-${c.holding.id}`} style={{
@@ -285,23 +285,23 @@ export function MonthlyStrategy() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 3 }}>
                       <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{c.holding.name}</span>
-                      <span style={{ fontSize: 13, padding: '1px 6px', borderRadius: 10, background: `${getRiskColor(c.risk)}20`, color: getRiskColor(c.risk), fontWeight: 700, whiteSpace: 'nowrap' }}>{c.risk}</span>
+                      <span style={{ fontSize: 'var(--text-sm)', padding: '1px 6px', borderRadius: 10, background: `${getRiskColor(c.risk)}20`, color: getRiskColor(c.risk), fontWeight: 700, whiteSpace: 'nowrap' }}>{c.risk}</span>
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 2 }}>
                       {c.owner} · {c.accAlias} ({c.accType})
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
                     <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{fmtM(c.val)}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
                       {c.holding.quantity ? `${c.holding.quantity}주` : ''} · 평단 {c.holding.avgPrice?.toLocaleString()}
                     </div>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 4 }}>
                   <span style={{ color: 'var(--text-tertiary)' }}>매도 이유: </span>{c.reason}
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6, background: 'var(--bg-elevated)', fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6, background: 'var(--bg-elevated)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 600 }}>
                   <MIcon name="arrow_forward" size={12} style={{ color: group.color }} />
                   {c.action}
                 </div>
@@ -313,7 +313,7 @@ export function MonthlyStrategy() {
 
       {/* 매도 후 이동 전략 */}
       <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 14px 0', paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <MIcon name="swap_horiz" size={16} style={{ color: 'var(--color-profit)' }} />
           매도 후 이동 전략
         </div>
@@ -329,7 +329,7 @@ export function MonthlyStrategy() {
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)', marginBottom: 2 }}>{item.title}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.desc}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{item.desc}</div>
             </div>
           </div>
         ))}
@@ -337,11 +337,11 @@ export function MonthlyStrategy() {
 
       {/* 종목 심층 분석 */}
       <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0', paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <MIcon name="search" size={16} style={{ color: 'var(--accent-blue)' }} />
           종목 심층 분석
         </div>
-        <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 16 }}>5월 전략 관점에서 보유 종목을 개별 분석합니다.</div>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 16 }}>5월 전략 관점에서 보유 종목을 개별 분석합니다.</div>
 
         {/* KODEX 200타겟위클리커버드콜 */}
         <div style={{ borderRadius: 10, border: '1px solid var(--border-secondary)', overflow: 'hidden' }}>
@@ -349,16 +349,16 @@ export function MonthlyStrategy() {
           <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)', marginBottom: 2 }}>KODEX 200타겟위클리커버드콜</div>
-              <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>498400 · 코스피200 기반 주간 커버드콜</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>498400 · 코스피200 기반 주간 커버드콜</div>
             </div>
-            <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(0,184,148,0.12)', color: 'var(--color-profit)', fontSize: 13, fontWeight: 700 }}>
+            <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(0,184,148,0.12)', color: 'var(--color-profit)', fontSize: 'var(--text-sm)', fontWeight: 700 }}>
               ✓ 5월 유지 추천
             </span>
           </div>
 
           {/* 보유 현황 */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-secondary)' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>보유 현황</div>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>보유 현황</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[
                 { owner: '지윤', acc: '펀슈(일반)', qty: 327, avg: 16241 },
@@ -368,7 +368,7 @@ export function MonthlyStrategy() {
               ].map((row, i) => {
                 const val = row.qty * row.avg;
                 return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-sm)' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>
                       <b style={{ color: 'var(--text-primary)' }}>{row.owner}</b> · {row.acc}
                     </span>
@@ -379,7 +379,7 @@ export function MonthlyStrategy() {
                   </div>
                 );
               })}
-              <div style={{ borderTop: '1px solid var(--border-secondary)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700 }}>
+              <div style={{ borderTop: '1px solid var(--border-secondary)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', fontWeight: 700 }}>
                 <span style={{ color: 'var(--text-secondary)' }}>합계</span>
                 <span style={{ color: 'var(--text-primary)' }}>1,699주 · 약 {fmtM(1699 * 13500)}</span>
               </div>
@@ -388,7 +388,7 @@ export function MonthlyStrategy() {
 
           {/* 분석 */}
           <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>5월 전략 분석</div>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>5월 전략 분석</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
                 {
@@ -415,8 +415,8 @@ export function MonthlyStrategy() {
                 <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-secondary)' : undefined }}>
                   <MIcon name={item.icon} size={15} style={{ color: item.color, flexShrink: 0, marginTop: 1 }} />
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 2 }}>{item.title}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.desc}</div>
+                    <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)', marginBottom: 2 }}>{item.title}</div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.desc}</div>
                   </div>
                 </div>
               ))}
@@ -426,7 +426,7 @@ export function MonthlyStrategy() {
       </div>
 
       {/* 면책 */}
-      <div style={{ fontSize: 13, color: 'var(--text-quaternary)', textAlign: 'center', lineHeight: 1.6, padding: '8px 0' }}>
+      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-quaternary)', textAlign: 'center', lineHeight: 1.6, padding: '8px 0' }}>
         이 분석은 평단가 기준 데이터이며 현재 수익률과 다를 수 있습니다.<br />
         투자 결정은 본인 판단 하에 이루어지며, 이 페이지는 참고용입니다.
       </div>
