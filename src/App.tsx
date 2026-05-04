@@ -78,7 +78,11 @@ const FONT_SIZES = [
 ];
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentPage, setCurrentPage] = useState(() => {
+    // 새 탭으로 차트 이동 시 초기 페이지를 chart로 설정
+    if (localStorage.getItem('chart_new_tab_ticker')) return 'chart';
+    return 'dashboard';
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [isAmountHidden, setIsAmountHidden] = useState(true);

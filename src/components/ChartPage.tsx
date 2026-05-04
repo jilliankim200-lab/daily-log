@@ -198,8 +198,15 @@ export function ChartPage() {
 
   const isCustomTicker = selectedTicker && !allHoldings.find(h => h.ticker === selectedTicker);
 
-  // sessionStorage에서 진입 컨텍스트 읽기
+  // sessionStorage(같은 탭) 또는 localStorage(새 탭) 진입 컨텍스트 읽기
   useEffect(() => {
+    const lsTicker = localStorage.getItem('chart_new_tab_ticker');
+    if (lsTicker) {
+      localStorage.removeItem('chart_new_tab_ticker');
+      setFromTicker(lsTicker);
+      setDays(90);
+      return;
+    }
     const navTicker = sessionStorage.getItem('chart_nav_ticker');
     const navFrom   = sessionStorage.getItem('chart_nav_from');
     if (navTicker) {

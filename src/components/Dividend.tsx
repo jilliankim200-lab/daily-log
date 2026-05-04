@@ -693,6 +693,16 @@ export function Dividend() {
                                   {a.label}
                                 </span>
                               ))}
+                              <button
+                                onClick={() => {
+                                  localStorage.setItem('chart_new_tab_ticker', m.ticker);
+                                  window.open(window.location.href, '_blank');
+                                }}
+                                title="3개월 차트 보기"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', lineHeight: 1 }}
+                              >
+                                <MIcon name="show_chart" size={13} style={{ color: 'var(--accent-blue)' }} />
+                              </button>
                             </div>
                           )}
                         </div>
