@@ -694,76 +694,85 @@ export function Dividend() {
 
           {/* 분산 현황 팝업 */}
           {showDistribution && (() => {
-            // 계좌 유형별 집계
-            const accTypeOrder = ['ISA', 'IRP', '연금저축', '일반', 'CMA'];
-            type AccGroup = { type: string; accLabel: string; owner: string; stocks: string[]; monthlyDiv: number };
-            const groups: AccGroup[] = accounts.map(acc => {
-              const stocks = effectiveStocks.filter(s => s.accLabel === acc.alias && s.owner === acc.owner);
-              const monthlyDiv = stocks.reduce((sum, s) => {
-                if (s.frequency === 'weekly') return sum + divAmount(s, exchangeRate) * 4.33;
-                if (s.frequency === 'monthly') return sum + divAmount(s, exchangeRate);
-                if (s.frequency === 'quarterly') return sum + divAmount(s, exchangeRate) / 3;
-                return sum + divAmount(s, exchangeRate) / 12;
-              }, 0);
-              return { type: acc.accountType, accLabel: acc.alias, owner: acc.ownerName, stocks: stocks.map(s => s.name), monthlyDiv };
-            }).filter(g => g.stocks.length > 0)
-              .sort((a, b) => (accTypeOrder.indexOf(a.type) - accTypeOrder.indexOf(b.type)) || a.owner.localeCompare(b.owner));
-
-            // 소유자별 합산
-            const ownerMap = new Map<string, number>();
-            groups.forEach(g => ownerMap.set(g.owner, (ownerMap.get(g.owner) ?? 0) + g.monthlyDiv));
-            const totalDiv = groups.reduce((s, g) => s + g.monthlyDiv, 0);
+            // 카테고리별 집계
+            const CAT_COLORS: Record<string, string> = {
+              '나스닥 커버드콜': '#6366f1',
+              'S&P500 커버드콜': '#3b82f6',
+              '배당 커버드콜': '#0ea5e9',
+              '채권 프리미엄': '#14b8a6',
+              '커버드콜': '#8b5cf6',
+              '국내 고배당': '#f59e0b',
+              '배당 다우존스': '#f97316',
+              '리츠': '#ec4899',
+              '채권': '#10b981',
+              '기타': '#94a3b8',
+            };
+            const catMap = new Map<string, { monthlyDiv: number; stocks: string[] }>();
+            for (const s of effectiveStocks) {
+              const cat = categorizeETF(s.name);
+              const monthly = s.frequency === 'weekly' ? divAmount(s, exchangeRate) * 4.33
+                : s.frequency === 'monthly' ? divAmount(s, exchangeRate)
+                : s.frequency === 'quarterly' ? divAmount(s, exchangeRate) / 3
+                : divAmount(s, exchangeRate) / 12;
+              const cur = catMap.get(cat) ?? { monthlyDiv: 0, stocks: [] };
+              if (!cur.stocks.includes(s.name)) cur.stocks.push(s.name);
+              catMap.set(cat, { monthlyDiv: cur.monthlyDiv + monthly, stocks: cur.stocks });
+            }
+            const catList = [...catMap.entries()]
+              .map(([cat, v]) => ({ cat, ...v }))
+              .sort((a, b) => b.monthlyDiv - a.monthlyDiv);
+            const totalDiv = catList.reduce((s, c) => s + c.monthlyDiv, 0);
 
             return (
               <div onClick={() => setShowDistribution(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '85vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
                   {/* 헤더 */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                     <div>
-                      <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>배당 종목 분산 현황</h2>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{mergedStocks.length}종목 · 월 예상 {hide(`${fmt(totalDiv)}원`)}</p>
+                      <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>종목 유형별 분산</h2>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', margin: '4px 0 0' }}>{mergedStocks.length}종목 · 월 {hide(`${fmt(totalDiv)}원`)}</p>
                     </div>
                     <button onClick={() => setShowDistribution(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}><MIcon name="close" size={20} /></button>
                   </div>
 
-                  {/* 소유자별 바 */}
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 6 }}>소유자별 월 배당</div>
-                    <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', marginBottom: 8 }}>
-                      {[...ownerMap.entries()].map(([owner, val], i) => (
-                        <div key={owner} style={{ width: `${totalDiv > 0 ? val / totalDiv * 100 : 0}%`, background: i === 0 ? 'var(--accent-blue)' : 'var(--color-profit)', transition: 'width 0.3s' }} />
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      {[...ownerMap.entries()].map(([owner, val], i) => (
-                        <span key={owner} style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? 'var(--accent-blue)' : 'var(--color-profit)', display: 'inline-block' }} />
-                          {owner} <b style={{ color: 'var(--text-primary)' }}>{hide(`${fmt(val)}원`)}</b>
-                          <span style={{ color: 'var(--text-tertiary)' }}>({totalDiv > 0 ? (val / totalDiv * 100).toFixed(0) : 0}%)</span>
-                        </span>
-                      ))}
-                    </div>
+                  {/* 누적 바 */}
+                  <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', marginBottom: 16 }}>
+                    {catList.map(c => (
+                      <div key={c.cat} style={{ width: `${totalDiv > 0 ? c.monthlyDiv / totalDiv * 100 : 0}%`, background: CAT_COLORS[c.cat] ?? '#94a3b8', transition: 'width 0.3s' }} />
+                    ))}
                   </div>
 
-                  {/* 계좌별 상세 */}
+                  {/* 카테고리별 행 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {groups.map((g, i) => (
-                      <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 6, background: 'var(--bg-elevated)', color: 'var(--text-tertiary)', fontWeight: 600 }}>{g.type}</span>
-                            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{g.owner} · {g.accLabel}</span>
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{g.stocks.length}종목</span>
+                    {catList.map(c => {
+                      const pct = totalDiv > 0 ? c.monthlyDiv / totalDiv * 100 : 0;
+                      const color = CAT_COLORS[c.cat] ?? '#94a3b8';
+                      return (
+                        <div key={c.cat} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+                              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{c.cat}</span>
+                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{c.stocks.length}종목</span>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color }}>{pct.toFixed(1)}%</span>
+                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 6 }}>{hide(`${fmt(c.monthlyDiv)}원/월`)}</span>
+                            </div>
                           </div>
-                          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--accent-blue)' }}>{hide(`${fmt(g.monthlyDiv)}원/월`)}</span>
+                          {/* 비율 바 */}
+                          <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-elevated)', overflow: 'hidden', marginBottom: 8 }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
+                          </div>
+                          {/* 종목 뱃지 */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {c.stocks.map((name, j) => (
+                              <span key={j} style={{ fontSize: 'var(--text-xs)', padding: '2px 7px', borderRadius: 10, background: 'var(--bg-primary)', border: `1px solid ${color}40`, color: 'var(--text-secondary)' }}>{name}</span>
+                            ))}
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {g.stocks.map((name, j) => (
-                            <span key={j} style={{ fontSize: 'var(--text-xs)', padding: '2px 7px', borderRadius: 10, background: 'var(--bg-primary)', border: '1px solid var(--border-secondary)', color: 'var(--text-secondary)' }}>{name}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
