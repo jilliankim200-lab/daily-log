@@ -146,6 +146,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function Dividend() {
   const { isAmountHidden, accounts, isMobile } = useAppContext();
   const [activeTab, setActiveTab] = useState<"ranking" | "my">("my");
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // KV에서 배당률 로드
   const [rates, setRates] = useState<DividendRate[]>([]);
@@ -536,8 +537,11 @@ export function Dividend() {
                 <span style={{ color: 'var(--color-profit)' }}>오빠 {hide(`${fmt(husbandMonthly)}원`)}</span>
               </div>
             </div>
-            <div className="toss-card" style={{ padding: 20 }}>
-              <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>연 예상 배당 (합산)</div>
+            <div className="toss-card" style={{ padding: 20, cursor: 'pointer', position: 'relative' }} onClick={() => setShowCalendar(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>연 예상 배당 (합산)</div>
+                <MIcon name="calendar_month" size={16} style={{ color: 'var(--text-tertiary)' }} />
+              </div>
               <div className="toss-number" style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-profit)" }}>
                 {hide(`${fmt(totalYearlyEstimate)}원`)}
               </div>
@@ -611,7 +615,7 @@ export function Dividend() {
               }
               const mixSuggestions = mixPicks.map(c => {
                 const qty = Math.ceil(gap / MIX_TARGET / c.recentDividend);
-                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category };
+                return { name: c.name, ticker: c.ticker, qty, cost: qty * c.price, monthlyDiv: qty * c.recentDividend, yield: c.annualYield, category: c.category, changeRate: c.priceChangeRate ?? 0 };
               });
               const mixTotalCost = mixSuggestions.reduce((s, m) => s + m.cost, 0);
               const mixTotalDiv = mixSuggestions.reduce((s, m) => s + m.monthlyDiv, 0);
@@ -620,10 +624,15 @@ export function Dividend() {
                   {mixSuggestions.length >= 2 && (
                     <div>
                       {mixSuggestions.map(m => (
-                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0', alignItems: 'flex-start' }}>
-                          <div>
-                            <span style={{ color: 'var(--text-primary)' }}>{m.name}</span>
-                            <span style={{ color: 'var(--text-quaternary)', marginLeft: 4, fontSize: '10px' }}>[{m.category}]</span>
+                        <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0', alignItems: 'center', borderBottom: '1px solid var(--border-secondary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{m.name}</span>
+                            <span style={{ color: 'var(--text-quaternary)', fontSize: '10px', flexShrink: 0 }}>[{m.category}]</span>
+                            {m.changeRate !== 0 && (
+                              <span style={{ flexShrink: 0, fontWeight: 700, color: m.changeRate > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                                {m.changeRate > 0 ? '▲' : '▼'}{Math.abs(m.changeRate).toFixed(2)}%
+                              </span>
+                            )}
                           </div>
                           <span style={{ whiteSpace: 'nowrap', marginLeft: 8 }}><span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{m.qty}주</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({fmt(m.cost)}원, 월 {fmt(m.monthlyDiv)}원)</span></span>
                         </div>
@@ -639,22 +648,37 @@ export function Dividend() {
             })()}
           </div>
 
-          {/* 월별 배당 캘린더 */}
-          <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
-            <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: "0 0 16px 0" }}>월별 예상 배당금 (12개월)</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
-              {monthlyDividendData.map((m) => (
-                <div key={m.month} style={{ padding: 12, borderRadius: 10, textAlign: "center",
-                  background: m.total > 0 ? "rgba(49,130,246,0.08)" : "var(--bg-secondary)",
-                  border: m.total > 0 ? "1px solid rgba(49,130,246,0.2)" : "1px solid var(--border-secondary)" }}>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 4 }}>{m.month}</div>
-                  <div className="toss-number" style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-bold)", color: m.total > 0 ? "var(--accent-blue)" : "var(--text-quaternary)" }}>
-                    {m.total > 0 ? hide(`${fmt(m.total)}원`) : "—"}
-                  </div>
+          {/* 월별 배당 캘린더 팝업 */}
+          {showCalendar && (
+            <div onClick={() => setShowCalendar(false)} style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            }}>
+              <div onClick={e => e.stopPropagation()} style={{
+                background: 'var(--bg-primary)', borderRadius: 16, width: '100%', maxWidth: 600,
+                maxHeight: '85vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)", margin: 0 }}>월별 예상 배당금 (12개월)</h2>
+                  <button onClick={() => setShowCalendar(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>
+                    <MIcon name="close" size={20} />
+                  </button>
                 </div>
-              ))}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
+                  {monthlyDividendData.map((m) => (
+                    <div key={m.month} style={{ padding: 12, borderRadius: 10, textAlign: "center",
+                      background: m.total > 0 ? "rgba(49,130,246,0.08)" : "var(--bg-secondary)",
+                      border: m.total > 0 ? "1px solid rgba(49,130,246,0.2)" : "1px solid var(--border-secondary)" }}>
+                      <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginBottom: 4 }}>{m.month}</div>
+                      <div className="toss-number" style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-bold)", color: m.total > 0 ? "var(--accent-blue)" : "var(--text-quaternary)" }}>
+                        {m.total > 0 ? hide(`${fmt(m.total)}원`) : "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 배당 종목 리스트 (계좌 보유 기준) */}
           <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
