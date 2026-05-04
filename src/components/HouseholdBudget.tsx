@@ -368,7 +368,7 @@ export function HouseholdBudget() {
   const totalVariableBudget = items.filter(i => i.type === 'variable').reduce((s, i) => s + (i.budget ?? 0), 0);
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
 
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>

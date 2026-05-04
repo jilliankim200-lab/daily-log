@@ -394,7 +394,7 @@ export function Dividend() {
   const [tooltip, setTooltip] = useState<{ ticker: string; x: number; y: number } | null>(null);
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
       {/* 툴팁 — fixed 포지션으로 overflow 무관하게 렌더 */}
       {tooltip && (() => {
         const accs = tickerAccountMap.get(tooltip.ticker) || [];

@@ -540,7 +540,7 @@ export function FinancialReview() {
   const [year, setYear] = useState<2024 | 2025 | 2026>(2026);
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
       {/* 헤더 */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>재정 평가</h1>

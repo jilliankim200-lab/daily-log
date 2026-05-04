@@ -719,7 +719,7 @@ export function Holdings() {
   const husbandAccounts = accounts.filter(a => a.owner === 'husband');
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

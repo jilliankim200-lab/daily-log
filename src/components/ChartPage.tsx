@@ -286,7 +286,7 @@ export function ChartPage() {
   const xInterval = chartData.length > 60 ? Math.floor(chartData.length / 8) : Math.floor(chartData.length / 6);
 
   return (
-    <div style={{ padding: p }}>
+    <div style={{ padding: p, maxWidth: 960, margin: '0 auto' }}>
       {showGuide && <PeriodGuideModal onClose={() => setShowGuide(false)} />}
 
       {/* 헤더 */}

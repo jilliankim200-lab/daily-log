@@ -447,6 +447,8 @@ export function Rebalancing() {
     <div
       style={{
         padding: isMobile ? '16px' : '24px',
+        maxWidth: 960,
+        margin: '0 auto',
         color: "var(--text-primary)",
       }}
     >
