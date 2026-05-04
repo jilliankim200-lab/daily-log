@@ -302,8 +302,6 @@ export function AssetChange() {
     lastDividend: number; wifeChange: number; husbandChange: number;
     wifeTotal: number; husbandTotal: number; startTotal: number;
   }>(null);
-  const [editingDividendMonth, setEditingDividendMonth] = useState<string | null>(null);
-  const [dividendInput, setDividendInput] = useState('');
 
   const totalAsset = useMemo(() => {
     return accounts.reduce((sum, account) => {
