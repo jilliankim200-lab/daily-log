@@ -641,7 +641,7 @@ export function RebalancingGuide() {
   }
 
   return (
-    <div style={{ padding: isMobile ? '16px 12px' : '24px' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
 
       {/* 타이틀 + 셀렉트 */}
       <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24 }}>

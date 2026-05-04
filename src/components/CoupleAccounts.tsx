@@ -858,7 +858,7 @@ export function CoupleAccounts() {
   const totalAll = wifeTotal + husbandTotal + otherTotal;
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
       {/* 헤더 */}
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <div>
