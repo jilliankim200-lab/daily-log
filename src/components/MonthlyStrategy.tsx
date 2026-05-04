@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../App';
 import { MIcon } from './MIcon';
 import type { Account, Holding } from '../types';
+import { fetchStockSignals, type StockSignal } from '../utils/fetchStockSignals';
+import { getSellDecision } from '../utils/sellEngine';
+import { loadSellConfig } from '../utils/sellConfig';
 
 type AssetClass = '주식' | '채권' | '커버드콜' | '금' | '기타';
 type RiskLevel = '매우높음' | '높음' | '보통' | '낮음';
@@ -88,6 +91,16 @@ interface SellCandidate {
 export function MonthlyStrategy() {
   const { accounts, prices, isMobile } = useAppContext();
 
+  const [signals, setSignals] = useState<Record<string, StockSignal>>({});
+
+  useEffect(() => {
+    const tickers = accounts
+      .flatMap(a => a.holdings.map(h => h.ticker))
+      .filter((t): t is string => Boolean(t));
+    if (tickers.length === 0) return;
+    fetchStockSignals(tickers).then(setSignals);
+  }, [accounts]);
+
   const candidates = useMemo<SellCandidate[]>(() => {
     const list: SellCandidate[] = [];
     for (const acc of accounts) {
@@ -116,8 +129,22 @@ export function MonthlyStrategy() {
         });
       }
     }
-    return list.sort((a, b) => a.priority - b.priority || b.val - a.val);
-  }, [accounts, prices]);
+    // sellEngine 게이트: 상승추세 종목 제거
+    const sellConfig = loadSellConfig();
+    const filtered = list.filter(c => {
+      if (!c.holding.ticker || !signals[c.holding.ticker]) return true;
+      const sig = signals[c.holding.ticker];
+      const avgPrice = c.holding.avgPrice || 0;
+      const currentPrice = prices[c.holding.ticker] || avgPrice;
+      const currentReturn = avgPrice > 0 ? (currentPrice - avgPrice) / avgPrice : null;
+      const decision = getSellDecision(
+        { currentReturn, currentPrice: sig.currentPrice, ma20: sig.ma20, ma60: sig.ma60 },
+        sellConfig,
+      );
+      return decision.action !== 'hold';
+    });
+    return filtered.sort((a, b) => a.priority - b.priority || b.val - a.val);
+  }, [accounts, prices, signals]);
 
   const allocation = useMemo(() => {
     const byClass: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };

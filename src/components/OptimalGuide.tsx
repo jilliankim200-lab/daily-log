@@ -6,6 +6,8 @@ import type { Account, Holding } from '../types';
 import { fetchStockSignals, getSellSignal, getBuySignal } from '../utils/fetchStockSignals';
 import type { StockSignal } from '../utils/fetchStockSignals';
 import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
+import { loadSellConfig, saveSellConfig, DEFAULT_SELL_CONFIG, type SellConfig } from '../utils/sellConfig';
+import { getSellDecision } from '../utils/sellEngine';
 
 type SignalFilter = { type: 'sell' | 'buy'; label: string } | null;
 
@@ -765,12 +767,6 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
           const rowKey = `${acc.id}__${k.h.id}`;
           const isExecuted = executedInCycle?.has(rowKey) ?? false;
           const buy = buys.find(b => b.h.id === k.h.id);
-          const addBadge = !isExecuted && buy && buy.addAmount > 0 ? (
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--color-profit)', flexShrink: 0,
-              background: 'color-mix(in srgb, var(--color-profit) 10%, transparent)', borderRadius: 6, padding: '3px 8px', marginLeft: 4 }}>
-              +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
-            </span>
-          ) : null;
           const execRec = executedMap?.[rowKey];
           const recQty = execRec?.isFund ? execRec.recommendedAmount : (execRec?.recommendedShares ?? 0);
           const exeQty = execRec?.isFund ? execRec.amount : (execRec?.shares ?? 0);
@@ -797,6 +793,15 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
           ) : null;
           const sig = k.h.ticker ? signals[k.h.ticker] : undefined;
           const timing = sig ? getBuySignal(sig) : noSignal();
+          const isCautious = timing.label.includes('조정 대기') || timing.label.includes('반등 대기');
+          const buyColor = timing.label === '–' ? 'var(--color-profit)' : timing.color;
+          const addBadge = !isExecuted && buy && buy.addAmount > 0 ? (
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: buyColor, flexShrink: 0,
+              background: `color-mix(in srgb, ${buyColor} 10%, transparent)`, borderRadius: 6, padding: '3px 8px', marginLeft: 4 }}>
+              +{fmtKrw(buy.addAmount)}{buy.shares && buy.shares > 0 ? ` (약 ${buy.shares}주)` : ''}
+              {isCautious ? ' · 분할 권장' : ''}
+            </span>
+          ) : null;
           const hasBuy = !isExecuted && buy && buy.addAmount > 0;
           const matched = isRowMatch(k.h.ticker, 'buy');
           return (
@@ -928,20 +933,23 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
               {sellsCol}{buysCol}
             </div>
           ) : (
-            /* 변경 없음: 종목 목록만 */
-            <div style={{ padding: '4px 14px 10px' }}>
-              {keeps.map((k, i) => {
-                const matched = isRowMatch(k.h.ticker, 'buy');
-                return (
-                  <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
-                    opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
-                    <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
-                      name={k.h.name} cls={k.cls} ticker={k.h.ticker} onNameClick={onNameClick}
-                      ret={k.ret} amount={k.val} badgeTip={k.keepReason || undefined} />
-                  </div>
-                );
-              })}
-              {acc.cash && acc.cash > 0 && <Row badge="유지" badgeColor="var(--color-profit)" name="현금" amount={acc.cash} />}
+            /* 변경 없음: 종목 목록 + 현금 매수 추천 */
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', rowGap: buysCol ? '1px' : '0', background: buysCol ? 'var(--border-secondary)' : 'transparent' }}>
+              <div style={{ padding: '4px 14px 10px', background: 'var(--bg-primary)' }}>
+                {keeps.map((k, i) => {
+                  const matched = isRowMatch(k.h.ticker, 'buy');
+                  return (
+                    <div key={k.h.id} style={{ borderBottom: i < keeps.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+                      opacity: signalFilter?.type === 'buy' && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
+                      <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
+                        name={k.h.name} cls={k.cls} ticker={k.h.ticker} onNameClick={onNameClick}
+                        ret={k.ret} amount={k.val} badgeTip={k.keepReason || undefined} />
+                    </div>
+                  );
+                })}
+                {acc.cash && acc.cash > 0 && <Row badge="유지" badgeColor="var(--color-profit)" name="현금" amount={acc.cash} />}
+              </div>
+              {buysCol}
             </div>
           )}
         </div>
@@ -1250,6 +1258,15 @@ export function OptimalGuide() {
   const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
   const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [sellConfig, setSellConfig] = useState<SellConfig>(loadSellConfig);
+
+  const handleSellConfigChange = (key: keyof SellConfig, delta: number) => {
+    setSellConfig(prev => {
+      const next = { ...prev, [key]: Math.round((prev[key] + delta) * 100) / 100 };
+      saveSellConfig(next);
+      return next;
+    });
+  };
 
   // 사이클 내 실행 이력 (localStorage) — 매월 1일·15일에 자연히 무효화
   const [executedMap, setExecutedMap] = useState<Record<string, ExecutionRecord>>(() => {
@@ -1333,9 +1350,36 @@ export function OptimalGuide() {
     } catch { return 0; }
   }, [accounts, prices, targets, exchangeRate]);
 
-  const { accountPlans, totalSells, retirementIssues } = useMemo(() =>
+  const { accountPlans: rawAccountPlans, retirementIssues } = useMemo(() =>
     computeAllPlans(accounts, prices, targets, new Set(), executedInCycle),
     [accounts, prices, targets, executedInCycle]);
+
+  // sellEngine 게이트: signals 로드 완료 전에는 필터 안 함
+  const accountPlans = useMemo(() => {
+    if (Object.keys(signals).length === 0) return rawAccountPlans;
+    return rawAccountPlans.map(plan => ({
+      ...plan,
+      sells: plan.sells.filter(s => {
+        if (!s.h.ticker || !signals[s.h.ticker]) return true;
+        const sig = signals[s.h.ticker];
+        const decision = getSellDecision(
+          {
+            currentReturn: s.ret !== null ? s.ret / 100 : null,
+            currentPrice: sig.currentPrice,
+            ma20: sig.ma20,
+            ma60: sig.ma60,
+          },
+          sellConfig,
+        );
+        return decision.action !== 'hold';
+      }),
+    }));
+  }, [rawAccountPlans, signals, sellConfig]);
+
+  const totalSells = useMemo(
+    () => accountPlans.reduce((s, p) => s + p.sells.length, 0),
+    [accountPlans],
+  );
 
   const currentAlloc = useMemo(() => {
     const byClass: Record<AssetClass, number> = { 주식: 0, 채권: 0, 커버드콜: 0, 금: 0, 기타: 0 };
@@ -1560,6 +1604,37 @@ export function OptimalGuide() {
         <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)' }}>
           중복 종목은 하위 계좌에서 매도하고, 그 현금을 같은 계좌 내 유지 종목에 비례 재배분합니다.
         </div>
+      </div>
+
+      {/* 매도 기준 설정 패널 */}
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: isMobile ? '10px 12px' : '12px 16px', marginBottom: isMobile ? 14 : 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <MIcon name="tune" size={15} style={{ color: 'var(--text-tertiary)' }} />
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>매도 기준</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-primary)', borderRadius: 8, padding: '5px 10px' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>수익실현</span>
+            <button onClick={() => handleSellConfigChange('targetReturn', -0.05)}
+              style={{ background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 4, color: 'var(--text-secondary)', width: 20, height: 20, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>−</button>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-profit)', minWidth: 36, textAlign: 'center' }}>
+              +{(sellConfig.targetReturn * 100).toFixed(0)}%
+            </span>
+            <button onClick={() => handleSellConfigChange('targetReturn', 0.05)}
+              style={{ background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 4, color: 'var(--text-secondary)', width: 20, height: 20, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-primary)', borderRadius: 8, padding: '5px 10px' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>손절</span>
+            <button onClick={() => handleSellConfigChange('stopLoss', -0.05)}
+              style={{ background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 4, color: 'var(--text-secondary)', width: 20, height: 20, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>−</button>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-loss)', minWidth: 36, textAlign: 'center' }}>
+              {(sellConfig.stopLoss * 100).toFixed(0)}%
+            </span>
+            <button onClick={() => handleSellConfigChange('stopLoss', 0.05)}
+              style={{ background: 'none', border: '1px solid var(--border-secondary)', borderRadius: 4, color: 'var(--text-secondary)', width: 20, height: 20, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+          </div>
+        </div>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 'auto' }}>자동 저장</span>
       </div>
 
       {/* 요약 카드 */}
