@@ -1,0 +1,68 @@
+<h2>B vs C — 실제 파일 구조로 비교</h2>
+<p class="subtitle">어떤 구조로 코드가 달라지는지 직접 보여드립니다</p>
+
+<div class="split">
+  <div class="mockup" style="cursor:pointer;border:2px solid transparent;transition:border .2s" onclick="selectOption('b', this)">
+    <div class="mockup-header" style="background:#1e3a5f;color:#60a5fa">B — fetchStockSignals 확장</div>
+    <div class="mockup-body" style="font-size:12px;font-family:monospace">
+      <div style="color:#64748b;margin-bottom:8px">📁 src/utils/</div>
+      <div style="padding-left:16px">
+        <div style="color:#fbbf24">fetchStockSignals.ts &nbsp;<span style="background:#fbbf2420;padding:2px 6px;border-radius:3px;font-size:11px">수정</span></div>
+        <div style="color:#64748b;padding-left:16px;margin:4px 0">
+          getSellSignal() &nbsp;&nbsp;&nbsp;← 기존 (타이밍)<br>
+          <span style="color:#4ade80">getSellDecision()</span> ← 신규 추가<br>
+          <span style="color:#4ade80">SELL_CONFIG = &#123;</span><br>
+          <span style="color:#4ade80">&nbsp;&nbsp;targetReturn: 0.20,</span><br>
+          <span style="color:#4ade80">&nbsp;&nbsp;stopLoss: -0.10</span><br>
+          <span style="color:#4ade80">&#125;</span>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:10px;background:#0f172a;border-radius:6px;color:#94a3b8;font-size:11px">
+        장점: 파일 1개만 건드림<br>
+        단점: 데이터 유틸인데 판단 로직까지 담당<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ 나중에 설정 바꾸려면 이 파일 찾아야 함
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup" style="cursor:pointer;border:2px solid transparent;transition:border .2s" onclick="selectOption('c', this)">
+    <div class="mockup-header" style="background:#1e3a2f;color:#4ade80">C — Config + Engine 분리</div>
+    <div class="mockup-body" style="font-size:12px;font-family:monospace">
+      <div style="color:#64748b;margin-bottom:8px">📁 src/utils/</div>
+      <div style="padding-left:16px">
+        <div style="color:#64748b">fetchStockSignals.ts &nbsp;<span style="background:#64748b20;padding:2px 6px;border-radius:3px;font-size:11px">그대로</span></div>
+        <div style="color:#4ade80;margin-top:6px">sellConfig.ts &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background:#4ade8020;padding:2px 6px;border-radius:3px;font-size:11px">신규</span></div>
+        <div style="color:#94a3b8;padding-left:16px;margin:4px 0">
+          targetReturn: 0.20<br>
+          stopLoss: -0.10<br>
+          riskTable: &#123;...&#125;
+        </div>
+        <div style="color:#4ade80;margin-top:6px">sellEngine.ts &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background:#4ade8020;padding:2px 6px;border-radius:3px;font-size:11px">신규</span></div>
+        <div style="color:#94a3b8;padding-left:16px;margin:4px 0">
+          getSellDecision(holding, prices)<br>
+          → &#123; action, reason, urgency &#125;
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:10px;background:#0f172a;border-radius:6px;color:#94a3b8;font-size:11px">
+        장점: 설정·로직 분리 → 각자 역할 명확<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;목표% 바꿀 때 sellConfig만 열면 됨<br>
+        단점: 파일 2개 (but 각 파일은 짧고 명확)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px;padding:14px;background:#1e293b;border-radius:8px;font-size:13px;color:#94a3b8">
+  <strong style="color:#e2e8f0">제 추천은 C입니다.</strong><br><br>
+  B는 지금 당장 빠르지만, 나중에 <em>"목표 수익률을 15%로 바꾸고 싶어"</em>가 나오면<br>
+  fetchStockSignals.ts 어딘가를 뒤져야 합니다.<br><br>
+  C는 sellConfig.ts 하나만 열면 모든 기준값이 보입니다. 파일 2개지만 각각 50줄 이하로 짧습니다.
+</div>
+
+<script>
+function selectOption(choice, el) {
+  document.querySelectorAll('.mockup').forEach(m => m.style.border = '2px solid transparent');
+  el.style.border = '2px solid ' + (choice === 'b' ? '#60a5fa' : '#4ade80');
+  if (window.recordChoice) recordChoice(choice, el.querySelector('.mockup-header').textContent);
+}
+</script>

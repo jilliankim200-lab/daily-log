@@ -1,0 +1,114 @@
+<h2>매도 신호 통합 — 전체 설계</h2>
+<p class="subtitle">이 구조로 구현합니다. 확인 후 승인해주세요.</p>
+
+<!-- 파일 구조 -->
+<div class="section">
+  <div class="label">파일 구조</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+    <div style="background:#0f172a;border-radius:8px;padding:14px;font-size:12px;font-family:monospace">
+      <div style="color:#4ade80;margin-bottom:8px">✦ 신규 생성</div>
+      <div style="color:#4ade80">src/utils/sellConfig.ts</div>
+      <div style="color:#64748b;padding-left:12px;margin:4px 0 10px">
+        targetReturn: 0.20 (기본 +20%)<br>
+        stopLoss: -0.10 (기본 -10%)<br>
+        → localStorage로 사용자 변경 저장
+      </div>
+      <div style="color:#4ade80">src/utils/sellEngine.ts</div>
+      <div style="color:#64748b;padding-left:12px;margin:4px 0">
+        getSellDecision(holding, prices, config)<br>
+        → &#123; action, reason, urgency &#125;
+      </div>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:14px;font-size:12px;font-family:monospace">
+      <div style="color:#fbbf24;margin-bottom:8px">✦ 수정</div>
+      <div style="color:#fbbf24">src/components/OptimalGuide.tsx</div>
+      <div style="color:#64748b;padding-left:12px;margin:4px 0 10px">
+        + 설정 패널 (목표%·손절% 조정)<br>
+        + sellEngine 호출로 매도 판단
+      </div>
+      <div style="color:#fbbf24">src/components/MonthlyStrategy.tsx</div>
+      <div style="color:#64748b;padding-left:12px;margin:4px 0">
+        기존 위험도 분류 유지<br>
+        + sellEngine 최종 판단으로 통일
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 의사결정 흐름 -->
+<div class="section">
+  <div class="label">매도 의사결정 흐름</div>
+  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="background:#1e3a5f;border-radius:6px;padding:8px 14px;font-size:13px;color:#60a5fa;white-space:nowrap">종목 입력</div>
+      <div style="color:#475569">→</div>
+      <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px 14px;font-size:13px">
+        <strong style="color:#e2e8f0">1단계 Veto</strong> &nbsp;
+        <span style="color:#94a3b8">주가 &gt; MA20 이면 즉시 "홀딩" — 이하 체크 생략</span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="background:#1e1e3a;border-radius:6px;padding:8px 14px;font-size:13px;color:#a78bfa;white-space:nowrap">추세 확인</div>
+      <div style="color:#475569">→</div>
+      <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px 14px;font-size:13px">
+        <strong style="color:#f87171">시나리오 1</strong> &nbsp;
+        <span style="color:#94a3b8">주가&lt;MA20 AND MA20&lt;MA60 AND 2일 연속 → <strong style="color:#f87171">전량 매도</strong></span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="background:#1a2e1a;border-radius:6px;padding:8px 14px;font-size:13px;color:#4ade80;white-space:nowrap">수익 확인</div>
+      <div style="color:#475569">→</div>
+      <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px 14px;font-size:13px">
+        <strong style="color:#fbbf24">시나리오 2</strong> &nbsp;
+        <span style="color:#94a3b8">수익률 ≥ 목표% AND 주가&lt;MA20 → <strong style="color:#fbbf24">50% 매도</strong></span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="background:#2e1a1a;border-radius:6px;padding:8px 14px;font-size:13px;color:#f87171;white-space:nowrap">손실 확인</div>
+      <div style="color:#475569">→</div>
+      <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px 14px;font-size:13px">
+        <strong style="color:#f87171">시나리오 3</strong> &nbsp;
+        <span style="color:#94a3b8">수익률 ≤ 손절% AND 주가&lt;MA60 → <strong style="color:#f87171">전량 손절</strong></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 패널 목업 -->
+<div class="section">
+  <div class="label">OptimalGuide 설정 패널 (목업)</div>
+  <div style="background:#1e293b;border-radius:8px;padding:16px;margin-top:8px;max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="font-size:13px;font-weight:600;color:#e2e8f0">매도 기준 설정</span>
+      <span style="font-size:11px;color:#64748b">변경 시 즉시 반영</span>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div style="flex:1;background:#0f172a;border-radius:6px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">수익 실현 기준</div>
+        <div style="font-size:22px;font-weight:700;color:#4ade80">+20%</div>
+        <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
+          <button style="background:#1e293b;border:none;color:#94a3b8;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">−5%</button>
+          <button style="background:#1e293b;border:none;color:#94a3b8;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">+5%</button>
+        </div>
+      </div>
+      <div style="flex:1;background:#0f172a;border-radius:6px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">손절 기준</div>
+        <div style="font-size:22px;font-weight:700;color:#f87171">−10%</div>
+        <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
+          <button style="background:#1e293b;border:none;color:#94a3b8;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">−5%</button>
+          <button style="background:#1e293b;border:none;color:#94a3b8;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">+5%</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:#475569;text-align:center">설정은 브라우저에 자동 저장됩니다</div>
+  </div>
+</div>
+
+<div style="margin-top:20px;padding:12px 16px;background:#16a34a20;border-radius:8px;border-left:3px solid #4ade80">
+  <strong style="color:#4ade80">이 설계로 진행해도 될까요?</strong>
+  <span style="color:#94a3b8;font-size:13px;margin-left:8px">승인하면 스펙 문서 작성 후 구현 계획을 수립합니다</span>
+</div>

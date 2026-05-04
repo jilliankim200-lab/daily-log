@@ -1,0 +1,66 @@
+<h2>매도 신호 통합 아키텍처 — 어떤 방식으로 만들까요?</h2>
+<p class="subtitle">현재 3곳에 흩어진 매도 로직을 하나로 합치는 방법입니다</p>
+
+<div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:24px;font-size:13px;color:#94a3b8">
+  <strong style="color:#f87171">현재 문제</strong> &nbsp;→&nbsp;
+  <span style="color:#fbbf24">MonthlyStrategy</span> (위험도/계절) &nbsp;+&nbsp;
+  <span style="color:#60a5fa">fetchStockSignals</span> (MA/고저점) &nbsp;+&nbsp;
+  <span style="color:#a78bfa">OptimalGuide</span> (포트폴리오) &nbsp;→&nbsp;
+  <strong style="color:#f87171">제각각 판단</strong>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>공유 유틸리티 함수</h3>
+      <p style="margin:8px 0 4px;font-size:13px;color:#64748b"><code>src/utils/sellSignal.ts</code> 신규 생성</p>
+      <div style="background:#0f172a;border-radius:6px;padding:10px;font-size:12px;color:#94a3b8;margin:8px 0">
+        getSellDecision(holding, prices, config)<br>
+        &nbsp;&nbsp;→ { action, reason, urgency }
+      </div>
+      <p style="font-size:13px;margin:4px 0">MonthlyStrategy · OptimalGuide · ChartPage 모두 이 함수 하나를 호출</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span style="background:#16a34a20;color:#4ade80;padding:3px 8px;border-radius:4px;font-size:12px">✓ 단순함</span>
+        <span style="background:#16a34a20;color:#4ade80;padding:3px 8px;border-radius:4px;font-size:12px">✓ 즉시 적용 가능</span>
+        <span style="background:#ef444420;color:#f87171;padding:3px 8px;border-radius:4px;font-size:12px">- 로직 커지면 복잡</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>fetchStockSignals 확장</h3>
+      <p style="margin:8px 0 4px;font-size:13px;color:#64748b">기존 파일에 AND 조건 레이어 추가</p>
+      <div style="background:#0f172a;border-radius:6px;padding:10px;font-size:12px;color:#94a3b8;margin:8px 0">
+        getSellSignal() → 기술적 타이밍만<br>
+        getSellDecision() → AND 조건 최종 판단 <span style="color:#fbbf24">← 신규</span>
+      </div>
+      <p style="font-size:13px;margin:4px 0">MA 데이터가 이미 있는 파일에 판단 로직을 덧붙임</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span style="background:#16a34a20;color:#4ade80;padding:3px 8px;border-radius:4px;font-size:12px">✓ 데이터 재활용</span>
+        <span style="background:#ef444420;color:#f87171;padding:3px 8px;border-radius:4px;font-size:12px">- 파일 역할 혼재</span>
+        <span style="background:#ef444420;color:#f87171;padding:3px 8px;border-radius:4px;font-size:12px">- 위험도 로직 추가 어색</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>SellSignalConfig + 엔진 분리</h3>
+      <p style="margin:8px 0 4px;font-size:13px;color:#64748b">설정 파일 + 판단 엔진 2파일 구조</p>
+      <div style="background:#0f172a;border-radius:6px;padding:10px;font-size:12px;color:#94a3b8;margin:8px 0">
+        sellConfig.ts &nbsp;→ 목표%, 손절%, 위험도표<br>
+        sellEngine.ts &nbsp;→ AND 조건 판단 로직
+      </div>
+      <p style="font-size:13px;margin:4px 0">나중에 사용자가 목표%를 UI에서 바꿀 수 있게 확장 가능</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span style="background:#16a34a20;color:#4ade80;padding:3px 8px;border-radius:4px;font-size:12px">✓ 확장성</span>
+        <span style="background:#16a34a20;color:#4ade80;padding:3px 8px;border-radius:4px;font-size:12px">✓ 설정 한눈에</span>
+        <span style="background:#ef444420;color:#f87171;padding:3px 8px;border-radius:4px;font-size:12px">- 파일 2개</span>
+      </div>
+    </div>
+  </div>
+</div>

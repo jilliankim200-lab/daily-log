@@ -12,7 +12,6 @@ import { RebalancingGuide } from "./components/RebalancingGuide";
 import { OptimalGuide } from "./components/OptimalGuide";
 import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
-import { StockDailyRecord } from "./components/StockDailyRecord";
 import { MonthlyStrategy } from "./components/MonthlyStrategy";
 import { CalcChecklist } from "./components/CalcChecklist";
 import { PasswordModal } from "./components/PasswordModal";
@@ -67,7 +66,6 @@ const MENU_ITEMS = [
   { id: "account-return", label: "계좌수익률", materialIcon: "percent" },
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
-  { id: "stock-daily-record", label: "개별종목기록", materialIcon: "table_chart" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
   { id: "calc-checklist", label: "계산식 검증", materialIcon: "fact_check" },
 ];
@@ -231,7 +229,6 @@ export default function App() {
       case "optimal-guide": return <OptimalGuide />;
       case "chart": return <ChartPage />;
       case "account-return": return <AccountReturn />;
-      case "stock-daily-record": return <StockDailyRecord />;
       case "monthly-strategy": return <MonthlyStrategy />;
       case "calc-checklist": return <CalcChecklist />;
     }

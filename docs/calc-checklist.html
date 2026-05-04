@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>계산식 체크리스트</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8fafc; --bg2: #ffffff; --bg3: #f1f5f9;
+    --border: #e2e8f0; --border2: #cbd5e1;
+    --text: #0f172a; --text2: #475569; --text3: #94a3b8;
+    --green: #16a34a; --red: #dc2626; --yellow: #d97706;
+    --blue: #2563eb; --purple: #7c3aed;
+    --pass: #16a34a; --fail: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .summary-box { display: flex; gap: 16px; align-items: center; }
+  .summary-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center; }
+  .summary-num { font-size: 22px; font-weight: 700; }
+  .summary-num.pass { color: var(--green); }
+  .summary-num.fail { color: var(--red); }
+  .summary-num.total { color: var(--blue); }
+  .summary-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity .15s; }
+  .btn:hover { opacity: .8; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .btn-section { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+
+  .section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .section-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+  .section-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; background: var(--bg3); color: var(--text2); }
+  .section-score { font-size: 12px; color: var(--text3); margin-left: 8px; }
+
+  .formula-box { margin: 14px 18px 0; padding: 12px 14px; background: var(--bg3); border-radius: 8px; border-left: 3px solid var(--blue); }
+  .formula-box code { font-family: 'Consolas', monospace; font-size: 12px; color: var(--blue); display: block; line-height: 1.8; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 0; }
+  th { background: var(--bg3); color: var(--text3); font-size: 11px; font-weight: 600; padding: 8px 18px; text-align: left; letter-spacing: .5px; text-transform: uppercase; }
+  td { padding: 10px 18px; border-top: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  tr:hover td { background: color-mix(in srgb, var(--bg3) 40%, transparent); }
+  td.input-col { font-family: monospace; font-size: 12px; color: var(--text2); max-width: 300px; }
+  td.expected-col { color: var(--yellow); font-weight: 600; }
+  td.actual-col { font-weight: 600; }
+  td.result-col { width: 60px; text-align: center; }
+  .badge-pass { display: inline-flex; align-items: center; gap: 4px; background: color-mix(in srgb, var(--pass) 15%, transparent); color: var(--green); padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: 700; }
+  .badge-fail { display: inline-flex; align-items: center; gap: 4px; background: color-mix(in srgb, var(--fail) 15%, transparent); color: var(--red); padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: 700; }
+  .badge-pending { display: inline-flex; align-items: center; gap: 4px; background: var(--bg3); color: var(--text3); padding: 3px 8px; border-radius: 5px; font-size: 12px; }
+
+  /* 커스텀 계산기 */
+  .calc-section { padding: 16px 18px 18px; }
+  .calc-title { font-weight: 700; font-size: 13px; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .calc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .calc-field label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 5px; font-weight: 600; }
+  .calc-field input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none; transition: border-color .15s; }
+  .calc-field input:focus { border-color: var(--blue); }
+  .calc-result { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-height: 60px; }
+  .calc-result-label { font-size: 11px; color: var(--text3); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .calc-result-value { font-size: 18px; font-weight: 700; }
+  .calc-result-desc { font-size: 12px; color: var(--text2); margin-top: 4px; line-height: 1.6; }
+  .color-hold { color: var(--text2); }
+  .color-sell-half { color: var(--yellow); }
+  .color-sell-all-high { color: #f97316; }
+  .color-sell-all-critical { color: var(--red); }
+  .color-up { color: var(--green); }
+  .color-down { color: var(--red); }
+  .color-sideways { color: var(--yellow); }
+
+  .material-icons { font-size: 16px; vertical-align: middle; }
+  .divider { height: 1px; background: var(--border); margin: 14px 18px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <h1>계산식 체크리스트</h1>
+    <div class="subtitle">자산 대시보드의 핵심 계산 로직을 직접 실행하고 검증합니다.</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="summary-box">
+      <div class="summary-item"><div class="summary-num pass" id="total-pass">0</div><div class="summary-label">통과</div></div>
+      <div class="summary-item"><div class="summary-num fail" id="total-fail">0</div><div class="summary-label">실패</div></div>
+      <div class="summary-item"><div class="summary-num total" id="total-all">0</div><div class="summary-label">전체</div></div>
+    </div>
+    <button class="btn btn-primary" onclick="runAll()">
+      <span class="material-icons">play_arrow</span> 모두 실행
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 1: sellEngine.getSellDecision()
+════════════════════════════════════════════ -->
+<div class="section" id="sec-engine">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--red)">trending_down</span>
+      sellEngine · getSellDecision()
+      <span class="section-badge">4조건 AND</span>
+      <span class="section-score" id="score-engine"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('engine')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>① Veto:  currentPrice &gt; MA20  →  hold (상승추세 보호)</code>
+    <code>② 추세붕괴: MA20 &lt; MA60  →  sell_all (urgency: high)</code>
+    <code>③ 손절:  currentReturn ≤ stopLoss(-10%)  →  sell_all (urgency: critical)</code>
+    <code>④ 수익실현: currentReturn ≥ targetReturn(+20%) + price &lt; MA20  →  sell_half (urgency: medium)</code>
+  </div>
+  <table id="tbl-engine">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상 결과</th><th>실제 결과</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="divider"></div>
+  <div class="calc-section">
+    <div class="calc-title"><span class="material-icons">tune</span> 직접 입력해서 테스트</div>
+    <div class="calc-grid">
+      <div class="calc-field"><label>현재 수익률 (%)</label><input id="ci-return" type="number" value="5" step="1" placeholder="예: 25"></div>
+      <div class="calc-field"><label>현재가 (원)</label><input id="ci-price" type="number" value="26000" step="100"></div>
+      <div class="calc-field"><label>MA20 (원)</label><input id="ci-ma20" type="number" value="27000" step="100"></div>
+      <div class="calc-field"><label>MA60 (원)</label><input id="ci-ma60" type="number" value="28000" step="100"></div>
+      <div class="calc-field"><label>목표 수익률 (%)</label><input id="ci-target" type="number" value="20" step="5"></div>
+      <div class="calc-field"><label>손절 기준 (%)</label><input id="ci-stoploss" type="number" value="-10" step="5"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="calcCustomEngine()" style="margin-bottom:12px;">
+      <span class="material-icons">calculate</span> 계산
+    </button>
+    <div class="calc-result" id="custom-engine-result">
+      <div class="calc-result-label">결과</div>
+      <div class="calc-result-value" style="color:var(--text3)">계산 버튼을 누르세요</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 2: getTrend()
+════════════════════════════════════════════ -->
+<div class="section" id="sec-trend">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--blue)">show_chart</span>
+      getTrend() — 추세 판단
+      <span class="section-badge">MA20 vs MA60</span>
+      <span class="section-score" id="score-trend"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('trend')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>price &gt; MA20 AND price &gt; MA60  →  'up'    (상승추세)</code>
+    <code>price &lt; MA20 AND price &lt; MA60  →  'down'  (하락추세)</code>
+    <code>그 외 (한쪽만 위)                →  'sideways' (횡보)</code>
+  </div>
+  <table id="tbl-trend">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상</th><th>실제</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 3: getSellSignal()
+════════════════════════════════════════════ -->
+<div class="section" id="sec-sell-sig">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--red)">sell</span>
+      getSellSignal() — 매도 타이밍 신호
+      <span class="section-badge">6가지 신호</span>
+      <span class="section-score" id="score-sell-sig"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('sell-sig')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>up   + position ≥ 70%  →  '매도 적합'   (상승추세 고점권)</code>
+    <code>up   + position &lt; 70%  →  '매도 가능'   (상승추세, 고점 여지 있음)</code>
+    <code>side + position ≥ 50%  →  '매도 가능'   (횡보 중상단)</code>
+    <code>side + position &lt; 50%  →  '반등 대기'   (횡보 하단, MA20 회복 기다림)</code>
+    <code>down + position ≤ 30%  →  '저점 매도'   (하락 저점권, 손절 수준)</code>
+    <code>down + position &gt; 30%  →  '반등 후 매도' (하락 진행, 단기반등 기다림)</code>
+  </div>
+  <table id="tbl-sell-sig">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상</th><th>실제</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 4: getBuySignal()
+════════════════════════════════════════════ -->
+<div class="section" id="sec-buy-sig">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--green)">shopping_cart</span>
+      getBuySignal() — 매수 타이밍 신호
+      <span class="section-badge">7가지 신호</span>
+      <span class="section-score" id="score-buy-sig"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('buy-sig')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>down + pos ≤ 20%        →  '반등 대기' + 분할권장 (하락추세 저점)</code>
+    <code>down + pos &gt; 20%        →  '반등 대기' + 분할권장 (하락추세 진행중)</code>
+    <code>side + pos ≤ 40%        →  '매수 적합'           (횡보 하단)</code>
+    <code>side + pos &gt; 40%        →  '분할 매수' + 분할권장 (횡보 중간)</code>
+    <code>up   + pos ≥ 80%        →  '조정 대기' + 분할권장 (상승 고점)</code>
+    <code>up   + 60% ≤ pos &lt; 80%  →  '분할 매수' + 분할권장 (상승 중상단)</code>
+    <code>up   + pos &lt; 60%        →  '매수 가능'           (상승 초입)</code>
+  </div>
+  <table id="tbl-buy-sig">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상 신호</th><th>분할권장</th><th>실제 신호</th><th>실제 분할</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 5: position 계산
+════════════════════════════════════════════ -->
+<div class="section" id="sec-position">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--yellow)">bar_chart</span>
+      position — 60일 범위 내 현재 위치
+      <span class="section-badge">0 ~ 1</span>
+      <span class="section-score" id="score-position"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('position')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>position = (currentPrice - low60) / (high60 - low60)</code>
+    <code>0 = 60일 저점, 1 = 60일 고점, 0.5 = 중간</code>
+  </div>
+  <table id="tbl-position">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상</th><th>실제</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 6: 등락률 계산
+════════════════════════════════════════════ -->
+<div class="section" id="sec-change">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--purple)">percent</span>
+      등락률 (changeRate) 계산
+      <span class="section-badge">실시간 API 우선</span>
+      <span class="section-score" id="score-change"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('change')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>histChangeRate = (lastPrice - prevPrice) / prevPrice × 100   ← rawData 마지막 두 점 (어제 변동률)</code>
+    <code>changeRate = realtimeChangeRate ?? histChangeRate             ← 실시간 API 우선, 없으면 fallback</code>
+    <code>⚠ 주의: histChangeRate는 '어제의 변동률'이라 오늘 OptimalGuide와 다를 수 있음</code>
+  </div>
+  <table id="tbl-change">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상</th><th>실제</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 7: MA 이동평균 계산
+════════════════════════════════════════════ -->
+<div class="section" id="sec-ma">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--blue)">timeline</span>
+      calcMA() — 이동평균 계산
+      <span class="section-badge">단순 이동평균</span>
+      <span class="section-score" id="score-ma"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('ma')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>calcMA(prices, period) = prices.map((_, i) => {</code>
+    <code>  if (i &lt; period - 1) return null;  // 데이터 부족 → null</code>
+    <code>  return Math.round( sum(prices[i-period+1 .. i]) / period );</code>
+    <code>})</code>
+  </div>
+  <table id="tbl-ma">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상 (마지막 값)</th><th>실제 (마지막 값)</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     섹션 8: 수익률 계산
+════════════════════════════════════════════ -->
+<div class="section" id="sec-return">
+  <div class="section-header">
+    <div class="section-title">
+      <span class="material-icons" style="color:var(--green)">account_balance_wallet</span>
+      수익률 (currentReturn) 계산
+      <span class="section-badge">보유 종목</span>
+      <span class="section-score" id="score-return"></span>
+    </div>
+    <button class="btn btn-sm btn-section" onclick="runSection('return')">
+      <span class="material-icons">play_arrow</span> 실행
+    </button>
+  </div>
+  <div class="formula-box">
+    <code>currentReturn = (currentPrice - avgCost) / avgCost     ← 소수점 (0.25 = +25%)</code>
+    <code>sellEngine에 전달 시: calcReturn() / 100 으로 변환</code>
+    <code>표시: (currentReturn × 100).toFixed(1) + '%'</code>
+  </div>
+  <table id="tbl-return">
+    <thead><tr><th>케이스</th><th>입력값</th><th>예상</th><th>실제</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// 계산 함수 구현 (실제 소스 코드와 동일)
+// ══════════════════════════════════════════════
+
+function getSellDecision(input, config = { targetReturn: 0.20, stopLoss: -0.10 }) {
+  const { currentReturn, currentPrice, ma20, ma60 } = input;
+  if (currentPrice > ma20)
+    return { action: 'hold', reason: '상승추세 (주가 > MA20)', urgency: 'none' };
+  if (ma20 < ma60)
+    return { action: 'sell_all', reason: '추세 붕괴 (MA20 < MA60)', urgency: 'high' };
+  if (currentReturn !== null && currentReturn <= config.stopLoss)
+    return { action: 'sell_all', reason: `손절 기준 도달 (${(currentReturn*100).toFixed(1)}%)`, urgency: 'critical' };
+  if (currentReturn !== null && currentReturn >= config.targetReturn)
+    return { action: 'sell_half', reason: `목표 수익 달성 + 추세 꺾임 (${(currentReturn*100).toFixed(1)}%)`, urgency: 'medium' };
+  return { action: 'hold', reason: '매도 조건 미충족', urgency: 'none' };
+}
+
+function getTrend(s) {
+  const aboveMA20 = s.currentPrice >= s.ma20;
+  const aboveMA60 = s.currentPrice >= s.ma60;
+  if (aboveMA20 && aboveMA60) return 'up';
+  if (!aboveMA20 && !aboveMA60) return 'down';
+  return 'sideways';
+}
+
+function getSellSignal(s) {
+  const trend = getTrend(s);
+  const pos = s.position;
+  const ma20Pct = ((s.currentPrice - s.ma20) / s.ma20 * 100).toFixed(1);
+  const p70 = s.low + 0.7 * (s.high - s.low);
+  if (trend === 'up' && pos >= 0.7)
+    return { label: '매도 적합', range: [s.currentPrice, s.high] };
+  if (trend === 'up')
+    return { label: '매도 가능', range: [s.currentPrice, p70] };
+  if (trend === 'sideways' && pos >= 0.5)
+    return { label: '매도 가능', range: [s.currentPrice, s.high] };
+  if (trend === 'sideways')
+    return { label: '반등 대기', range: [s.ma20, s.high] };
+  if (trend === 'down' && pos <= 0.3)
+    return { label: '저점 매도', range: [s.low, s.currentPrice] };
+  return { label: '반등 후 매도', range: [s.ma60, s.ma20] };
+}
+
+function getBuySignal(s) {
+  const trend = getTrend(s);
+  const pos = s.position;
+  const ma20Pct = ((s.currentPrice - s.ma20) / s.ma20 * 100).toFixed(1);
+  if (trend === 'down' && pos <= 0.2)
+    return { label: '반등 대기', cautious: true };
+  if (trend === 'down')
+    return { label: '반등 대기', cautious: true };
+  if (trend === 'sideways' && pos <= 0.4)
+    return { label: '매수 적합', cautious: false };
+  if (trend === 'sideways')
+    return { label: '분할 매수', cautious: true };
+  if (trend === 'up' && pos >= 0.8)
+    return { label: '조정 대기', cautious: true };
+  if (trend === 'up' && pos >= 0.6)
+    return { label: '분할 매수', cautious: true };
+  return { label: '매수 가능', cautious: false };
+}
+
+function calcPosition(currentPrice, low, high) {
+  if (high === low) return 0;
+  return (currentPrice - low) / (high - low);
+}
+
+function calcChangeRate(lastPrice, prevPrice) {
+  if (prevPrice === 0) return 0;
+  return (lastPrice - prevPrice) / prevPrice * 100;
+}
+
+function calcReturn(currentPrice, avgCost) {
+  if (avgCost === 0) return 0;
+  return (currentPrice - avgCost) / avgCost;
+}
+
+function calcMA(prices, period) {
+  return prices.map((_, i) => {
+    if (i < period - 1) return null;
+    const slice = prices.slice(i - period + 1, i + 1);
+    return Math.round(slice.reduce((s, p) => s + p, 0) / period);
+  });
+}
+
+// ══════════════════════════════════════════════
+// 테스트 케이스 정의
+// ══════════════════════════════════════════════
+
+const TESTS = {
+  engine: [
+    {
+      name: '① Veto — 주가 > MA20',
+      input: { currentReturn: -0.05, currentPrice: 28000, ma20: 27000, ma60: 26000 },
+      config: { targetReturn: 0.20, stopLoss: -0.10 },
+      expected: { action: 'hold', urgency: 'none' },
+      run: (t) => getSellDecision(t.input, t.config),
+      fmt: (r) => `${r.action} / ${r.urgency}`,
+      check: (r, e) => r.action === e.action && r.urgency === e.urgency,
+    },
+    {
+      name: '② 추세붕괴 — MA20 < MA60',
+      input: { currentReturn: 0.05, currentPrice: 25000, ma20: 26000, ma60: 27000 },
+      config: { targetReturn: 0.20, stopLoss: -0.10 },
+      expected: { action: 'sell_all', urgency: 'high' },
+      run: (t) => getSellDecision(t.input, t.config),
+      fmt: (r) => `${r.action} / ${r.urgency}`,
+      check: (r, e) => r.action === e.action && r.urgency === e.urgency,
+    },
+    {
+      name: '③ 손절 — return ≤ -10%',
+      input: { currentReturn: -0.15, currentPrice: 24000, ma20: 26000, ma60: 25000 },
+      config: { targetReturn: 0.20, stopLoss: -0.10 },
+      expected: { action: 'sell_all', urgency: 'critical' },
+      run: (t) => getSellDecision(t.input, t.config),
+      fmt: (r) => `${r.action} / ${r.urgency}`,
+      check: (r, e) => r.action === e.action && r.urgency === e.urgency,
+    },
+    {
+      name: '④ 수익실현 — return ≥ +20% + price < MA20',
+      input: { currentReturn: 0.25, currentPrice: 24000, ma20: 26000, ma60: 25000 },
+      config: { targetReturn: 0.20, stopLoss: -0.10 },
+      expected: { action: 'sell_half', urgency: 'medium' },
+      run: (t) => getSellDecision(t.input, t.config),
+      fmt: (r) => `${r.action} / ${r.urgency}`,
+      check: (r, e) => r.action === e.action && r.urgency === e.urgency,
+    },
+    {
+      name: '⑤ 기본값 — 조건 미충족',
+      input: { currentReturn: 0.05, currentPrice: 24000, ma20: 26000, ma60: 25000 },
+      config: { targetReturn: 0.20, stopLoss: -0.10 },
+      expected: { action: 'hold', urgency: 'none' },
+      run: (t) => getSellDecision(t.input, t.config),
+      fmt: (r) => `${r.action} / ${r.urgency}`,
+      check: (r, e) => r.action === e.action && r.urgency === e.urgency,
+    },
+    {
+      name: '⑥ 추세붕괴가 수익실현(+25%)보다 우선 — MA20 < MA60이면 sell_all',
+      input: { currentReturn: 0.25, currentPrice: 22000, ma20: 24000, ma60: 26000 },
+      config: { targetReturn: 0.20, stopLoss: -0.10 },
+      expected: { action: 'sell_all', urgency: 'high' },
+      run: (t) => getSellDecision(t.input, t.config),
+      fmt: (r) => `${r.action} / ${r.urgency}`,
+      check: (r, e) => r.action === e.action && r.urgency === e.urgency,
+    },
+  ],
+
+  trend: [
+    {
+      name: '상승추세 — 주가가 MA20, MA60 모두 위',
+      s: { currentPrice: 30000, ma20: 28000, ma60: 26000 },
+      expected: 'up',
+      run: (t) => getTrend(t.s),
+      fmt: (r) => r,
+      check: (r, e) => r === e,
+    },
+    {
+      name: '하락추세 — 주가가 MA20, MA60 모두 아래',
+      s: { currentPrice: 22000, ma20: 26000, ma60: 28000 },
+      expected: 'down',
+      run: (t) => getTrend(t.s),
+      fmt: (r) => r,
+      check: (r, e) => r === e,
+    },
+    {
+      name: '횡보 — 주가 > MA20 but < MA60',
+      s: { currentPrice: 27000, ma20: 26000, ma60: 28000 },
+      expected: 'sideways',
+      run: (t) => getTrend(t.s),
+      fmt: (r) => r,
+      check: (r, e) => r === e,
+    },
+    {
+      name: '횡보 — 주가 < MA20 but > MA60',
+      s: { currentPrice: 25000, ma20: 26000, ma60: 24000 },
+      expected: 'sideways',
+      run: (t) => getTrend(t.s),
+      fmt: (r) => r,
+      check: (r, e) => r === e,
+    },
+    {
+      name: '경계값 — 주가 = MA20 (exactly)',
+      s: { currentPrice: 26000, ma20: 26000, ma60: 24000 },
+      expected: 'up',  // aboveMA20 = (price >= ma20) → true
+      run: (t) => getTrend(t.s),
+      fmt: (r) => r,
+      check: (r, e) => r === e,
+    },
+  ],
+
+  'sell-sig': [
+    {
+      name: '매도 적합 — 상승추세 + position 80%',
+      s: { currentPrice: 29000, ma20: 27000, ma60: 25000, high: 30000, low: 20000, position: 0.9 },
+      expected: '매도 적합',
+      run: (t) => getSellSignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e,
+    },
+    {
+      name: '매도 가능 — 상승추세 + position 50%',
+      s: { currentPrice: 26000, ma20: 24000, ma60: 22000, high: 30000, low: 20000, position: 0.6 },
+      expected: '매도 가능',
+      run: (t) => getSellSignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e,
+    },
+    {
+      name: '매도 가능 — 횡보 + position 60%',
+      s: { currentPrice: 26000, ma20: 24000, ma60: 28000, high: 30000, low: 20000, position: 0.6 },
+      expected: '매도 가능',
+      run: (t) => getSellSignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e,
+    },
+    {
+      name: '반등 대기 — 횡보 + position 40% (price<MA20, price>MA60)',
+      s: { currentPrice: 24000, ma20: 26000, ma60: 22000, high: 30000, low: 20000, position: 0.4 },
+      expected: '반등 대기',
+      run: (t) => getSellSignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e,
+    },
+    {
+      name: '저점 매도 — 하락추세 + position 20%',
+      s: { currentPrice: 22000, ma20: 26000, ma60: 28000, high: 30000, low: 20000, position: 0.2 },
+      expected: '저점 매도',
+      run: (t) => getSellSignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e,
+    },
+    {
+      name: '반등 후 매도 — 하락추세 + position 50%',
+      s: { currentPrice: 22000, ma20: 26000, ma60: 28000, high: 30000, low: 20000, position: 0.5 },
+      expected: '반등 후 매도',
+      run: (t) => getSellSignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e,
+    },
+  ],
+
+  'buy-sig': [
+    {
+      name: '반등 대기 (분할) — 하락 + position 10%',
+      s: { currentPrice: 22000, ma20: 26000, ma60: 28000, high: 30000, low: 20000, position: 0.1 },
+      expectedLabel: '반등 대기', expectedCautious: true,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+    {
+      name: '반등 대기 (분할) — 하락 + position 50%',
+      s: { currentPrice: 22000, ma20: 26000, ma60: 28000, high: 30000, low: 20000, position: 0.5 },
+      expectedLabel: '반등 대기', expectedCautious: true,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+    {
+      name: '매수 적합 — 횡보 + position 30% (price<MA20, price>MA60)',
+      s: { currentPrice: 23000, ma20: 26000, ma60: 21000, high: 30000, low: 20000, position: 0.3 },
+      expectedLabel: '매수 적합', expectedCautious: false,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+    {
+      name: '분할 매수 (분할) — 횡보 + position 60%',
+      s: { currentPrice: 26000, ma20: 24000, ma60: 28000, high: 30000, low: 20000, position: 0.6 },
+      expectedLabel: '분할 매수', expectedCautious: true,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+    {
+      name: '조정 대기 (분할) — 상승 + position 90%',
+      s: { currentPrice: 29000, ma20: 27000, ma60: 25000, high: 30000, low: 20000, position: 0.9 },
+      expectedLabel: '조정 대기', expectedCautious: true,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+    {
+      name: '분할 매수 (분할) — 상승 + position 70%',
+      s: { currentPrice: 27000, ma20: 25000, ma60: 23000, high: 30000, low: 20000, position: 0.7 },
+      expectedLabel: '분할 매수', expectedCautious: true,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+    {
+      name: '매수 가능 — 상승 + position 40%',
+      s: { currentPrice: 24000, ma20: 22000, ma60: 20000, high: 30000, low: 20000, position: 0.4 },
+      expectedLabel: '매수 가능', expectedCautious: false,
+      run: (t) => getBuySignal(t.s),
+      fmt: (r) => r.label,
+      check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
+    },
+  ],
+
+  position: [
+    { name: '저점 = currentPrice → position 0', price: 20000, low: 20000, high: 30000, expected: 0.00 },
+    { name: '고점 = currentPrice → position 1', price: 30000, low: 20000, high: 30000, expected: 1.00 },
+    { name: '정중간 → position 0.5', price: 25000, low: 20000, high: 30000, expected: 0.50 },
+    { name: '42% 위치', price: 24200, low: 20000, high: 30000, expected: 0.42 },
+    { name: '고저점 같음 → 0 (division guard)', price: 25000, low: 25000, high: 25000, expected: 0.00 },
+  ],
+
+  change: [
+    { name: '가격 상승 +4.7%', lastPrice: 26175, prevPrice: 25000, expected: 4.70 },
+    { name: '가격 하락 -0.27%', lastPrice: 26175, prevPrice: 26247, expected: -0.27 },
+    { name: '변동 없음 0%', lastPrice: 26000, prevPrice: 26000, expected: 0.00 },
+    { name: '반토막 -50%', lastPrice: 5000, prevPrice: 10000, expected: -50.00 },
+    { name: '2배 +100%', lastPrice: 20000, prevPrice: 10000, expected: 100.00 },
+  ],
+
+  ma: [
+    {
+      name: 'MA3, 데이터 5개',
+      prices: [10, 20, 30, 40, 50],
+      period: 3,
+      expectedLast: Math.round((30+40+50)/3),
+    },
+    {
+      name: 'MA5, 데이터 정확히 5개',
+      prices: [10, 20, 30, 40, 50],
+      period: 5,
+      expectedLast: Math.round((10+20+30+40+50)/5),
+    },
+    {
+      name: 'MA5, 데이터 4개 → 마지막이 null',
+      prices: [10, 20, 30, 40],
+      period: 5,
+      expectedLast: null,
+    },
+    {
+      name: 'MA20, 균등한 100가격',
+      prices: Array(25).fill(100),
+      period: 20,
+      expectedLast: 100,
+    },
+  ],
+
+  return: [
+    { name: '+25% 수익', currentPrice: 25000, avgCost: 20000, expected: 0.25 },
+    { name: '-10% 손실', currentPrice: 18000, avgCost: 20000, expected: -0.10 },
+    { name: '원금 동일 0%', currentPrice: 20000, avgCost: 20000, expected: 0.00 },
+    { name: '+39.6% (TIGER 케이스)', currentPrice: 26175, avgCost: 18750, expected: parseFloat((( 26175-18750)/18750).toFixed(4)) },
+  ],
+};
+
+// ══════════════════════════════════════════════
+// 렌더링 및 실행
+// ══════════════════════════════════════════════
+
+let scores = {};
+
+function renderPending(sectionId) {
+  const info = {
+    engine: { cols: ['케이스','입력값','예상 결과','실제 결과','판정'] },
+    trend: { cols: ['케이스','입력값','예상','실제','판정'] },
+    'sell-sig': { cols: ['케이스','입력값','예상','실제','판정'] },
+    'buy-sig': { cols: ['케이스','입력값','예상 신호','분할권장','실제 신호','실제 분할','판정'] },
+    position: { cols: ['케이스','입력값','예상','실제','판정'] },
+    change: { cols: ['케이스','입력값','예상','실제','판정'] },
+    ma: { cols: ['케이스','입력값','예상 (마지막 값)','실제 (마지막 값)','판정'] },
+    return: { cols: ['케이스','입력값','예상','실제','판정'] },
+  };
+}
+
+function fmt2(n) { return typeof n === 'number' ? n.toFixed(2) : String(n); }
+function fmt4(n) { return typeof n === 'number' ? n.toFixed(4) : String(n); }
+
+function runSection(sectionId) {
+  const tests = TESTS[sectionId];
+  if (!tests) return;
+  const tbody = document.querySelector(`#tbl-${sectionId} tbody`);
+  tbody.innerHTML = '';
+  let pass = 0, fail = 0;
+
+  tests.forEach((t, i) => {
+    const tr = document.createElement('tr');
+    let result, passed, inputStr, expectedStr, actualStr;
+
+    if (sectionId === 'engine') {
+      result = t.run(t);
+      passed = t.check(result, t.expected);
+      inputStr = `return=${t.input.currentReturn !== null ? (t.input.currentReturn*100).toFixed(0)+'%' : 'null'} price=${t.input.currentPrice.toLocaleString()} MA20=${t.input.ma20.toLocaleString()} MA60=${t.input.ma60.toLocaleString()}`;
+      expectedStr = `${t.expected.action} / ${t.expected.urgency}`;
+      actualStr = t.fmt(result);
+    } else if (sectionId === 'trend') {
+      result = t.run(t);
+      passed = t.check(result, t.expected);
+      inputStr = `price=${t.s.currentPrice.toLocaleString()} MA20=${t.s.ma20.toLocaleString()} MA60=${t.s.ma60.toLocaleString()}`;
+      expectedStr = t.expected;
+      actualStr = t.fmt(result);
+    } else if (sectionId === 'sell-sig') {
+      result = t.run(t);
+      passed = t.check(result, t.expected);
+      inputStr = `price=${t.s.currentPrice.toLocaleString()} MA20=${t.s.ma20.toLocaleString()} MA60=${t.s.ma60.toLocaleString()} pos=${(t.s.position*100).toFixed(0)}%`;
+      expectedStr = t.expected;
+      actualStr = t.fmt(result);
+    } else if (sectionId === 'buy-sig') {
+      result = t.run(t);
+      passed = t.check(result, t);
+      inputStr = `price=${t.s.currentPrice.toLocaleString()} MA20=${t.s.ma20.toLocaleString()} MA60=${t.s.ma60.toLocaleString()} pos=${(t.s.position*100).toFixed(0)}%`;
+      const expCautious = t.expectedCautious ? '✓' : '–';
+      const actCautious = result.cautious ? '✓' : '–';
+      tr.innerHTML = `
+        <td>${t.name}</td>
+        <td class="input-col">${inputStr}</td>
+        <td class="expected-col">${t.expectedLabel}</td>
+        <td style="color:${t.expectedCautious?'var(--yellow)':'var(--text3)'}">${expCautious}</td>
+        <td class="actual-col" style="color:${passed?'var(--green)':'var(--red)'}">${result.label}</td>
+        <td style="color:${result.cautious?'var(--yellow)':'var(--text3)'}">${actCautious}</td>
+        <td class="result-col">${passed ? '<span class="badge-pass"><span class="material-icons">check</span> 통과</span>' : '<span class="badge-fail"><span class="material-icons">close</span> 실패</span>'}</td>
+      `;
+      tbody.appendChild(tr);
+      if (passed) pass++; else fail++;
+      return;
+    } else if (sectionId === 'position') {
+      result = calcPosition(t.price, t.low, t.high);
+      passed = Math.abs(result - t.expected) < 0.001;
+      inputStr = `price=${t.price.toLocaleString()} low=${t.low.toLocaleString()} high=${t.high.toLocaleString()}`;
+      expectedStr = t.expected.toFixed(2);
+      actualStr = result.toFixed(2);
+    } else if (sectionId === 'change') {
+      result = calcChangeRate(t.lastPrice, t.prevPrice);
+      passed = Math.abs(result - t.expected) < 0.01;
+      inputStr = `last=${t.lastPrice.toLocaleString()} prev=${t.prevPrice.toLocaleString()}`;
+      expectedStr = t.expected.toFixed(2) + '%';
+      actualStr = result.toFixed(2) + '%';
+    } else if (sectionId === 'ma') {
+      const arr = calcMA(t.prices, t.period);
+      result = arr[arr.length - 1];
+      passed = result === t.expectedLast;
+      inputStr = `prices=[${t.prices.slice(0,4).join(',')}${t.prices.length>4?',...':''}] period=${t.period}`;
+      expectedStr = t.expectedLast === null ? 'null' : String(t.expectedLast);
+      actualStr = result === null ? 'null' : String(result);
+    } else if (sectionId === 'return') {
+      result = calcReturn(t.currentPrice, t.avgCost);
+      passed = Math.abs(result - t.expected) < 0.0001;
+      inputStr = `price=${t.currentPrice.toLocaleString()} avgCost=${t.avgCost.toLocaleString()}`;
+      expectedStr = (t.expected * 100).toFixed(2) + '%';
+      actualStr = (result * 100).toFixed(2) + '%';
+    }
+
+    if (passed) pass++; else fail++;
+    tr.innerHTML = `
+      <td>${t.name}</td>
+      <td class="input-col">${inputStr}</td>
+      <td class="expected-col">${expectedStr}</td>
+      <td class="actual-col" style="color:${passed?'var(--green)':'var(--red)'}">${actualStr}</td>
+      <td class="result-col">${passed ? '<span class="badge-pass"><span class="material-icons">check</span> 통과</span>' : '<span class="badge-fail"><span class="material-icons">close</span> 실패</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  scores[sectionId] = { pass, fail, total: pass + fail };
+  document.getElementById(`score-${sectionId}`).textContent = `(${pass}/${pass+fail})`;
+  updateTotal();
+}
+
+function runAll() {
+  Object.keys(TESTS).forEach(s => runSection(s));
+}
+
+function updateTotal() {
+  let tp = 0, tf = 0;
+  Object.values(scores).forEach(s => { tp += s.pass; tf += s.fail; });
+  document.getElementById('total-pass').textContent = tp;
+  document.getElementById('total-fail').textContent = tf;
+  document.getElementById('total-all').textContent = tp + tf;
+}
+
+// 커스텀 sellEngine 계산기
+function calcCustomEngine() {
+  const r = parseFloat(document.getElementById('ci-return').value) / 100;
+  const price = parseFloat(document.getElementById('ci-price').value);
+  const ma20 = parseFloat(document.getElementById('ci-ma20').value);
+  const ma60 = parseFloat(document.getElementById('ci-ma60').value);
+  const target = parseFloat(document.getElementById('ci-target').value) / 100;
+  const stoploss = parseFloat(document.getElementById('ci-stoploss').value) / 100;
+
+  const decision = getSellDecision(
+    { currentReturn: r, currentPrice: price, ma20, ma60 },
+    { targetReturn: target, stopLoss: stoploss }
+  );
+
+  const colorMap = {
+    hold: 'var(--text2)',
+    sell_half: 'var(--yellow)',
+    sell_all: decision.urgency === 'critical' ? 'var(--red)' : 'var(--red)',
+  };
+  const actionLabel = { hold: '홀딩 유지', sell_half: '절반 매도', sell_all: '전량 매도' };
+  const urgencyLabel = { none: '', medium: ' (urgency: medium)', high: ' (urgency: high ⚠)', critical: ' (urgency: critical 🚨)' };
+
+  const el = document.getElementById('custom-engine-result');
+  el.innerHTML = `
+    <div class="calc-result-label">결정</div>
+    <div class="calc-result-value" style="color:${colorMap[decision.action]}">${actionLabel[decision.action]}${urgencyLabel[decision.urgency]}</div>
+    <div class="calc-result-desc">${decision.reason}</div>
+  `;
+}
+</script>
+</body>
+</html>

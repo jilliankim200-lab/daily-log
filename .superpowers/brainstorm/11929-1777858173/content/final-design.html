@@ -1,0 +1,113 @@
+<h2>최종 설계 — 3레이어 매도 판단 구조</h2>
+<p class="subtitle">기존 로직을 유지하면서 sellEngine을 앞에 추가합니다</p>
+
+<!-- 3레이어 구조 -->
+<div class="section">
+  <div class="label">판단 흐름 (3레이어)</div>
+  <div style="display:flex;flex-direction:column;gap:4px;margin-top:10px">
+
+    <div style="display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:#ef4444;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div>
+        <div style="width:2px;flex:1;background:#1e293b;margin:4px 0"></div>
+      </div>
+      <div style="background:#1e293b;border-radius:8px;padding:12px 14px;margin-bottom:4px">
+        <div style="font-weight:700;color:#e2e8f0;margin-bottom:4px">sellEngine — "팔 것인가?" <span style="background:#4ade8020;color:#4ade80;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:6px">신규</span></div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.8">
+          Veto: 주가 &gt; MA20 → 즉시 <strong style="color:#4ade80">HOLD</strong> (이하 생략)<br>
+          시나리오 1: 주가&lt;MA20 AND MA20&lt;MA60 AND 2일 연속 → <strong style="color:#f87171">SELL (전량)</strong><br>
+          시나리오 2: 수익률 ≥ +20% AND 주가&lt;MA20 → <strong style="color:#fbbf24">SELL (부분)</strong><br>
+          시나리오 3: 수익률 ≤ −10% AND 주가&lt;MA60 → <strong style="color:#f87171">SELL (손절)</strong>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:#f59e0b;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
+        <div style="width:2px;flex:1;background:#1e293b;margin:4px 0"></div>
+      </div>
+      <div style="background:#1e293b;border-radius:8px;padding:12px 14px;margin-bottom:4px">
+        <div style="font-weight:700;color:#e2e8f0;margin-bottom:4px">OptimalGuide 기존 로직 — "어느 계좌에서, 얼마나?" <span style="background:#fbbf2420;color:#fbbf24;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:6px">기존 유지</span></div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.8">
+          ① 중복 종목 → 절세 우선순위 낮은 계좌 선택 (IRP &gt; 퇴직 &gt; 연금 &gt; ISA &gt; 일반)<br>
+          ② 수익률 40%↑ → sellEngine SELL이어도 예외 처리 (세금 고려)<br>
+          ③ 퇴직/IRP → 안전자산 30~35% 유지 체크<br>
+          ④ 매도 현금 → 목표 비중 기반 재배분 계획
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start">
+      <div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div>
+      <div style="background:#1e293b;border-radius:8px;padding:12px 14px">
+        <div style="font-weight:700;color:#e2e8f0;margin-bottom:4px">fetchStockSignals — "지금 타이밍이 맞나?" <span style="background:#3b82f620;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:6px">기존 유지</span></div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.8">
+          매도 적합 / 매도 가능 / 반등 대기 / 저점 매도 / 반등 후 매도<br>
+          → 배지 + 실행 가격 범위로 표시 (기존 그대로)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 파일 변경 요약 -->
+<div class="section">
+  <div class="label">파일 변경 요약</div>
+  <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="background:#0f172a;border-radius:8px;padding:12px;font-size:12px">
+      <div style="color:#4ade80;font-weight:700;margin-bottom:8px">신규 생성 (2개)</div>
+      <div style="color:#94a3b8;line-height:2">
+        src/utils/<span style="color:#4ade80">sellConfig.ts</span><br>
+        <span style="color:#64748b;padding-left:12px">targetReturn, stopLoss + localStorage 저장</span><br>
+        src/utils/<span style="color:#4ade80">sellEngine.ts</span><br>
+        <span style="color:#64748b;padding-left:12px">getSellDecision() → HOLD / SELL</span>
+      </div>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:12px;font-size:12px">
+      <div style="color:#fbbf24;font-weight:700;margin-bottom:8px">수정 (2개)</div>
+      <div style="color:#94a3b8;line-height:2">
+        src/components/<span style="color:#fbbf24">OptimalGuide.tsx</span><br>
+        <span style="color:#64748b;padding-left:12px">sellEngine 게이트 추가 + 설정 패널 UI</span><br>
+        src/components/<span style="color:#fbbf24">MonthlyStrategy.tsx</span><br>
+        <span style="color:#64748b;padding-left:12px">sellEngine 게이트로 매도 후보 필터링</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 패널 -->
+<div class="section">
+  <div class="label">OptimalGuide 설정 패널</div>
+  <div style="background:#1e293b;border-radius:8px;padding:14px;margin-top:8px;max-width:440px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:13px;font-weight:600;color:#e2e8f0">매도 기준 설정</span>
+      <span style="font-size:11px;color:#64748b">브라우저 자동 저장</span>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1;background:#0f172a;border-radius:6px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:#64748b;margin-bottom:4px">수익 실현 기준</div>
+        <div style="font-size:24px;font-weight:700;color:#4ade80">+20%</div>
+        <div style="font-size:11px;color:#475569;margin:4px 0 8px">부분 매도 트리거</div>
+        <div style="display:flex;gap:6px;justify-content:center">
+          <button style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px">−5%</button>
+          <button style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px">+5%</button>
+        </div>
+      </div>
+      <div style="flex:1;background:#0f172a;border-radius:6px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:#64748b;margin-bottom:4px">손절 기준</div>
+        <div style="font-size:24px;font-weight:700;color:#f87171">−10%</div>
+        <div style="font-size:11px;color:#475569;margin:4px 0 8px">긴급 손절 트리거</div>
+        <div style="display:flex;gap:6px;justify-content:center">
+          <button style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px">−5%</button>
+          <button style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px">+5%</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px;padding:12px 16px;background:#16a34a20;border-radius:8px;border-left:3px solid #4ade80;font-size:13px">
+  <strong style="color:#4ade80">이 설계로 진행할까요?</strong>
+  <span style="color:#94a3b8;margin-left:8px">승인하면 스펙 문서를 작성하고 구현 계획을 세웁니다</span>
+</div>
