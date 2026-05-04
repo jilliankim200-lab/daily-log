@@ -127,7 +127,11 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
         </span>
         {hasRange && (
           <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: timing.color, marginTop: 1, whiteSpace: 'nowrap' }}>
-            {rMin === rMax ? fmtP(rMin) : `${fmtP(rMin)}~${fmtP(rMax)}`}
+            {timing.label === '반등 대기'
+              ? `MA20 ${fmtP(rMax)} 돌파 시`
+              : timing.label === '조정 대기'
+              ? `MA20~60 ${fmtP(rMin)}~${fmtP(rMax)} 도달 시`
+              : rMin === rMax ? fmtP(rMin) : `${fmtP(rMin)}~${fmtP(rMax)}`}
           </span>
         )}
       </div>
