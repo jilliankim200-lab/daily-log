@@ -18,14 +18,17 @@ interface BudgetData {
 }
 
 // ── 시드 데이터 ────────────────────────────────────────────────
+// 시드 버전을 올리면 다음 로드 시 자동 재시드 (기존 데이터 덮어씀)
+const SEED_VERSION_2026_04 = 'v2';
+
 const SEED_2026_04: Omit<BudgetItem, 'id'>[] = [
-  // 수입
+  // 수입 — 우리은행 4월 수입 합산 13,985,153원 (개인별 분배 직접 입력 필요)
   { type: 'income', name: '지윤 급여',   budget: null, actual: null },
   { type: 'income', name: '오빠 급여',   budget: null, actual: null },
   { type: 'income', name: '사업자 소득', budget: null, actual: null },
   { type: 'income', name: '부수입',      budget: null, actual: null },
   // 고정 지출
-  { type: 'fixed', name: '노랑우산',     budget: 250000,  actual: null    },
+  { type: 'fixed', name: '노랑우산',     budget: 250000,  actual: 4000000 }, // 은퇴자금 우리은행 기준
   { type: 'fixed', name: '인터넷',       budget: 55230,   actual: 44000   },
   { type: 'fixed', name: 'TV',           budget: 0,       actual: 0       },
   { type: 'fixed', name: '오빠휴대폰',   budget: 21000,   actual: 25000   },
@@ -44,8 +47,8 @@ const SEED_2026_04: Omit<BudgetItem, 'id'>[] = [
   { type: 'fixed', name: '엄마실비',     budget: 123610,  actual: 123610  },
   { type: 'fixed', name: '엄마암',       budget: 33000,   actual: 33000   },
   { type: 'fixed', name: '양압기',       budget: 15200,   actual: 41600   },
-  { type: 'fixed', name: '대출',         budget: 930000,  actual: null    },
-  { type: 'fixed', name: '용돈',         budget: 850000,  actual: 850000  },
+  { type: 'fixed', name: '대출',         budget: 930000,  actual: 930000  }, // 우리은행 대출 930,000
+  { type: 'fixed', name: '용돈',         budget: 850000,  actual: 533200  }, // 오빠용돈 500,000 + 지윤용돈 33,200
   // 변동 지출
   { type: 'variable', name: '도시가스',  budget: 50000,   actual: 119880  },
   { type: 'variable', name: '관리비',    budget: 200000,  actual: 183270  },
@@ -53,10 +56,10 @@ const SEED_2026_04: Omit<BudgetItem, 'id'>[] = [
   { type: 'variable', name: '하이패스',  budget: 300000,  actual: 73400   },
   { type: 'variable', name: '구독료',    budget: 20000,   actual: 24390   },
   { type: 'variable', name: '자동차세',  budget: 500000,  actual: 476290  },
-  { type: 'variable', name: '식비/외식', budget: 300000,  actual: null    },
-  { type: 'variable', name: '쇼핑',      budget: 200000,  actual: null    },
-  { type: 'variable', name: '의료/약국', budget: 50000,   actual: null    },
-  { type: 'variable', name: '기타',      budget: 100000,  actual: null    },
+  { type: 'variable', name: '식비/외식', budget: 300000,  actual: 253753  }, // 우리은행 식비
+  { type: 'variable', name: '쇼핑',      budget: 200000,  actual: 460048  }, // 우리은행 쇼핑
+  { type: 'variable', name: '의료/약국', budget: 50000,   actual: 2730    }, // 미용 2,730
+  { type: 'variable', name: '기타',      budget: 100000,  actual: 208439  }, // 취미여가+편의점+카페+생활+카드대금
 ];
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
@@ -269,6 +272,15 @@ export function HouseholdBudget() {
 
   const loadData = async (ym: string) => {
     setLoading(true);
+    // 버전이 바뀌면 기존 데이터를 무시하고 새 시드로 덮어씀
+    if (ym === '2026-04' && localStorage.getItem('budget_seed_ver_2026_04') !== SEED_VERSION_2026_04) {
+      const seeded = SEED_2026_04.map(item => ({ ...item, id: genId() }));
+      setItems(seeded);
+      await persistData(ym, seeded);
+      localStorage.setItem('budget_seed_ver_2026_04', SEED_VERSION_2026_04);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await kvGet<BudgetData>(kvKey(ym));
       if (data?.items?.length) { setItems(data.items); setLoading(false); return; }
@@ -284,6 +296,7 @@ export function HouseholdBudget() {
       const seeded = SEED_2026_04.map(item => ({ ...item, id: genId() }));
       setItems(seeded);
       await persistData(ym, seeded);
+      localStorage.setItem('budget_seed_ver_2026_04', SEED_VERSION_2026_04);
     } else {
       setItems([]);
     }
