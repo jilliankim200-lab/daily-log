@@ -323,6 +323,16 @@ export function Dividend() {
   const totalYearlyEstimate = totalMonthlyEstimate * 12;
   const achievementRate = targetMonthly > 0 ? Math.min((totalMonthlyEstimate / targetMonthly) * 100, 100) : 0;
 
+  // 월 추정 배당금을 monthly_dividend_estimates에 날짜별로 저장
+  useEffect(() => {
+    if (totalMonthlyEstimate > 0) {
+      const stored = JSON.parse(localStorage.getItem('monthly_dividend_estimates') || '{}');
+      const month = new Date().toISOString().slice(0, 7);
+      stored[month] = Math.round(totalMonthlyEstimate);
+      localStorage.setItem('monthly_dividend_estimates', JSON.stringify(stored));
+    }
+  }, [totalMonthlyEstimate]);
+
   const hide = (s: string) => isAmountHidden ? "••••" : s;
 
   const handleSaveEdit = (ticker: string) => {

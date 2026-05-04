@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAppContext } from "../App";
-import { fetchSnapshots } from "../api";
+import { fetchSnapshots, saveSnapshot } from "../api";
 import type { DailySnapshot } from "../types";
 import {
   ResponsiveContainer,
@@ -300,6 +300,8 @@ export function AssetChange() {
     lastDividend: number; wifeChange: number; husbandChange: number;
     wifeTotal: number; husbandTotal: number; startTotal: number;
   }>(null);
+  const [editingDividendMonth, setEditingDividendMonth] = useState<string | null>(null);
+  const [dividendInput, setDividendInput] = useState('');
 
   const totalAsset = useMemo(() => {
     return accounts.reduce((sum, account) => {
@@ -315,13 +317,27 @@ export function AssetChange() {
   useEffect(() => {
     let cancelled = false;
     fetchSnapshots()
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return;
-        if (data && data.length > 0) {
-          setSnapshots(data);
-        } else {
-          setSnapshots(generateMockSnapshots(totalAsset || 100000000));
+        const loaded = data && data.length > 0 ? data : generateMockSnapshots(totalAsset || 100000000);
+
+        // 지난 달 중 배당금 미입력 월을 monthly_dividend_estimates로 자동 채움
+        const estimates: Record<string, number> = JSON.parse(localStorage.getItem('monthly_dividend_estimates') || '{}');
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const monthMap = new Map<string, typeof loaded[0]>();
+        for (const s of loaded) {
+          const m = s.date.slice(0, 7);
+          if (m < currentMonth) {
+            const existing = monthMap.get(m);
+            if (!existing || s.date > existing.date) monthMap.set(m, s);
+          }
         }
+        const toFill = Array.from(monthMap.entries()).filter(([m, s]) => !s.dividend && estimates[m]);
+        for (const [m, s] of toFill) {
+          await saveSnapshot({ ...s, dividend: estimates[m] });
+        }
+        const final = toFill.length > 0 ? await fetchSnapshots() : loaded;
+        if (!cancelled) setSnapshots(final);
       })
       .catch(() => {
         if (!cancelled) {
@@ -427,6 +443,19 @@ export function AssetChange() {
       };
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredSnapshots, isYearFilter]);
+
+  async function handleSaveDividend(month: string) {
+    const amount = parseInt(dividendInput.replace(/,/g, ''), 10);
+    if (isNaN(amount) || amount < 0) return;
+    const monthSnaps = snapshots.filter(s => s.date.startsWith(month));
+    if (monthSnaps.length === 0) return;
+    const target = [...monthSnaps].sort((a, b) => b.date.localeCompare(a.date))[0];
+    await saveSnapshot({ ...target, dividend: amount || undefined });
+    const updated = await fetchSnapshots();
+    setSnapshots(updated);
+    setEditingDividendMonth(null);
+    setDividendInput('');
+  }
 
   const chartData = useMemo(() => {
     return [...filteredSnapshots].sort((a, b) => a.date.localeCompare(b.date)).map((s) => ({
@@ -790,6 +819,38 @@ export function AssetChange() {
                       </div>
                     </div>
                   </div>
+                  {isYearRow && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>배당금</span>
+                      {editingDividendMonth === (row as typeof monthlySummary[0]).date ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input
+                            autoFocus
+                            value={dividendInput}
+                            onChange={e => setDividendInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSaveDividend((row as typeof monthlySummary[0]).date); if (e.key === 'Escape') setEditingDividendMonth(null); }}
+                            style={{ width: 100, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--accent-blue)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-xs)', textAlign: 'right' }}
+                            placeholder="금액"
+                          />
+                          <button onClick={() => handleSaveDividend((row as typeof monthlySummary[0]).date)} style={{ background: 'var(--accent-blue)', border: 'none', borderRadius: 5, padding: '3px 7px', cursor: 'pointer', color: '#fff', fontSize: 'var(--text-xs)', fontWeight: 700 }}>저장</button>
+                          <button onClick={() => setEditingDividendMonth(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12 }}>✕</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span className="toss-number" style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: dividend ? 'var(--accent-blue)' : 'var(--text-quaternary)' }}>
+                            {dividend ? formatAmount(dividend, isAmountHidden) + '원' : '—'}
+                          </span>
+                          <button
+                            onClick={() => { setEditingDividendMonth((row as typeof monthlySummary[0]).date); setDividendInput(dividend ? String(dividend) : ''); }}
+                            title="배당금 편집"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px', borderRadius: 4, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}
+                          >
+                            <MIcon name="edit" size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -824,7 +885,37 @@ export function AssetChange() {
                       <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{formatAmount(row.totalAsset, isAmountHidden)}원</td>
                       <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(row.assetChange), fontWeight: "var(--font-medium)" }}>{row.assetChange > 0 ? "+" : ""}{formatAmount(row.assetChange, isAmountHidden)}원</td>
                       <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: getChangeColor(row.changeRate), fontWeight: "var(--font-medium)" }}>{formatRate(row.changeRate, isAmountHidden)}</td>
-                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: row.lastDividend ? "var(--accent-blue)" : "var(--text-quaternary)", fontWeight: "var(--font-medium)" }}>{row.lastDividend ? formatAmount(row.lastDividend, isAmountHidden) + "원" : "—"}</td>
+                      <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", fontWeight: "var(--font-medium)" }}>
+                        {editingDividendMonth === row.date ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                            <input
+                              autoFocus
+                              value={dividendInput}
+                              onChange={e => setDividendInput(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveDividend(row.date); if (e.key === 'Escape') setEditingDividendMonth(null); }}
+                              style={{ width: 110, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--accent-blue)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 'var(--text-xs)', textAlign: 'right' }}
+                              placeholder="금액 입력"
+                            />
+                            <button onClick={() => handleSaveDividend(row.date)} style={{ background: 'var(--accent-blue)', border: 'none', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', color: '#fff', fontSize: 'var(--text-xs)', fontWeight: 700 }}>저장</button>
+                            <button onClick={() => setEditingDividendMonth(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12 }}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                            <span style={{ color: row.lastDividend ? "var(--accent-blue)" : "var(--text-quaternary)" }}>
+                              {row.lastDividend ? formatAmount(row.lastDividend, isAmountHidden) + "원" : "—"}
+                            </span>
+                            <button
+                              onClick={() => { setEditingDividendMonth(row.date); setDividendInput(row.lastDividend ? String(row.lastDividend) : ''); }}
+                              title="배당금 편집"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px', borderRadius: 4, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', opacity: 0.6 }}
+                              onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                              onMouseLeave={e => e.currentTarget.style.opacity = '0.6'}
+                            >
+                              <MIcon name="edit" size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))
                 ) : (

@@ -14,6 +14,7 @@ import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
 import { StockDailyRecord } from "./components/StockDailyRecord";
 import { MonthlyStrategy } from "./components/MonthlyStrategy";
+import { CalcChecklist } from "./components/CalcChecklist";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -68,6 +69,7 @@ const MENU_ITEMS = [
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "stock-daily-record", label: "개별종목기록", materialIcon: "table_chart" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
+  { id: "calc-checklist", label: "계산식 검증", materialIcon: "fact_check" },
 ];
 
 const FONT_SIZES = [
@@ -231,6 +233,7 @@ export default function App() {
       case "account-return": return <AccountReturn />;
       case "stock-daily-record": return <StockDailyRecord />;
       case "monthly-strategy": return <MonthlyStrategy />;
+      case "calc-checklist": return <CalcChecklist />;
     }
   };
 

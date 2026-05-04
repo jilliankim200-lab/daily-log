@@ -31,6 +31,7 @@ export function Sidebar({ currentPage, onNavigate, isCollapsed = false, onToggle
     { id: "retirement-plan", label: "은퇴설계", icon: "description", gradient: "from-teal-500 to-cyan-500" },
     { id: "cash-flow", label: "현금흐름", icon: "attach_money", gradient: "from-emerald-500 to-green-500" },
     { id: "stock-daily-record", label: "개별종목기록", icon: "table_chart", gradient: "from-sky-500 to-blue-500" },
+    { id: "calc-checklist", label: "계산식 검증", icon: "fact_check", gradient: "from-slate-500 to-gray-500" },
   ];
 
   return (

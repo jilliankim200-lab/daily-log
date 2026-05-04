@@ -227,6 +227,7 @@ function OwnerSection({
   isMobile?: boolean;
 }) {
   const [signalFilter, setSignalFilter] = useState<'all' | 'buy' | 'sell' | 'day-buy' | 'day-sell'>('all');
+  const [showGuide, setShowGuide] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -331,8 +332,92 @@ function OwnerSection({
               </button>
             );
           })}
+          <button
+            onClick={() => setShowGuide(g => !g)}
+            title="신호 기준 보기"
+            style={{
+              width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer',
+              background: showGuide ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+              color: showGuide ? 'var(--accent-blue-fg)' : 'var(--text-tertiary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'all 0.15s',
+            }}
+          >
+            <MIcon name="help_outline" size={16} />
+          </button>
         </div>
       </div>
+
+      {/* Signal Guide Panel */}
+      {showGuide && (
+        <div style={{
+          padding: isMobile ? '12px 16px' : '14px 24px',
+          borderBottom: '1px solid var(--border-primary)',
+          background: 'var(--bg-secondary)',
+        }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 10, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            신호 판단 기준
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 8 }}>
+            {[
+              {
+                label: '평균가 매수',
+                color: 'var(--color-loss)',
+                icon: 'trending_down',
+                cond: '현재가 ≤ 평균단가 × 0.97',
+                desc: '평균 매수가 대비 -3% 이하 하락 시 저가 매수 기회로 판단',
+              },
+              {
+                label: '평균가 매도',
+                color: 'var(--color-profit)',
+                icon: 'trending_up',
+                cond: '현재가 ≥ 평균단가 × 1.10',
+                desc: '평균 매수가 대비 +10% 이상 상승 시 수익 실현 검토',
+              },
+              {
+                label: '당일 매수',
+                color: 'var(--color-loss)',
+                icon: 'arrow_downward',
+                cond: '당일 등락률 ≤ −3%',
+                desc: '당일 기준 3% 이상 하락 — 일중 과매도, 리밸런싱 매수 기회',
+              },
+              {
+                label: '당일 매도',
+                color: 'var(--color-profit)',
+                icon: 'arrow_upward',
+                cond: '당일 등락률 ≥ +3%',
+                desc: '당일 기준 3% 이상 상승 — 일중 과열, 부분 차익 실현 검토',
+              },
+            ].map(({ label, color, icon, cond, desc }) => (
+              <div key={label} style={{
+                display: 'flex', gap: 10, alignItems: 'flex-start',
+                padding: '10px 12px', borderRadius: 10,
+                background: `color-mix(in srgb, ${color} 6%, var(--bg-primary))`,
+                border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                  background: `color-mix(in srgb, ${color} 15%, transparent)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <MIcon name={icon} size={16} style={{ color }} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color }}>{label}</span>
+                    <code style={{
+                      fontSize: 11, padding: '1px 6px', borderRadius: 4,
+                      background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                      color, fontFamily: 'monospace',
+                    }}>{cond}</code>
+                  </div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summary */}
       <div style={{
