@@ -582,8 +582,6 @@ export function Dividend() {
               const allCandidates = rankingData
                 .filter(r => !ownedTickers.has(r.ticker) && r.recentDividend > 0 && !r.name.includes('혼합'))
                 .sort((a, b) => b.annualYield - a.annualYield);
-              const candidates = allCandidates.slice(0, 5);
-              const suggestions = candidates.map(c => ({ ...c, qtyNeeded: Math.ceil(gap / c.recentDividend), investNeeded: Math.ceil(gap / c.recentDividend) * c.price }));
               // 분산: 카테고리당 최대 2개, 총 7개
               const MIX_TARGET = 7;
               const MAX_PER_CAT = 2;
@@ -605,18 +603,6 @@ export function Dividend() {
               return (
                 <div style={{ padding: 14, borderRadius: 10, background: 'rgba(49,130,246,0.06)', border: '1px solid rgba(49,130,246,0.15)' }}>
                   <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--accent-blue)', marginBottom: 8 }}>월 {fmt(gap)}원 부족 — 추천 종목</div>
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>단일 종목으로 채우기</div>
-                    {suggestions.map(s => (
-                      <div key={s.ticker} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border-secondary)', fontSize: 'var(--text-xs)' }}>
-                        <div><span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{s.name}</span><span style={{ color: 'var(--text-quaternary)', marginLeft: 4 }}>({s.annualYield}%)</span></div>
-                        <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{s.qtyNeeded}주</span>
-                          <span style={{ color: 'var(--text-tertiary)', marginLeft: 6 }}>≈ {fmt(s.investNeeded)}원</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                   {mixSuggestions.length >= 2 && (
                     <div>
                       <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>분산 투자로 채우기 (추천)</div>
