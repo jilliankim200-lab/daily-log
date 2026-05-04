@@ -530,22 +530,23 @@ function OwnerSection({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-              {['신호', '종목명', '현재가', '등락률'].map(col => {
+              {['신호', '종목명', '현재가', '등락금액', '등락률'].map(col => {
                 const sortable = !['신호', '종목명'].includes(col);
+                const isActive = sortKey === col || (col === '등락률' && sortKey === '등락률') || (col === '등락금액' && sortKey === '등락률');
                 return (
                   <th
                     key={col}
-                    onClick={sortable ? () => toggleSort(col) : undefined}
+                    onClick={sortable ? () => toggleSort('등락률') : undefined}
                     style={{
                       padding: '12px 16px', textAlign: col === '종목명' ? 'left' : 'right',
-                      fontSize: 'var(--text-xs)', fontWeight: 600, color: sortKey === col ? 'var(--accent-blue)' : 'var(--text-tertiary)',
+                      fontSize: 'var(--text-xs)', fontWeight: 600, color: isActive ? 'var(--accent-blue)' : 'var(--text-tertiary)',
                       whiteSpace: 'nowrap', cursor: sortable ? 'pointer' : 'default', userSelect: 'none',
                       ...(col === '신호' ? { textAlign: 'center', width: 70 } : {}),
                     }}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
                       {col}
-                      {sortKey === col && (
+                      {isActive && sortable && (
                         sortDir === 'desc'
                           ? <MIcon name="expand_more" size={12} />
                           : <MIcon name="expand_less" size={12} />
@@ -571,6 +572,7 @@ function OwnerSection({
                         <HoldingInfoPopup accountDetails={h.accountDetails} isFund />
                       </div>
                     </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
                   </tr>
@@ -622,12 +624,10 @@ function OwnerSection({
                     {cp ? (isAmountHidden ? '••••' : `${fmt(cp)}원`) : '—'}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: changeRate > 0 ? 'var(--color-profit)' : changeRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
-                    {cp ? (
-                      <>
-                        <div>{changeRate > 0 ? '+' : ''}{fmt(Math.round(cp * changeRate / 100))}원</div>
-                        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 500, marginTop: 1 }}>{changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%</div>
-                      </>
-                    ) : '—'}
+                    {cp ? `${changeRate > 0 ? '+' : ''}${fmt(Math.round(cp * changeRate / 100))}원` : '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: changeRate > 0 ? 'var(--color-profit)' : changeRate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
+                    {cp ? `${changeRate > 0 ? '+' : ''}${changeRate.toFixed(2)}%` : '—'}
                   </td>
                 </tr>
               );
