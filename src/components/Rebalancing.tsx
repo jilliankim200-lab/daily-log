@@ -295,7 +295,7 @@ function DonutChart({
 }
 
 export function Rebalancing() {
-  const { accounts, isAmountHidden, isMobile, navigateTo } = useAppContext();
+  const { accounts, prices, isAmountHidden, isMobile, navigateTo } = useAppContext();
   const [targets, setTargets] = useState<TargetAllocation>(loadTargets);
   const [editingTargets, setEditingTargets] = useState(false);
   const [tempTargets, setTempTargets] = useState<TargetAllocation>({
@@ -318,11 +318,18 @@ export function Rebalancing() {
     }).catch(() => {});
   }, []);
 
-  // Classify all holdings
+  // Classify all holdings — 현재가(prices) 우선, 없으면 avgPrice, 펀드는 amount
   const classifiedHoldings = useMemo<ClassifiedHolding[]>(() => {
     const result: ClassifiedHolding[] = [];
     for (const account of accounts) {
       for (const holding of account.holdings || []) {
+        let totalValue: number;
+        if (holding.isFund) {
+          totalValue = holding.amount ?? 0;
+        } else {
+          const cp = (holding.ticker && prices[holding.ticker]) ? prices[holding.ticker] : holding.avgPrice;
+          totalValue = cp * holding.quantity;
+        }
         result.push({
           id: holding.id,
           name: holding.name,
@@ -331,14 +338,14 @@ export function Rebalancing() {
           avgPrice: holding.avgPrice,
           quantity: holding.quantity,
           assetClass: categorizeHolding(holding.name),
-          totalValue: holding.avgPrice * holding.quantity,
+          totalValue,
           owner: account.owner,
           ownerName: account.ownerName,
         });
       }
     }
     return result;
-  }, [accounts]);
+  }, [accounts, prices]);
 
   // Get unique owners
   const owners = useMemo(() => {
@@ -1227,7 +1234,7 @@ export function Rebalancing() {
                         const color = ASSET_CLASS_COLORS[cls];
                         const isHighlighted = selectedClass === cls;
                         const isDimmedItem = selectedClass !== null && !isHighlighted;
-                        const val = h.avgPrice * h.quantity;
+                        const val = h.isFund ? (h.amount ?? 0) : ((h.ticker && prices[h.ticker] ? prices[h.ticker] : h.avgPrice) * h.quantity);
                         return (
                           <div key={hi} style={{
                             display: "flex", justifyContent: "space-between", alignItems: "center",
