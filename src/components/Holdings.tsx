@@ -530,7 +530,7 @@ function OwnerSection({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-primary)' }}>
-              {['신호', '종목명', '현재가', '등락률', '수량', '매입금액', '평가금액', '수익금'].map(col => {
+              {['신호', '종목명', '현재가', '등락률'].map(col => {
                 const sortable = !['신호', '종목명'].includes(col);
                 return (
                   <th
@@ -572,14 +572,6 @@ function OwnerSection({
                       </div>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                      {isAmountHidden ? '••••••' : `${fmt(h.amount || 0)}원`}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {isAmountHidden ? '••••••' : `${fmt(h.amount || 0)}원`}
-                    </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-quaternary)' }}>-</td>
                   </tr>
                 );
@@ -636,35 +628,6 @@ function OwnerSection({
                         <div style={{ fontSize: 'var(--text-xs)', fontWeight: 500, marginTop: 1 }}>{changeRate > 0 ? '+' : ''}{changeRate.toFixed(2)}%</div>
                       </>
                     ) : '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                    {fmt(h.quantity)}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                    {isAmountHidden ? '••••••' : `${fmt(h.totalCost)}원`}
-                    {!isAmountHidden && totalCost > 0 && (
-                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {(h.totalCost / totalCost * 100).toFixed(1)}%
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {isAmountHidden ? '••••••' : `${fmt(evalAmount)}원`}
-                    {!isAmountHidden && totalCurrent > 0 && (
-                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {(evalAmount / totalCurrent * 100).toFixed(1)}%
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: pnlColor }}>
-                    {isAmountHidden ? '••••' : (
-                      <div>
-                        <div>{pnl > 0 ? '+' : ''}{fmt(pnl)}원</div>
-                        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 400, marginTop: 1 }}>
-                          {pnlRate > 0 ? '+' : ''}{pnlRate.toFixed(2)}%
-                        </div>
-                      </div>
-                    )}
                   </td>
                 </tr>
               );
