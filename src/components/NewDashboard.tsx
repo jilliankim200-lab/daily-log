@@ -225,7 +225,7 @@ export function NewDashboard() {
       </div>
 
       {/* 자산 증감 상세 내역 */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24, maxWidth: 960, margin: '0 auto 24px' }}>
           <div>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
