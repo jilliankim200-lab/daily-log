@@ -145,7 +145,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function Dividend() {
   const { isAmountHidden, accounts, isMobile } = useAppContext();
-  const [activeTab, setActiveTab] = useState<"ranking" | "my">("ranking");
+  const [activeTab, setActiveTab] = useState<"ranking" | "my">("my");
 
   // KV에서 배당률 로드
   const [rates, setRates] = useState<DividendRate[]>([]);
@@ -438,8 +438,8 @@ export function Dividend() {
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-        <button className={`toss-tab ${activeTab === 'ranking' ? 'toss-tab-active' : ''}`} onClick={() => setActiveTab('ranking')}>월배당 순위</button>
         <button className={`toss-tab ${activeTab === 'my' ? 'toss-tab-active' : ''}`} onClick={() => setActiveTab('my')}>내 배당종목</button>
+        <button className={`toss-tab ${activeTab === 'ranking' ? 'toss-tab-active' : ''}`} onClick={() => setActiveTab('ranking')}>월배당 순위</button>
       </div>
 
       {/* ═══ 탭1: 월배당 순위 ═══ */}
@@ -561,13 +561,28 @@ export function Dividend() {
 
           {/* 목표 설정 */}
           <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: "var(--font-medium)" }}>월 목표 배당금</span>
-              <input className="toss-input" type="text" value={targetMonthly.toLocaleString('ko-KR')}
-                onChange={e => setTargetMonthly(Number(e.target.value.replace(/,/g, '')) || 0)}
-                style={{ width: 160, textAlign: "right", fontSize: "var(--text-sm)" }} />
-              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>원</span>
-            </div>
+            {(() => {
+              const gap = targetMonthly - totalMonthlyEstimate;
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+                  <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: "var(--font-medium)" }}>월 목표 배당금</span>
+                  <input className="toss-input" type="text" value={targetMonthly.toLocaleString('ko-KR')}
+                    onChange={e => setTargetMonthly(Number(e.target.value.replace(/,/g, '')) || 0)}
+                    style={{ width: 160, textAlign: "right", fontSize: "var(--text-sm)" }} />
+                  <span style={{ fontSize: "var(--text-sm)", color: "var(--text-tertiary)" }}>원</span>
+                  {gap > 0 && (
+                    <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--color-loss)' }}>
+                      월 {fmt(gap)}원 부족
+                    </span>
+                  )}
+                  {gap <= 0 && (
+                    <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--color-profit)' }}>
+                      {fmt(Math.abs(gap))}원 초과 달성
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             {(() => {
               const gap = targetMonthly - totalMonthlyEstimate;
               if (gap <= 0) return (
@@ -602,10 +617,8 @@ export function Dividend() {
               const mixTotalDiv = mixSuggestions.reduce((s, m) => s + m.monthlyDiv, 0);
               return (
                 <div style={{ padding: 14, borderRadius: 10, background: 'rgba(49,130,246,0.06)', border: '1px solid rgba(49,130,246,0.15)' }}>
-                  <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: 'var(--accent-blue)', marginBottom: 8 }}>월 {fmt(gap)}원 부족 — 추천 종목</div>
                   {mixSuggestions.length >= 2 && (
                     <div>
-                      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>분산 투자로 채우기 (추천)</div>
                       {mixSuggestions.map(m => (
                         <div key={m.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', padding: '5px 0', alignItems: 'flex-start' }}>
                           <div>
