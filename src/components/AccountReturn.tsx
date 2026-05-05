@@ -227,7 +227,7 @@ export function AccountReturn() {
   // ── 편집 모드 테이블 ──
   if (editing) {
     return (
-      <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* 편집 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div>
@@ -381,7 +381,7 @@ export function AccountReturn() {
   ];
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>

@@ -111,7 +111,7 @@ export function NewDashboard() {
   }
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px' }}>
+    <div style={{ padding: isMobile ? '12px' : '12px' }}>
       {/* 통합 티커 바: 시장 지표 + 자산 (횡스크롤) */}
       <div style={{
         overflowX: 'auto', overflowY: 'hidden',

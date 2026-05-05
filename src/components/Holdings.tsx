@@ -287,7 +287,7 @@ function OwnerSection({
     }}>
       {/* Header */}
       <div style={{
-        padding: isMobile ? '14px 16px' : '20px 24px',
+        padding: isMobile ? '14px 16px' : '12px',
         display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
         flexDirection: isMobile ? 'column' : 'row',
         gap: isMobile ? 10 : 0,
@@ -351,7 +351,7 @@ function OwnerSection({
       {/* Signal Guide Panel */}
       {showGuide && (
         <div style={{
-          padding: isMobile ? '12px 16px' : '14px 24px',
+          padding: isMobile ? '12px 16px' : '12px',
           borderBottom: '1px solid var(--border-primary)',
           background: 'var(--bg-secondary)',
         }}>
@@ -421,7 +421,7 @@ function OwnerSection({
 
       {/* Summary */}
       <div style={{
-        padding: isMobile ? '12px 16px' : '16px 24px',
+        padding: isMobile ? '12px 16px' : '12px',
         display: 'grid',
         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, auto)',
         gap: isMobile ? 12 : 32,
@@ -682,7 +682,7 @@ export function Holdings() {
   const husbandAccounts = accounts.filter(a => a.owner === 'husband');
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

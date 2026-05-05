@@ -170,7 +170,7 @@ export function Contribution() {
   const BLS = '2px solid var(--border-secondary)';
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* 헤더 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

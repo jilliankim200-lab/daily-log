@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>딥리서치 × 주식 투자 — 실전 가이드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #F9FAFB;
+  --s1: #FFFFFF;
+  --s2: #F9FAFB;
+  --s3: #F2F4F6;
+  --accent: #3182F6;
+  --accent2: #8A3FFC;
+  --green: #00C471;
+  --yellow: #FF9500;
+  --red: #F04452;
+  --purple: #8A3FFC;
+  --text: #191F28;
+  --muted: #8B95A1;
+  --border: #E5E8EB;
+  --r: 14px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Pretendard','Malgun Gothic','Noto Sans KR',sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex; align-items: center; gap: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.nav-logo { font-size: 16px; font-weight: 800; padding: 14px 0; margin-right: 32px;
+  color: var(--accent); }
+.nav-links { display: flex; gap: 0; }
+.nav-links a {
+  color: var(--muted); font-size: 13px; font-weight: 600;
+  padding: 16px 16px; text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all .2s;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(135deg, #EDF4FF 0%, #F5F0FF 50%, #EFF8FF 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 64px 32px 56px;
+  text-align: center;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(ellipse at 60% 40%, rgba(49,130,246,.06) 0%, transparent 60%),
+              radial-gradient(ellipse at 30% 70%, rgba(138,63,252,.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+.hero h1 { font-size: 36px; font-weight: 900; margin-bottom: 12px;
+  color: var(--text); letter-spacing: -0.5px; }
+.hero p { color: var(--muted); font-size: 15px; max-width: 600px; margin: 0 auto 28px; }
+.hero-stats { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
+.hero-stat .val { font-size: 28px; font-weight: 900; color: var(--green); }
+.hero-stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* ── CONTAINER ── */
+.container { max-width: 1200px; margin: 0 auto; padding: 48px 24px; }
+.section { margin-bottom: 72px; }
+.section-header { margin-bottom: 28px; }
+.section-header .tag {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+  background: #EDF4FF; color: var(--accent);
+}
+.section-header h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.3px; }
+.section-header p { color: var(--muted); font-size: 14px; }
+
+/* ── TOPIC CARDS ── */
+.topic-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+@media(max-width:768px){ .topic-grid { grid-template-columns: 1fr; } }
+.topic-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+  box-shadow: var(--shadow);
+  transition: box-shadow .2s, transform .2s;
+  cursor: pointer;
+  position: relative; overflow: hidden;
+}
+.topic-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.topic-card:nth-child(1)::before { background: linear-gradient(90deg,var(--accent),var(--purple)); }
+.topic-card:nth-child(2)::before { background: linear-gradient(90deg,var(--green),var(--accent)); }
+.topic-card:nth-child(3)::before { background: linear-gradient(90deg,var(--yellow),var(--red)); }
+.topic-card:nth-child(4)::before { background: linear-gradient(90deg,var(--purple),var(--red)); }
+.topic-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+.topic-num { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+.topic-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
+.topic-card p { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 16px; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chip {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: var(--s3); color: var(--muted); border: 1px solid var(--border);
+}
+
+/* ── DETAIL PANEL (탭) ── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: 13px; font-weight: 600;
+  padding: 12px 20px; cursor: pointer; transition: all .2s;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── CHARTS GRID ── */
+.charts-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-bottom: 20px; }
+.charts-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; margin-bottom: 20px; }
+@media(max-width:900px){ .charts-grid,.charts-grid-2 { grid-template-columns: 1fr; } }
+.chart-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px; box-shadow: var(--shadow);
+}
+.chart-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+.chart-card p { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+
+/* ── WORKFLOW ── */
+.workflow {
+  display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.wf-step {
+  flex: 1; min-width: 180px;
+  padding: 24px 20px;
+  border-right: 1px solid var(--border);
+  position: relative;
+  transition: background .2s;
+}
+.wf-step:last-child { border-right: none; }
+.wf-step:hover { background: var(--s2); }
+.wf-step::after {
+  content: '→';
+  position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 18px; z-index: 1;
+}
+.wf-step:last-child::after { display: none; }
+.wf-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; margin-bottom: 10px;
+}
+.wf-step:nth-child(1) .wf-num { background: #EDF4FF; color: var(--accent); }
+.wf-step:nth-child(2) .wf-num { background: #ECFDF5; color: #059669; }
+.wf-step:nth-child(3) .wf-num { background: #FFFBEB; color: #B45309; }
+.wf-step:nth-child(4) .wf-num { background: #F5F3FF; color: #6D28D9; }
+.wf-step h4 { font-size: 13px; font-weight: 800; margin-bottom: 6px; }
+.wf-step p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.wf-tool { display: inline-block; font-size: 10px; margin-top: 8px;
+  padding: 2px 8px; border-radius: 12px; background: var(--s3);
+  color: var(--muted); border: 1px solid var(--border); }
+
+/* ── PROMPT BOX ── */
+.prompt-box {
+  background: var(--s3); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 24px; margin-bottom: 16px;
+  position: relative;
+}
+.prompt-box .label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  color: var(--accent); margin-bottom: 10px;
+}
+.prompt-box pre {
+  font-family: 'Consolas','Courier New',monospace;
+  font-size: 12px; color: #374151;
+  white-space: pre-wrap; line-height: 1.7;
+}
+.prompt-box .copy-btn {
+  position: absolute; top: 14px; right: 14px;
+  background: var(--s1); border: 1px solid var(--border);
+  color: var(--muted); font-size: 11px; padding: 4px 10px;
+  border-radius: 6px; cursor: pointer; transition: all .15s;
+}
+.prompt-box .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── DATA TABLE ── */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--s1); border-radius: var(--r);
+  overflow: hidden; border: 1px solid var(--border);
+  font-size: 13px; margin-bottom: 20px; box-shadow: var(--shadow);
+}
+.data-table th {
+  background: var(--s3); color: var(--muted);
+  padding: 10px 16px; text-align: left;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+}
+.data-table td { padding: 11px 16px; border-top: 1px solid var(--border); color: var(--text); }
+.data-table tr:hover td { background: var(--s2); }
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px;
+}
+.badge.green  { background: #D1FAE5; color: #065F46; }
+.badge.yellow { background: #FEF3C7; color: #92400E; }
+.badge.red    { background: #FEE2E2; color: #991B1B; }
+.badge.blue   { background: #DBEAFE; color: #1E40AF; }
+
+/* ── SIGNAL CARDS ── */
+.signal-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; margin-bottom: 20px; }
+.signal-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; box-shadow: var(--shadow);
+}
+.signal-card .s-icon { font-size: 22px; margin-bottom: 8px; }
+.signal-card h5 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.signal-card p { font-size: 12px; color: var(--muted); }
+
+/* ── RISK GRID ── */
+.risk-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+@media(max-width:600px){ .risk-grid { grid-template-columns: 1fr; } }
+.risk-item {
+  background: #FFF5F6; border: 1px solid rgba(240,68,82,.15);
+  border-radius: 10px; padding: 16px;
+  display: flex; gap: 12px;
+}
+.risk-item .r-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.risk-item h5 { font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #D93240; }
+.risk-item p { font-size: 12px; color: var(--muted); }
+
+/* ── METRIC BIG ── */
+.metric-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.metric-big {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 24px; flex: 1; min-width: 160px;
+  text-align: center; box-shadow: var(--shadow);
+}
+.metric-big .val { font-size: 30px; font-weight: 900; }
+.metric-big .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.metric-big .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── TOOL CARDS ── */
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 14px; margin-bottom: 20px; }
+.tool-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px; box-shadow: var(--shadow);
+  transition: box-shadow .2s, transform .2s;
+}
+.tool-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+.tool-card .t-name { font-size: 14px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+.tool-card .t-desc { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.55; }
+.tool-card .t-price {
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px; display: inline-block;
+  background: var(--s3); border: 1px solid var(--border);
+}
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #191F28; color: #FFFFFF;
+  padding: 10px 24px; border-radius: 20px; font-size: 13px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+  opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999;
+}
+#toast.show { opacity: 1; }
+
+/* ── QUICK START ── */
+.qs-wrap {
+  background: linear-gradient(135deg,#1a1f35 0%,#1e3a5f 60%,#1a2744 100%);
+  padding: 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.qs-title {
+  font-size: 13px; font-weight: 800; color: #60A5FA;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+}
+.qs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+@media(max-width:900px){ .qs-grid { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:500px){ .qs-grid { grid-template-columns: 1fr; } }
+.qs-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 18px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  color: #fff;
+}
+.qs-btn:hover {
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(96,165,250,0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.qs-btn .qb-icon { font-size: 22px; margin-bottom: 10px; }
+.qs-btn .qb-label { font-size: 12px; font-weight: 700; color: #93C5FD; letter-spacing: 0.04em; margin-bottom: 4px; }
+.qs-btn .qb-title { font-size: 14px; font-weight: 700; color: #F1F5F9; margin-bottom: 6px; }
+.qs-btn .qb-desc { font-size: 11.5px; color: #94A3B8; line-height: 1.5; }
+.qs-btn .qb-time {
+  display: inline-block; margin-top: 10px;
+  font-size: 10.5px; font-weight: 600; color: #60A5FA;
+  background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.2);
+  padding: 2px 8px; border-radius: 20px;
+}
+
+.qs-flow {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.qs-flow-step {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  font-size: 12.5px; color: #CBD5E1; font-weight: 500;
+}
+.qs-flow-step .fs-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(96,165,250,0.2); color: #60A5FA;
+  font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.qs-flow-arrow { color: #475569; font-size: 16px; }
+
+/* ── PROMPT 개선 ── */
+.prompt-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.prompt-meta {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.p-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  background: #EDF4FF; color: var(--accent);
+}
+.p-badge.green { background: #ECFDF5; color: #059669; }
+.p-badge.orange { background: #FFF7ED; color: #C2410C; }
+.p-badge.purple { background: #F5F3FF; color: #6D28D9; }
+.p-time { font-size: 11px; color: var(--muted); }
+.p-output {
+  background: #F8FAFC; border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+  margin-bottom: 12px; font-size: 12px; color: #4E5968;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.p-output strong { color: var(--text); font-weight: 700; flex-shrink: 0; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px; text-align: center;
+  color: var(--muted); font-size: 12px;
+  background: var(--s1);
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">딥리서치 × 투자</div>
+  <div class="nav-links">
+    <a href="#topics" class="active">4대 주제</a>
+    <a href="#performance">성과 데이터</a>
+    <a href="#workflow">통합 워크플로우</a>
+    <a href="#prompts">프롬프트</a>
+    <a href="#tools">도구 비교</a>
+    <a href="#risk">한계·리스크</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>딥리서치 × 주식 투자</h1>
+  <p>AI 딥리서치 기능을 주식 투자에 활용하는 현실적이고 구체적인 방법론 — 20개 이상의 논문·보고서 종합</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="val">+247 bps</div><div class="lbl">어닝콜 감성 분석 알파</div></div>
+    <div class="hero-stat"><div class="val">125.9%</div><div class="lbl">AI 전략 누적수익 (2yr)</div></div>
+    <div class="hero-stat"><div class="val">+4.1%p</div><div class="lbl">섹터 로테이션 초과수익</div></div>
+    <div class="hero-stat"><div class="val" style="color:var(--red)">-20%</div><div class="lbl">프롬프트 엔지니어링 오류율 감소</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     QUICK START GUIDE
+══════════════════════════════════ -->
+<div class="qs-wrap">
+  <div class="qs-title">⚡ Quick Start — 지금 바로 시작하기</div>
+
+  <div class="qs-grid">
+    <button class="qs-btn" onclick="goPrompt('p1')">
+      <div class="qb-icon">🔍</div>
+      <div class="qb-label">PROMPT 01 · 필수</div>
+      <div class="qb-title">종목 재무 리스크 스캔</div>
+      <div class="qb-desc">DART 사업보고서를 Claude에 붙여넣고 실행. 이상 징후 7가지를 자동 진단.</div>
+      <span class="qb-time">⏱ 약 5분</span>
+    </button>
+    <button class="qs-btn" onclick="goPrompt('p2')">
+      <div class="qb-icon">📞</div>
+      <div class="qb-label">PROMPT 02 · 필수</div>
+      <div class="qb-title">어닝콜 감성 분석</div>
+      <div class="qb-desc">IR 트랜스크립트 복사 후 실행. -5~+5 감성 점수와 서프라이즈 방향 예측.</div>
+      <span class="qb-time">⏱ 약 3분</span>
+    </button>
+    <button class="qs-btn" onclick="goPrompt('p3')">
+      <div class="qb-icon">🔗</div>
+      <div class="qb-label">PROMPT 03 · 심화</div>
+      <div class="qb-title">공급망·경쟁 환경 분석</div>
+      <div class="qb-desc">공급업체 집중도·지정학 노출·해자 강도를 1~10점으로 정량화.</div>
+      <span class="qb-time">⏱ 약 8분</span>
+    </button>
+    <button class="qs-btn" onclick="goPrompt('p4')">
+      <div class="qb-icon">🌐</div>
+      <div class="qb-label">PROMPT 04 · 매크로</div>
+      <div class="qb-title">경기 국면 → 섹터 배분</div>
+      <div class="qb-desc">현재 GDP·ISM·금리 데이터 입력 → 최적 섹터 Top 3 + 리밸런싱 트리거 도출.</div>
+      <span class="qb-time">⏱ 약 5분</span>
+    </button>
+  </div>
+
+  <div class="qs-flow">
+    <div class="qs-flow-step">
+      <span class="fs-num">1</span>
+      <span>분석 목적 선택 (위 4개 중 하나)</span>
+    </div>
+    <span class="qs-flow-arrow">→</span>
+    <div class="qs-flow-step">
+      <span class="fs-num">2</span>
+      <span>프롬프트 복사 → Claude / Perplexity 실행</span>
+    </div>
+    <span class="qs-flow-arrow">→</span>
+    <div class="qs-flow-step">
+      <span class="fs-num">3</span>
+      <span>결과 점수화 → Python 팩터로 변환</span>
+    </div>
+    <span class="qs-flow-arrow">→</span>
+    <div class="qs-flow-step">
+      <span class="fs-num">4</span>
+      <span>매크로 섹터 대시보드와 교차 검증</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ── SECTION 1: 4대 주제 ── -->
+<div class="section" id="topics">
+  <div class="section-header">
+    <div class="tag">OVERVIEW</div>
+    <h2>딥리서치 활용 4대 주제</h2>
+    <p>필수 2가지 + 추가 2가지 — 각 주제를 클릭해 상세 내용 확인</p>
+  </div>
+  <div class="topic-grid">
+    <div class="topic-card" onclick="scrollTo('#detail1')">
+      <div class="topic-num">TOPIC 01 · 필수</div>
+      <h3>🔍 기업 가치 & 숨겨진 리스크</h3>
+      <p>재무제표 이상 탐지, 회계 조작 징후, 숨겨진 부채, 관련회사 거래를 AI로 자동 스캐닝합니다.</p>
+      <div class="tag-row">
+        <span class="tag-chip">재무제표 분석</span>
+        <span class="tag-chip">이상 탐지</span>
+        <span class="tag-chip">SEC/DART</span>
+        <span class="tag-chip">흑자도산 경보</span>
+      </div>
+    </div>
+    <div class="topic-card" onclick="scrollTo('#detail2')">
+      <div class="topic-num">TOPIC 02 · 필수</div>
+      <h3>📰 시장 흐름 & 뉴스 모니터링</h3>
+      <p>어닝콜 감성 분석, PEAD 포착, 어닝 서프라이즈 예측으로 정보 우위를 확보합니다.</p>
+      <div class="tag-row">
+        <span class="tag-chip">감성 분석</span>
+        <span class="tag-chip">어닝콜</span>
+        <span class="tag-chip">PEAD</span>
+        <span class="tag-chip">NLP 알파</span>
+      </div>
+    </div>
+    <div class="topic-card" onclick="scrollTo('#detail3')">
+      <div class="topic-num">TOPIC 03 · 추가</div>
+      <h3>🌐 공급망 & 경쟁 환경 분석</h3>
+      <p>공급망 집중도 리스크, 경쟁사 전략 변화, 시장 점유율 이동을 실시간으로 포착합니다.</p>
+      <div class="tag-row">
+        <span class="tag-chip">공급망 리스크</span>
+        <span class="tag-chip">경쟁 분석</span>
+        <span class="tag-chip">지정학적 리스크</span>
+        <span class="tag-chip">Moat 평가</span>
+      </div>
+    </div>
+    <div class="topic-card" onclick="scrollTo('#detail4')">
+      <div class="topic-num">TOPIC 04 · 추가</div>
+      <h3>📊 매크로 & 섹터 로테이션</h3>
+      <p>경기 사이클 판별 + AI 섹터 배분으로 연 1.8~4.1%p 초과수익을 목표로 합니다.</p>
+      <div class="tag-row">
+        <span class="tag-chip">경기 사이클</span>
+        <span class="tag-chip">섹터 로테이션</span>
+        <span class="tag-chip">거시경제</span>
+        <span class="tag-chip">알파 생성</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 2: 성과 데이터 ── -->
+<div class="section" id="performance">
+  <div class="section-header">
+    <div class="tag">EVIDENCE</div>
+    <h2>실증 성과 데이터</h2>
+    <p>학술 논문 & 업계 연구 기반 — AI 딥리서치의 실제 알파 생성 근거</p>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('t1',this)">어닝콜 감성</button>
+    <button class="tab-btn" onclick="switchTab('t2',this)">섹터 로테이션</button>
+    <button class="tab-btn" onclick="switchTab('t3',this)">AI 전략 vs B&H</button>
+    <button class="tab-btn" onclick="switchTab('t4',this)">리스크 감지 정확도</button>
+  </div>
+
+  <div id="t1" class="tab-panel active">
+    <div class="charts-grid-2">
+      <div class="chart-card">
+        <h4>어닝콜 CEO 톤 → 다음 달 알파</h4>
+        <p>적극적 & 주제 집중 vs 소극적 & 주제 이탈 (bps)</p>
+        <canvas id="c1" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>텍스트 기반 PEAD 누적 수익률</h4>
+        <p>SUE.txt 기반 어닝 서프라이즈 포착 — 1년 누적 (Philadelphia Fed 연구)</p>
+        <canvas id="c2" height="220"></canvas>
+      </div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-big"><div class="val" style="color:var(--green)">+247 bps</div><div class="lbl">높은 감성 (상위 10%)</div><div class="sub">다음 달 초과수익</div></div>
+      <div class="metric-big"><div class="val" style="color:var(--red)">-256 bps</div><div class="lbl">낮은 감성 (하위 10%)</div><div class="sub">다음 달 언더퍼폼</div></div>
+      <div class="metric-big"><div class="val" style="color:var(--accent)">+8.01%</div><div class="lbl">텍스트 SUE 1년 수익</div><div class="sub">PEAD 드리프트</div></div>
+      <div class="metric-big"><div class="val" style="color:var(--purple)">503 bps</div><div class="lbl">감성 스프레드</div><div class="sub">롱숏 알파 기회</div></div>
+    </div>
+  </div>
+
+  <div id="t2" class="tab-panel">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h4>AI 섹터 로테이션 vs B&H 연수익률</h4>
+        <p>Fidelity & S&P Global 연구 (1962~2024)</p>
+        <canvas id="c3" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>경기 국면별 최적 섹터 성과 (상대 수익)</h4>
+        <p>각 국면에서 해당 섹터의 S&P 500 대비 초과수익 평균</p>
+        <canvas id="c4" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>2024~2025 AI 테마 선도 섹터</h4>
+        <p>Nvidia 기준 AI 섹터 수익률 (2024 기준)</p>
+        <canvas id="c5" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="t3" class="tab-panel">
+    <div class="charts-grid-2">
+      <div class="chart-card">
+        <h4>MarketSenseAI vs S&P 100 누적 수익</h4>
+        <p>RAG + LLM 에이전트 전략 (2023~2024)</p>
+        <canvas id="c6" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>돈치안 전략 — KOSPI vs S&P500 vs Bitcoin</h4>
+        <p>전략 CAGR vs B&H CAGR (이번 세션 백테스트)</p>
+        <canvas id="c7" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="t4" class="tab-panel">
+    <table class="data-table">
+      <thead><tr><th>탐지 항목</th><th>AI 정확도</th><th>대표 시그널</th><th>주의사항</th></tr></thead>
+      <tbody>
+        <tr><td>수익-현금흐름 불일치</td><td><span class="badge green">높음</span></td><td>영업이익↑ & OCF 정체</td><td>수치 직접 재확인 필수</td></tr>
+        <tr><td>미수금 이상 증가</td><td><span class="badge green">높음</span></td><td>매출 성장률 < 미수금 증가율</td><td>업종 특성 고려</td></tr>
+        <tr><td>회계정책 빈번 변경</td><td><span class="badge green">높음</span></td><td>주석 내 정책 변경 탐지</td><td>연도별 주석 비교</td></tr>
+        <tr><td>관련회사 거래</td><td><span class="badge yellow">중간</span></td><td>비시장 조건 내부 거래</td><td>지식 그래프 도구 병용</td></tr>
+        <tr><td>단기 차입금 급증</td><td><span class="badge yellow">중간</span></td><td>전년 대비 50%+ 증가</td><td>사유 설명 필요</td></tr>
+        <tr><td>숨겨진 부채</td><td><span class="badge red">낮음</span></td><td>비공개 계약·구두 합의</td><td>공개 정보 한계</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── SECTION 3: 통합 워크플로우 ── -->
+<div class="section" id="workflow">
+  <div class="section-header">
+    <div class="tag">WORKFLOW</div>
+    <h2>실전 4단계 통합 워크플로우</h2>
+    <p>퀀트 투자팀이 실제 운용에 적용할 수 있는 AI 딥리서치 프로세스</p>
+  </div>
+  <div class="workflow">
+    <div class="wf-step">
+      <div class="wf-num">1</div>
+      <h4>유니버스 스크리닝</h4>
+      <p>산업 트렌드 & 뉴스 모니터링<br>이상 공시 & 어닝 서프라이즈 후보 식별<br>공급망 리스크 초기 스캔</p>
+      <span class="wf-tool">Perplexity Deep Research</span>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">2</div>
+      <h4>개별 기업 심층 분석</h4>
+      <p>재무제표 이상 탐지 프롬프트<br>공급망·경쟁 환경 평가<br>어닝콜 텍스트 감성 분석</p>
+      <span class="wf-tool">Claude + DART/SEC</span>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">3</div>
+      <h4>신호 정량화</h4>
+      <p>어닝콜 감성 점수 → PEAD 포착<br>재무 건전성 스코어 산출<br>섹터 로테이션 신호 생성</p>
+      <span class="wf-tool">Python + fin_analyzer</span>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">4</div>
+      <h4>포지션 결정</h4>
+      <p>섹터 배분 + 개별 기업 점수 결합<br>리스크 관리 (Stop-loss 설계)<br>포트폴리오 사이징</p>
+      <span class="wf-tool">인간 최종 판단</span>
+    </div>
+  </div>
+
+  <!-- 경기 사이클 섹터 매핑 -->
+  <div id="detail4" class="chart-card" style="margin-bottom:20px">
+    <h4>경기 사이클 × 섹터 로테이션 매핑</h4>
+    <p style="margin-bottom:16px">딥리서치로 현재 국면을 판별한 후 아래 매트릭스로 섹터 배분 결정</p>
+    <table class="data-table" style="margin-bottom:0">
+      <thead><tr><th>경기 국면</th><th>최적 섹터 ↑</th><th>회피 섹터 ↓</th><th>핵심 지표</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge blue">초기 확장</span></td><td>금융, 소재, 산업재</td><td>유틸리티, 필수소비재</td><td>ISM 제조업↑, 실업률↓</td></tr>
+        <tr><td><span class="badge green">후기 확장</span></td><td>에너지, 기술, 소비재량</td><td>채권, 유틸리티</td><td>인플레이션↑, 금리↑ 시작</td></tr>
+        <tr><td><span class="badge yellow">경기 둔화</span></td><td>헬스케어, 유틸리티</td><td>소비재량, 기술</td><td>GDP 성장 둔화, PMI < 50</td></tr>
+        <tr><td><span class="badge red">침체</span></td><td>필수소비재, 채권, 금</td><td>에너지, 금융, 소재</td><td>실업률↑, 수익률 곡선 역전</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── SECTION 4: 프롬프트 ── -->
+<div class="section" id="prompts">
+  <div class="section-header">
+    <div class="tag">PROMPTS</div>
+    <h2>실전 프롬프트 4종</h2>
+    <p>복사 후 바로 사용 — 각 주제별 최적화된 딥리서치 프롬프트</p>
+  </div>
+
+  <div id="p1">
+    <div class="prompt-section-header">
+      <div class="prompt-meta">
+        <span class="p-badge">PROMPT 01</span>
+        <span class="p-badge green">필수</span>
+        <span class="p-time">⏱ 약 5분 · Claude 권장</span>
+      </div>
+    </div>
+    <div class="p-output">
+      <strong>📤 예상 아웃풋:</strong>
+      7개 항목별 [정상/주의/위험] 판정 + 실제 수치 인용. 흑자도산 경보·회계 조작 징후 자동 탐지.
+    </div>
+  <div id="detail1">
+    <div class="prompt-box">
+      <div class="label">① 기업 가치 & 리스크 분석 프롬프트</div>
+      <button class="copy-btn" onclick="copyPrompt(this)">복사</button>
+      <pre>[회사명]의 최근 3년 재무제표를 분석하고 다음을 순서대로 검토하라:
+
+① 수익-현금흐름 乖離: 당기순이익 증가 시 영업현금흐름이 함께 증가하는가?
+② 미수금 이상: 매출 성장률 대비 미수금 증가율 비교 (공격적 인식 징후)
+③ 재고자산 변화: 급격한 증감, 평가방법 변경 여부
+④ 회계정책 변경: 최근 3년 내 수익 인식 기준 변경 여부
+⑤ 관련회사 거래: 비시장 조건 의심 거래, 순환 출자 구조
+⑥ 단기 차입금 급증: 전년 대비 50% 이상 증가 시 사유 분석
+⑦ 이자보상배율 추이: 영업이익으로 이자를 감당할 수 있는가?
+
+각 항목에 대해 실제 수치를 인용하고, 위험도를 [정상/주의/위험]으로 분류하라.</pre>
+    </div>
+  </div>
+
+  <div id="p2" style="margin-top:24px">
+    <div class="prompt-section-header">
+      <div class="prompt-meta">
+        <span class="p-badge">PROMPT 02</span>
+        <span class="p-badge green">필수</span>
+        <span class="p-time">⏱ 약 3분 · Claude / FinBERT 권장</span>
+      </div>
+    </div>
+    <div class="p-output">
+      <strong>📤 예상 아웃풋:</strong>
+      감성 점수 (-5~+5) + 어닝 서프라이즈 방향 예측 (상회/부합/하회). 팩터 시그널로 직접 변환 가능.
+    </div>
+  <div id="detail2">
+    <div class="prompt-box">
+      <div class="label">② 어닝콜 감성 분석 프롬프트</div>
+      <button class="copy-btn" onclick="copyPrompt(this)">복사</button>
+      <pre>[회사명] 최근 어닝콜 트랜스크립트를 분석하라:
+
+① CEO 전반 톤: 긍정/중립/부정 + 확신 수준 (1~10)
+② 적극성 지표: 구체적 수치 제시 빈도 vs 모호한 표현 빈도
+③ 주제 집중도: 핵심 사업 이슈에 집중하는가, 화제를 돌리는가?
+④ 포워드 가이던스: 구체적 숫자를 제시하는가, 회피하는가?
+⑤ 리스크 언급 빈도: 위험 요소를 선제적으로 언급하는가?
+⑥ Q&A 방어적 태도: 날카로운 질문에 어떻게 반응하는가?
+
+최종: 감성 점수(-5 ~ +5) + 어닝 서프라이즈 방향 예측 (상회/부합/하회)</pre>
+    </div>
+  </div>
+
+  <div id="p3" style="margin-top:24px">
+    <div class="prompt-section-header">
+      <div class="prompt-meta">
+        <span class="p-badge orange">PROMPT 03</span>
+        <span class="p-badge" style="background:#FFF7ED;color:#C2410C;">심화</span>
+        <span class="p-time">⏱ 약 8분 · Perplexity Deep Research 권장</span>
+      </div>
+    </div>
+    <div class="p-output">
+      <strong>📤 예상 아웃풋:</strong>
+      공급망 탄력성 점수 (1~10) + 경쟁적 해자 강도 평가. 지정학 노출도·단일 공급업체 집중 리스크 정량화.
+    </div>
+  <div id="detail3">
+    <div class="prompt-box">
+      <div class="label">③ 공급망 & 경쟁 환경 분석 프롬프트</div>
+      <button class="copy-btn" onclick="copyPrompt(this)">복사</button>
+      <pre>[회사명]의 공급망과 경쟁 환경을 분석하라:
+
+[공급망 리스크]
+① 주요 공급업체 Top 5와 매출 의존도 (%)
+② 단일 공급업체 집중도 리스크 (50% 이상이면 위험 신호)
+③ 지정학적 리스크 (중국 의존도, 미·중 갈등 노출)
+④ 공급 차질 시 예상 영업이익 감소 시나리오 (금액 추정)
+
+[경쟁 환경]
+⑤ 시장 점유율 변화 추이 (최근 3년)
+⑥ 신규 진입자 위협 (기술 장벽, 특허 만료 시점)
+⑦ 가격 결정력 평가 (가격 인상 시 수요 탄력성)
+⑧ 경쟁사 대비 원가 구조 우위/열위
+
+결론: 공급망 탄력성 점수 (1~10) + 경쟁적 해자(Moat) 강도 평가</pre>
+    </div>
+  </div>
+
+  <div id="p4" style="margin-top:24px">
+    <div class="prompt-section-header">
+      <div class="prompt-meta">
+        <span class="p-badge purple">PROMPT 04</span>
+        <span class="p-badge" style="background:#F5F3FF;color:#6D28D9;">매크로</span>
+        <span class="p-time">⏱ 약 5분 · FRED + Claude 권장</span>
+      </div>
+    </div>
+    <div class="p-output">
+      <strong>📤 예상 아웃풋:</strong>
+      현재 경기 국면 + 추천 섹터 배분 (%) + 리밸런싱 트리거 조건. 매크로 섹터 대시보드와 교차 검증용.
+    </div>
+  <div class="prompt-box">
+    <div class="label">④ 매크로 & 섹터 로테이션 프롬프트</div>
+    <button class="copy-btn" onclick="copyPrompt(this)">복사</button>
+    <pre>현재 거시경제 지표(GDP, 인플레이션, 기준금리, ISM 제조업지수, 실업률)를
+종합 분석하라:
+
+① 현재 경기 사이클 단계 판별 (초기 확장 / 후기 확장 / 둔화 / 침체)
+② 단계 판별 근거: 각 지표의 현황과 방향성을 수치로 제시
+③ 최적 섹터 Top 3: 선택 이유와 과거 유사 국면 성과 데이터
+④ 회피 섹터: 이유와 구체적 리스크 시나리오
+⑤ 로테이션 타이밍 신호: 어떤 지표가 바뀌면 포지션을 전환해야 하는가?
+⑥ 주요 테일 리스크: 예상 외 인플레이션 재가속, 지정학 충격 등
+
+결론: 현재 추천 섹터 배분 (%) + 리밸런싱 트리거 조건</pre>
+  </div>
+</div>
+
+<!-- ── SECTION 5: 도구 비교 ── -->
+<div class="section" id="tools">
+  <div class="section-header">
+    <div class="tag">TOOLS</div>
+    <h2>AI 딥리서치 도구 비교</h2>
+    <p>용도별 최적 도구 선택 가이드</p>
+  </div>
+  <div class="tool-grid">
+    <div class="tool-card">
+      <div class="t-name">🔍 Perplexity Deep Research</div>
+      <div class="t-desc">2~4분 내 수십 개 소스 자동 종합. 실시간 웹 검색 기반. 속도 대비 인사이트 비율 최고.</div>
+      <span class="t-price" style="color:#047857;border-color:rgba(0,196,113,.25)">$20/월</span>
+    </div>
+    <div class="tool-card">
+      <div class="t-name">🤖 Claude (Deep Research)</div>
+      <div class="t-desc">재무 문서 분석 정밀도 최고. MCP로 LSEG·S&P Global 데이터 직접 연동. 코드 생성 병행.</div>
+      <span class="t-price" style="color:#1D4ED8;border-color:rgba(49,130,246,.25)">API 종량</span>
+    </div>
+    <div class="tool-card">
+      <div class="t-name">📄 AskEdgar / Intelligize</div>
+      <div class="t-desc">SEC 파일링 전용. RAG 방식으로 10-K 동시 분석. 중대 조건 변화 알림 제공.</div>
+      <span class="t-price" style="color:#B45309;border-color:rgba(255,149,0,.25)">별도 계약</span>
+    </div>
+    <div class="tool-card">
+      <div class="t-name">📊 FinBERT / GPT-4</div>
+      <div class="t-desc">금융 감성 분석에 특화. 어닝콜 스코어 자동화. FinBERT는 금융 도메인 사전 학습.</div>
+      <span class="t-price" style="color:#1D4ED8;border-color:rgba(49,130,246,.25)">API 종량</span>
+    </div>
+    <div class="tool-card">
+      <div class="t-name">🏦 LSEG + Claude MCP</div>
+      <div class="t-desc">실시간 시장 데이터 + Claude AI 결합. 어닝 분석·리스크 평가에 최적. 기관 투자자용.</div>
+      <span class="t-price" style="color:#991B1B;border-color:rgba(240,68,82,.25)">기관 계약</span>
+    </div>
+    <div class="tool-card">
+      <div class="t-name">📡 FRED + Claude</div>
+      <div class="t-desc">연준 경제 데이터(무료) + Claude 해석. 경기 사이클 판별, 섹터 로테이션 신호 생성.</div>
+      <span class="t-price" style="color:#047857;border-color:rgba(0,196,113,.25)">무료 + API</span>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h4>도구별 역량 레이더</h4>
+    <p>속도·정밀도·실시간성·비용 효율·코드 연동 5개 축 비교</p>
+    <canvas id="c8" height="320"></canvas>
+  </div>
+</div>
+
+<!-- ── SECTION 6: 리스크 ── -->
+<div class="section" id="risk">
+  <div class="section-header">
+    <div class="tag">RISK</div>
+    <h2>한계 & 반드시 인지할 리스크</h2>
+    <p>AI 딥리서치는 강력하지만, 이 5가지를 모르면 오히려 위험합니다.</p>
+  </div>
+  <div class="risk-grid">
+    <div class="risk-item">
+      <div class="r-icon">🌀</div>
+      <div>
+        <h5>환각 (Hallucination)</h5>
+        <p>AI가 존재하지 않는 수치나 사실을 생성할 수 있습니다. 모든 정량 데이터는 원본 소스에서 반드시 재확인하세요.</p>
+      </div>
+    </div>
+    <div class="risk-item">
+      <div class="r-icon">⏱️</div>
+      <div>
+        <h5>데이터 컷오프</h5>
+        <p>LLM 학습 데이터에는 시간 제한이 있습니다. 실시간 웹 검색 기능이 있는 도구를 사용하거나 최신 공시를 직접 제공하세요.</p>
+      </div>
+    </div>
+    <div class="risk-item">
+      <div class="r-icon">🔒</div>
+      <div>
+        <h5>비공개 정보 한계</h5>
+        <p>내부 계약, 구두 합의, 비공개 협상은 탐지 불가합니다. 공개 정보 기반 분석의 구조적 한계입니다.</p>
+      </div>
+    </div>
+    <div class="risk-item">
+      <div class="r-icon">📉</div>
+      <div>
+        <h5>소형주 취약</h5>
+        <p>공개 정보가 적은 소형주일수록 AI 분석의 신뢰도가 낮아집니다. 직접 IR 접촉과 병행이 필수입니다.</p>
+      </div>
+    </div>
+    <div class="risk-item">
+      <div class="r-icon">🧠</div>
+      <div>
+        <h5>과신 편향</h5>
+        <p>AI의 자신감 있는 어조가 정확성을 보장하지 않습니다. AI는 "분석가 10명의 1차 작업"을 대체하지, 최종 판단을 대체하지 않습니다.</p>
+      </div>
+    </div>
+    <div class="risk-item">
+      <div class="r-icon">⚖️</div>
+      <div>
+        <h5>법적·규제 리스크</h5>
+        <p>AI 분석 기반 투자 결정의 책임은 투자자에게 있습니다. AI를 내부 도구로 사용하더라도 규제 준수 여부를 확인하세요.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 핵심 메시지 -->
+  <div style="background:linear-gradient(135deg,#EDF4FF,#F5F0FF);border:1px solid rgba(49,130,246,.15);border-radius:var(--r);padding:24px 28px;margin-top:8px">
+    <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">💡 핵심 원칙</div>
+    <p style="font-size:14px;line-height:1.75;color:#4E5968">
+      딥리서치는 <strong style="color:var(--text)">"분석가 10명의 1차 작업"</strong>을 대체하지만,
+      <strong style="color:var(--text)">"펀드매니저의 최종 판단"</strong>은 대체하지 못합니다.
+      속도와 커버리지를 극대화하되, 최종 결정은 <strong style="color:var(--text)">데이터 기반 인간 판단</strong>으로 유지하는 것이 현재 최선의 활용법입니다.
+    </p>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<footer>
+  딥리서치 × 주식 투자 가이드 · 2026-05-05 · 20개 이상 학술 논문·업계 보고서 종합<br>
+  <span style="margin-top:6px;display:block">Philadelphia Fed · ACL · Deloitte · BlackRock · MarketSenseAI · Fidelity & S&P Global 연구 기반</span>
+</footer>
+
+<div id="toast">복사 완료!</div>
+
+<script>
+// ── 탭 전환 ──
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── 프롬프트 복사 ──
+function copyPrompt(btn) {
+  const pre = btn.nextElementSibling;
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  });
+}
+
+// ── 스크롤 ──
+function scrollTo(sel) {
+  const el = document.querySelector(sel);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Quick Start 버튼 → 프롬프트 섹션으로 이동 ──
+function goPrompt(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // 강조 효과
+    el.style.transition = 'outline 0.1s';
+    el.style.outline = '2px solid rgba(49,130,246,0.5)';
+    el.style.borderRadius = '12px';
+    setTimeout(() => { el.style.outline = 'none'; }, 1500);
+  }
+}
+
+// ── 네비 하이라이트 ──
+const sections = ['topics','performance','workflow','prompts','tools','risk'];
+window.addEventListener('scroll', () => {
+  const y = window.scrollY + 80;
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const link = document.querySelector(`.nav-links a[href="#${id}"]`);
+    if (el.offsetTop <= y && el.offsetTop + el.offsetHeight > y) {
+      document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+      if (link) link.classList.add('active');
+    }
+  });
+});
+
+// ── Chart.js 기본 설정 ──
+Chart.defaults.color = '#8B95A1';
+Chart.defaults.borderColor = 'rgba(0,0,0,0.06)';
+Chart.defaults.font.family = "'Pretendard','Malgun Gothic','Noto Sans KR',sans-serif";
+Chart.defaults.font.size = 11;
+
+const gridOpts = { color: 'rgba(0,0,0,0.06)', drawBorder: false };
+const tickOpts = { color: '#8B95A1' };
+
+// ── C1: 어닝콜 감성 → 알파 ──
+new Chart(document.getElementById('c1'), {
+  type: 'bar',
+  data: {
+    labels: ['하위 10%\n(소극적)', '하위 25%', '중간', '상위 25%', '상위 10%\n(적극적)'],
+    datasets: [{
+      label: '다음 달 초과수익 (bps)',
+      data: [-256, -110, 0, 130, 247],
+      backgroundColor: v => v.raw >= 0 ? 'rgba(0,196,113,.75)' : 'rgba(240,68,82,.75)',
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts,
+           title: { display: true, text: 'bps', color: '#8B95A1' } }
+    }
+  }
+});
+
+// ── C2: PEAD 드리프트 ──
+const months = Array.from({length:12},(_,i)=>`${i+1}개월`);
+const pead = [0.8,1.5,2.3,3.1,3.8,4.5,5.1,5.8,6.4,7.0,7.5,8.01];
+const bench = [0.2,0.4,0.7,0.9,1.1,1.3,1.5,1.7,1.8,1.9,2.0,2.1];
+new Chart(document.getElementById('c2'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label: 'SUE.txt 전략', data: pead, borderColor:'rgba(49,130,246,1)', backgroundColor:'rgba(49,130,246,.08)', fill:true, tension:.4, borderWidth:2 },
+      { label: '벤치마크', data: bench, borderColor:'rgba(139,149,161,.7)', borderDash:[4,4], tension:.4, borderWidth:1.5, fill:false },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top', labels:{ usePointStyle:true, boxWidth:8 } } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts,
+           title: { display: true, text: '누적 수익률 (%)', color: '#8B95A1' } }
+    }
+  }
+});
+
+// ── C3: 섹터 로테이션 성과 ──
+new Chart(document.getElementById('c3'), {
+  type: 'bar',
+  data: {
+    labels: ['S&P500\nBuy&Hold', 'AI 섹터 로테이션\n(하한)', 'AI 섹터 로테이션\n(상한)'],
+    datasets: [{
+      label: '연간 수익률 (%)',
+      data: [10.2, 11.8, 14.3],
+      backgroundColor: ['rgba(139,149,161,.55)', 'rgba(0,196,113,.7)', 'rgba(49,130,246,.7)'],
+      borderRadius: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ display:false } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts, min: 8,
+           title: { display: true, text: '연수익률 (%)', color: '#8B95A1' } }
+    }
+  }
+});
+
+// ── C4: 경기 국면별 섹터 상대 수익 ──
+new Chart(document.getElementById('c4'), {
+  type: 'bar',
+  data: {
+    labels: ['금융\n(초기확장)', '에너지\n(후기확장)', '헬스케어\n(둔화)', '필수소비재\n(침체)', '기술\n(후기확장)'],
+    datasets: [{
+      label: 'S&P500 대비 초과수익 (%)',
+      data: [4.2, 5.8, 3.1, 2.9, 6.3],
+      backgroundColor: ['rgba(49,130,246,.7)','rgba(255,149,0,.7)','rgba(0,196,113,.7)','rgba(138,63,252,.7)','rgba(49,130,246,.7)'],
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ display:false } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts,
+           title: { display: true, text: '초과수익 (%)', color: '#8B95A1' } }
+    }
+  }
+});
+
+// ── C5: 2024 AI 테마 수익 ──
+new Chart(document.getElementById('c5'), {
+  type: 'bar',
+  data: {
+    labels: ['Nvidia\n(AI칩)', 'S&P500\n전체', '반도체\n섹터', '에너지\n섹터', '유틸리티'],
+    datasets: [{
+      label: '2024년 수익률 (%)',
+      data: [173, 24, 67, 8, 19],
+      backgroundColor: v => v.raw > 50 ? 'rgba(138,63,252,.75)' : v.raw > 20 ? 'rgba(49,130,246,.7)' : 'rgba(139,149,161,.55)',
+      borderRadius: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ display:false } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts,
+           title: { display: true, text: '수익률 (%)', color: '#8B95A1' } }
+    }
+  }
+});
+
+// ── C6: MarketSenseAI ──
+const mmonths = ['2023.01','04','07','10','2024.01','04','07','10','2024.12'];
+new Chart(document.getElementById('c6'), {
+  type: 'line',
+  data: {
+    labels: mmonths,
+    datasets: [
+      { label: 'MarketSenseAI', data:[0,8,19,28,42,61,83,105,125.9], borderColor:'rgba(0,196,113,1)', backgroundColor:'rgba(0,196,113,.07)', fill:true, tension:.4, borderWidth:2.5 },
+      { label: 'S&P100 지수', data:[0,5,12,17,25,38,50,62,73.5], borderColor:'rgba(139,149,161,.7)', borderDash:[4,4], fill:false, tension:.4, borderWidth:1.5 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ position:'top', labels:{usePointStyle:true,boxWidth:8} } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts,
+           title:{ display:true, text:'누적 수익률 (%)', color:'#8B95A1' } }
+    }
+  }
+});
+
+// ── C7: 멀티 에셋 CAGR ──
+new Chart(document.getElementById('c7'), {
+  type: 'bar',
+  data: {
+    labels: ['KOSPI','S&P500','Bitcoin'],
+    datasets: [
+      { label: '전략 CAGR', data:[9.34,7.41,42.45], backgroundColor:['rgba(49,130,246,.8)','rgba(0,196,113,.8)','rgba(255,149,0,.8)'], borderRadius:8 },
+      { label: 'B&H CAGR', data:[13.22,13.43,43.03], backgroundColor:['rgba(49,130,246,.25)','rgba(0,196,113,.25)','rgba(255,149,0,.25)'], borderRadius:8 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ position:'top', labels:{usePointStyle:true,boxWidth:8} } },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: tickOpts,
+           title:{ display:true, text:'CAGR (%)', color:'#8B95A1' } }
+    }
+  }
+});
+
+// ── C8: 레이더 ──
+new Chart(document.getElementById('c8'), {
+  type: 'radar',
+  data: {
+    labels: ['속도','분석 정밀도','실시간성','비용 효율','코드 연동','커버리지'],
+    datasets: [
+      { label:'Perplexity', data:[95,72,90,95,40,88], borderColor:'rgba(0,196,113,.9)', backgroundColor:'rgba(0,196,113,.07)', borderWidth:2, pointRadius:4 },
+      { label:'Claude', data:[70,95,75,80,98,82], borderColor:'rgba(49,130,246,.9)', backgroundColor:'rgba(49,130,246,.07)', borderWidth:2, pointRadius:4 },
+      { label:'AskEdgar', data:[80,88,85,70,30,65], borderColor:'rgba(255,149,0,.9)', backgroundColor:'rgba(255,149,0,.07)', borderWidth:2, pointRadius:4 },
+      { label:'LSEG+Claude', data:[65,96,95,40,90,95], borderColor:'rgba(138,63,252,.9)', backgroundColor:'rgba(138,63,252,.07)', borderWidth:2, pointRadius:4 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ position:'right', labels:{usePointStyle:true,boxWidth:8,padding:16} } },
+    scales: {
+      r: {
+        grid: { color:'rgba(0,0,0,0.08)' },
+        angleLines: { color:'rgba(0,0,0,0.08)' },
+        pointLabels: { color:'#4E5968', font:{ size:12 } },
+        ticks: { display:false, stepSize:20 },
+        min: 0, max: 100,
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

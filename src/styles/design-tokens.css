@@ -341,7 +341,7 @@ body {
   border-spacing: 0;
 }
 .toss-table th {
-  padding: 10px 16px;
+  padding: 10px 10px;
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-tertiary);
@@ -349,11 +349,10 @@ body {
   white-space: nowrap;
 }
 .toss-table td {
-  padding: 12px 16px;
+  padding: 12px 10px;
   font-size: var(--text-sm);
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-secondary);
-  white-space: nowrap;
 }
 .toss-table tbody tr {
   transition: background 0.1s ease;

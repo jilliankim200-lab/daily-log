@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>퀀트 분석 대시보드</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6}
+.page{padding:28px 24px;max-width:1280px;margin:0 auto}
+.hdr{margin-bottom:28px}
+.hdr h1{font-size:22px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px}
+.hdr p{font-size:13px;color:#64748b;margin-top:4px}
+.badge{display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2px 10px;font-size:12px;color:#94a3b8;margin-left:10px;vertical-align:middle}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px}
+.card .label{font-size:12px;color:#64748b;margin-bottom:6px}
+.card .val{font-size:19px;font-weight:700;color:#f1f5f9}
+.card .sub{font-size:12px;color:#64748b;margin-top:2px}
+.card .pos{color:#34d399}
+.card .neg{color:#f87171}
+.chart-row{display:grid;gap:16px;margin-bottom:16px}
+.chart-row.cols2{grid-template-columns:1fr 1fr}
+.chart-row.cols3{grid-template-columns:2fr 1fr 1fr}
+.panel{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px}
+.panel h2{font-size:13px;font-weight:600;color:#94a3b8;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.panel .sub{font-size:12px;color:#475569;margin-bottom:12px}
+.plotly-chart{width:100%}
+.sep{height:1px;background:#1e293b;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>퀀트 분석 대시보드 <span class="badge">듀얼 모멘텀 전략</span></h1>
+    <p>백테스트 기간: 2022-01 ~ 2026-05 &nbsp;|&nbsp; 분석 ETF: 43종목 &nbsp;|&nbsp; 리밸런싱: 월 1회 &nbsp;|&nbsp; 룩백: 6개월</p>
+  </div>
+
+  <!-- Metric Cards -->
+  <div class="cards" id="metric-cards"></div>
+
+  <!-- Cumulative Return -->
+  <div class="chart-row" style="margin-bottom:16px">
+    <div class="panel">
+      <h2>전략별 누적 수익률</h2>
+      <div class="sub">초기 자산 100 기준, 월간 리밸런싱</div>
+      <div id="chart-nav" style="height:320px"></div>
+    </div>
+  </div>
+
+  <!-- ETF Momentum -->
+  <div class="chart-row" style="margin-bottom:16px">
+    <div class="panel">
+      <h2>포트폴리오 ETF 모멘텀 (3개월 수익률 기준)</h2>
+      <div class="sub">보유 43개 종목 정렬 — 초록: 상승모멘텀 / 빨강: 하락모멘텀</div>
+      <div id="chart-mom" style="height:480px"></div>
+    </div>
+  </div>
+
+  <!-- Risk/Return + Annual -->
+  <div class="chart-row cols2" style="margin-bottom:16px">
+    <div class="panel">
+      <h2>리스크/리턴 비교 (연복리 vs 최대낙폭)</h2>
+      <div class="sub">버블 크기 = 샤프지수</div>
+      <div id="chart-rr" style="height:300px"></div>
+    </div>
+    <div class="panel">
+      <h2>연도별 수익률 비교</h2>
+      <div class="sub">전략별 연간 퍼포먼스</div>
+      <div id="chart-ann" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- Holdings timeline + donut -->
+  <div class="chart-row cols2" style="margin-bottom:16px">
+    <div class="panel">
+      <h2>듀얼 모멘텀 — 월별 보유 자산</h2>
+      <div class="sub">매월 초 시그널 기준 보유 자산 전환</div>
+      <div id="chart-hold" style="height:300px"></div>
+    </div>
+    <div class="panel">
+      <h2>포트폴리오 구성 (평가금액 기준)</h2>
+      <div class="sub">카테고리별 비중</div>
+      <div id="chart-donut" style="height:300px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────
+const MOM  = [{"ticker": "456600", "name": "TIME 글로벌AI인공지능", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 50.2, "r6m": 68.0, "r12m": 97.0}, {"ticker": "483340", "name": "ACE 구글밸류체인액티브", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 45.0, "r6m": 52.2, "r12m": 113.4}, {"ticker": "381180", "name": "TIGER 미국필라델피아반", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 41.8, "r6m": 51.0, "r12m": 106.6}, {"ticker": "491010", "name": "TIGER 글로벌AI전력인", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 38.3, "r6m": 67.3, "r12m": 113.7}, {"ticker": "498400", "name": "KODEX 200타겟위클리", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 36.1, "r6m": 56.0, "r12m": 93.8}, {"ticker": "226490", "name": "KODEX 코스피100", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 36.0, "r6m": 63.9, "r12m": 126.6}, {"ticker": "487230", "name": "KODEX 미국AI전력핵심", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 35.5, "r6m": 58.7, "r12m": 74.6}, {"ticker": "469170", "name": "ACE 포스코그룹포커스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 31.5, "r6m": 54.4, "r12m": 89.2}, {"ticker": "MSTY", "name": "MSTY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 27.1, "r6m": -8.6, "r12m": -75.6}, {"ticker": "486450", "name": "SOL 미국AI전력인프라", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 21.5, "r6m": 31.3, "r12m": 54.0}, {"ticker": "465580", "name": "ACE 미국빅테크TOP7 ", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 18.2, "r6m": 7.8, "r12m": 37.1}, {"ticker": "133690", "name": "TIGER 미국나스닥100", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 14.7, "r6m": 10.4, "r12m": 32.4}, {"ticker": "161510", "name": "PLUS 고배당주", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 12.1, "r6m": 29.9, "r12m": 45.6}, {"ticker": "491620", "name": "RISE 미국테크100데일", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 11.5, "r6m": 1.6, "r12m": 14.1}, {"ticker": "229200", "name": "KODEX 코스닥150", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 11.1, "r6m": 30.8, "r12m": 59.5}, {"ticker": "232080", "name": "TIGER 코스닥150", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 10.7, "r6m": 30.7, "r12m": 59.2}, {"ticker": "466940", "name": "TIGER 은행고배당플러스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 8.8, "r6m": 22.6, "r12m": 43.6}, {"ticker": "360200", "name": "ACE 미국S&P500", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 8.0, "r6m": 6.2, "r12m": 26.2}, {"ticker": "379800", "name": "KODEX 미국S&P500", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 7.9, "r6m": 5.9, "r12m": 25.0}, {"ticker": "CONY", "name": "CONY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 6.1, "r6m": -29.0, "r12m": -69.4}, {"ticker": "438100", "name": "ACE 미국나스닥100채권", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 5.0, "r6m": 6.6, "r12m": 18.3}, {"ticker": "448540", "name": "ACE 엔비디아채권혼합", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 4.8, "r6m": 3.2, "r12m": 11.0}, {"ticker": "NVDY", "name": "NVDY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 3.5, "r6m": -8.0, "r12m": -19.9}, {"ticker": "ULTY", "name": "ULTY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 3.5, "r6m": -15.0, "r12m": -49.6}, {"ticker": "453870", "name": "TIGER 미국배당다우존스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 2.4, "r6m": -10.0, "r12m": -7.5}, {"ticker": "453810", "name": "KODEX 인도Nifty5", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 2.2, "r6m": -10.5, "r12m": -8.1}, {"ticker": "447770", "name": "TIGER 테슬라채권혼합F", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 1.1, "r6m": -6.5, "r12m": 5.6}, {"ticker": "489030", "name": "PLUS 고배당주위클리커버", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 0.7, "r6m": -4.3, "r12m": -19.0}, {"ticker": "272580", "name": "TIGER 단기채권액티브", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.4, "r6m": 1.0, "r12m": 1.4}, {"ticker": "475630", "name": "TIGER CD1년금리액티", "value": 0, "cat": "원자재/기타", "r1m": 0.0, "r3m": 0.3, "r6m": 0.9, "r12m": 1.7}, {"ticker": "148070", "name": "KIWOOM 국고채10년", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 0.2, "r6m": -2.6, "r12m": -8.7}, {"ticker": "475080", "name": "KODEX 테슬라커버드콜채", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.0, "r6m": -7.5, "r12m": -1.5}, {"ticker": "153130", "name": "KODEX 단기채권", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.0, "r6m": -0.1, "r12m": -0.1}, {"ticker": "TSLY", "name": "TSLY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": -0.6, "r6m": -20.6, "r12m": -27.0}, {"ticker": "402970", "name": "ACE 미국배당다우존스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": -1.0, "r6m": 16.7, "r12m": 29.3}, {"ticker": "481060", "name": "KODEX 미국30년국채타", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -1.4, "r6m": -5.2, "r12m": -8.9}, {"ticker": "453850", "name": "ACE 미국30년국채액티브", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -1.5, "r6m": -3.1, "r12m": -3.5}, {"ticker": "458250", "name": "TIGER 미국30년국채스", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -2.0, "r6m": -4.1, "r12m": -3.9}, {"ticker": "411060", "name": "ACE KRX금현물", "value": 0, "cat": "원자재/기타", "r1m": 0.0, "r3m": -4.1, "r6m": 4.3, "r12m": 50.5}, {"ticker": "308620", "name": "KODEX 미국10년국채선", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -4.6, "r6m": 0.7, "r12m": 7.7}, {"ticker": "305080", "name": "TIGER 미국채10년선물", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -4.8, "r6m": 0.3, "r12m": 8.6}, {"ticker": "473330", "name": "SOL 미국30년국채커버드", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -5.2, "r6m": -2.0, "r12m": 3.3}, {"ticker": "PLTY", "name": "PLTY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": -5.7, "r6m": -29.4, "r12m": -43.3}];
+const BT_M = ["2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05"];
+const STRAT= {"듀얼모멘텀": [100.0, 87.1185, 85.7325, 85.7698, 82.5286, 80.1123, 80.0774, 80.1548, 80.8443, 78.716, 78.8336, 74.3516, 68.2809, 68.5488, 68.6632, 75.6978, 78.0127, 78.5538, 79.3054, 86.592, 85.722, 79.1505, 77.2405, 83.0379, 86.0629, 81.3178, 83.6299, 86.8125, 83.1271, 84.2532, 90.0635, 86.2207, 85.7613, 85.8761, 91.851, 95.6125, 100.3062, 100.787, 96.6135, 89.9893, 86.667, 86.8394, 104.4403, 110.0129, 108.1971, 119.3049, 152.4631, 144.4688, 159.1077, 228.9283, 273.5719, 225.5541, 321.4599], "나스닥100 BH": [100.0, 87.1185, 84.9943, 93.5877, 85.6834, 80.2107, 76.2984, 85.2961, 84.8462, 81.754, 83.4169, 77.3918, 69.2483, 74.59, 81.418, 85.9624, 89.4875, 96.549, 100.5524, 100.8485, 104.0376, 100.2961, 97.8759, 105.2221, 111.1845, 117.5683, 120.9112, 125.5125, 124.6241, 129.9772, 138.9408, 133.0125, 131.6401, 132.3519, 141.5604, 147.3576, 160.4556, 159.254, 152.6595, 142.1925, 139.8462, 148.7415, 154.8861, 165.8087, 166.3098, 174.6298, 187.3292, 187.9271, 185.6777, 186.3155, 181.1503, 178.7642, 202.7221], "코스피200 BH": [100.0, 90.9205, 91.8109, 93.0023, 89.0645, 88.8889, 77.4392, 81.2265, 80.8377, 70.918, 75.1568, 80.449, 74.2287, 80.6496, 80.0226, 81.9915, 81.8284, 85.2019, 85.1768, 86.4811, 84.2112, 82.4555, 76.8999, 85.1643, 90.7198, 84.8508, 89.8796, 95.1843, 91.9238, 90.3185, 96.6767, 95.6233, 91.0459, 87.083, 85.4903, 81.8661, 80.4113, 83.8851, 84.7254, 84.9386, 85.1141, 90.6446, 104.5899, 110.1706, 108.3521, 119.4758, 145.8365, 139.5786, 152.7339, 193.8927, 236.0672, 189.1899, 250.5769], "S&P500 BH": [100.0, 91.9861, 90.5226, 98.1533, 94.007, 90.2091, 86.0627, 93.1707, 93.9721, 91.4983, 96.8293, 91.324, 83.8676, 86.3763, 92.0906, 92.23, 96.3763, 96.899, 101.324, 101.2544, 104.216, 101.0105, 97.5958, 102.5436, 107.77, 113.8676, 117.5261, 124.669, 122.5784, 125.8885, 131.6376, 130.7666, 130.0697, 130.2439, 138.4669, 145.5052, 152.6481, 153.3798, 148.8502, 141.5679, 136.3415, 141.0105, 145.122, 154.1463, 156.3066, 161.9164, 169.1986, 173.9373, 172.4739, 171.9512, 171.1847, 169.6516, 182.2997], "코스피60/미채40": [100.0, 94.042, 94.2967, 94.0799, 91.917, 91.2727, 85.4885, 89.0747, 88.6447, 82.9744, 85.4725, 87.0595, 81.5196, 85.5155, 86.6376, 88.2779, 89.3719, 90.8691, 90.0357, 89.5342, 89.254, 88.1531, 83.9735, 89.1195, 93.6458, 90.9892, 93.5454, 97.5537, 95.6148, 94.921, 99.3292, 99.2418, 95.903, 92.9045, 92.6824, 90.8898, 91.2187, 93.3115, 94.815, 95.4983, 94.4715, 96.5726, 105.1873, 109.5418, 109.1441, 116.4028, 132.6683, 131.2498, 137.273, 158.8838, 180.8896, 162.5272, 191.7286]};
+const MET  = {"듀얼모멘텀": {"cagr": 30.26, "mdd": -31.72, "sharpe": 0.88, "total": 221.46}, "나스닥100 BH": {"cagr": 17.35, "mdd": -30.75, "sharpe": 0.92, "total": 102.72}, "코스피200 BH": {"cagr": 23.12, "mdd": -29.08, "sharpe": 0.81, "total": 150.58}, "S&P500 BH": {"cagr": 14.56, "mdd": -16.13, "sharpe": 1.04, "total": 82.3}, "코스피60/미채40": {"cagr": 15.88, "mdd": -18.48, "sharpe": 0.89, "total": 91.73}};
+const ANN  = {"듀얼모멘텀": {"2022": -25.6, "2023": 21.6, "2024": 11.1, "2025": 44.0, "2026": 102.0}, "나스닥100 BH": {"2022": -22.6, "2023": 51.9, "2024": 32.5, "2025": 17.1, "2026": 9.2}, "코스피200 BH": {"2022": -19.6, "2023": 14.7, "2024": -9.8, "2025": 73.6, "2026": 64.1}, "S&P500 BH": {"2022": -8.7, "2023": 22.3, "2024": 35.0, "2025": 13.9, "2026": 5.7}, "코스피60/미채40": {"2022": -12.9, "2023": 9.3, "2024": -2.9, "2025": 43.9, "2026": 39.7}};
+const HOLDS= ["나스닥100", "S&P500", "단기채권", "반도체", "반도체", "단기채권", "단기채권", "S&P500", "S&P500", "단기채권", "S&P500", "S&P500", "단기채권", "단기채권", "코스닥150", "코스닥150", "코스닥150", "코스닥150", "반도체", "코스닥150", "반도체", "나스닥100", "나스닥100", "반도체", "반도체", "나스닥100", "나스닥100", "반도체", "반도체", "나스닥100", "나스닥100", "S&P500", "S&P500", "나스닥100", "나스닥100", "S&P500", "S&P500", "나스닥100", "나스닥100", "S&P500", "단기채권", "반도체", "코스피200", "코스피200", "코스피200", "반도체", "반도체", "반도체", "반도체", "반도체", "반도체", "반도체", "반도체"];
+const HFREQ= [{"asset": "반도체", "months": 17}, {"asset": "나스닥100", "months": 11}, {"asset": "S&P500", "months": 10}, {"asset": "단기채권", "months": 7}, {"asset": "코스닥150", "months": 5}, {"asset": "코스피200", "months": 3}];
+const CAT  = {"국내주식": 0, "커버드콜": 0, "국내채권": 0, "원자재/기타": 0};
+
+const STRAT_NAMES = Object.keys(STRAT);
+const STRAT_COLORS = ['#38bdf8','#818cf8','#34d399','#fb923c','#a78bfa'];
+const PAPER = '#1e293b';
+const PLOT_BG = '#1e293b';
+const FONT_COLOR = '#94a3b8';
+const GRID_COLOR = '#334155';
+const DARK_LAYOUT = {
+  paper_bgcolor: PAPER,
+  plot_bgcolor: PLOT_BG,
+  font: { color: FONT_COLOR, family: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", size: 12 },
+  margin: { t: 10, r: 10, b: 40, l: 50 },
+};
+
+// ─── Metric Cards ────────────────────────────────────────────────────────
+const METRIC_LABELS = [
+  ['CAGR', m => m.cagr + '%'],
+  ['MDD', m => m.mdd + '%'],
+  ['샤프지수', m => m.sharpe],
+  ['누적수익률', m => m.total + '%'],
+];
+const cardsEl = document.getElementById('metric-cards');
+STRAT_NAMES.forEach((name, ci) => {
+  const m = MET[name];
+  cardsEl.innerHTML += `
+    <div class="card">
+      <div class="label" style="color:${STRAT_COLORS[ci]}">${name}</div>
+      <div class="val ${m.total >= 0 ? 'pos':'neg'}">${m.total >= 0 ? '+' : ''}${m.total}%</div>
+      <div class="sub">CAGR ${m.cagr >= 0 ? '+' : ''}${m.cagr}% &nbsp;|&nbsp; MDD ${m.mdd}%</div>
+      <div class="sub">샤프 ${m.sharpe}</div>
+    </div>`;
+});
+
+// ─── Chart 1: Cumulative Return ──────────────────────────────────────────
+const navTraces = STRAT_NAMES.map((name, ci) => ({
+  x: BT_M,
+  y: STRAT[name],
+  name,
+  type: 'scatter',
+  mode: 'lines',
+  line: { color: STRAT_COLORS[ci], width: ci === 0 ? 2.5 : 1.5, dash: ci === 0 ? 'solid' : (ci === 1 ? 'solid' : 'dot') },
+  hovertemplate: '%{x}<br>' + name + ': <b>%{y:.1f}</b><extra></extra>',
+}));
+
+Plotly.newPlot('chart-nav', navTraces, {
+  ...DARK_LAYOUT,
+  margin: { t: 10, r: 20, b: 50, l: 55 },
+  xaxis: { gridcolor: GRID_COLOR, tickformat: '%Y-%m', nticks: 12 },
+  yaxis: { gridcolor: GRID_COLOR, ticksuffix: '' },
+  legend: { orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center', font: { size: 11 } },
+  hovermode: 'x unified',
+}, {responsive: true, displayModeBar: false});
+
+// ─── Chart 2: ETF Momentum ───────────────────────────────────────────────
+const CAT_COLORS = {
+  '국내주식':  '#38bdf8',
+  '미국주식':  '#818cf8',
+  '커버드콜':  '#fb923c',
+  '국내채권':  '#34d399',
+  '미국채권':  '#a78bfa',
+  '원자재/기타':'#fbbf24',
+};
+
+// Group by category, top 30 by |r3m|
+const displayMom = MOM.slice(0, 35);
+const momY = displayMom.map(d => d.ticker + ' ' + (d.name || ''));
+const momX = displayMom.map(d => d.r3m);
+const momColors = displayMom.map(d => d.r3m >= 0 ? '#34d399' : '#f87171');
+const momOpacity = displayMom.map(d => Math.min(0.4 + Math.abs(d.r3m) / 30, 1.0));
+
+Plotly.newPlot('chart-mom', [{
+  type: 'bar',
+  orientation: 'h',
+  x: momX,
+  y: momY,
+  marker: {
+    color: momColors,
+    opacity: momOpacity,
+    line: { color: momColors, width: 0.5 },
+  },
+  hovertemplate: '<b>%{y}</b><br>3M: %{x:.1f}%<extra></extra>',
+  text: displayMom.map(d => d.r3m >= 0 ? '+' + d.r3m + '%' : d.r3m + '%'),
+  textposition: 'outside',
+  textfont: { size: 10, color: FONT_COLOR },
+  cliponaxis: false,
+}], {
+  ...DARK_LAYOUT,
+  margin: { t: 10, r: 60, b: 40, l: 160 },
+  xaxis: { gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: '#475569', ticksuffix: '%' },
+  yaxis: { gridcolor: 'transparent', automargin: true, tickfont: { size: 11 } },
+  bargap: 0.25,
+}, {responsive: true, displayModeBar: false});
+
+// ─── Chart 3: Risk/Return Scatter ────────────────────────────────────────
+const rrTraces = STRAT_NAMES.map((name, ci) => {
+  const m = MET[name];
+  return {
+    type: 'scatter',
+    mode: 'markers+text',
+    x: [m.mdd],
+    y: [m.cagr],
+    name,
+    text: [name],
+    textposition: 'top center',
+    textfont: { size: 11, color: STRAT_COLORS[ci] },
+    marker: {
+      size: Math.max(14, m.sharpe * 14),
+      color: STRAT_COLORS[ci],
+      opacity: 0.8,
+      line: { width: 1.5, color: STRAT_COLORS[ci] },
+    },
+    hovertemplate: `<b>${name}</b><br>CAGR: %{y:.2f}%<br>MDD: %{x:.2f}%<br>Sharpe: ${m.sharpe}<extra></extra>`,
+  };
+});
+
+Plotly.newPlot('chart-rr', rrTraces, {
+  ...DARK_LAYOUT,
+  margin: { t: 20, r: 20, b: 45, l: 50 },
+  xaxis: { gridcolor: GRID_COLOR, title: 'MDD (%)', autorange: 'reversed', ticksuffix: '%' },
+  yaxis: { gridcolor: GRID_COLOR, title: 'CAGR (%)', ticksuffix: '%' },
+  showlegend: false,
+}, {responsive: true, displayModeBar: false});
+
+// ─── Chart 4: Annual Returns ─────────────────────────────────────────────
+const allYears = Array.from(new Set(
+  STRAT_NAMES.flatMap(n => Object.keys(ANN[n]))
+)).sort();
+
+const annTraces = STRAT_NAMES.map((name, ci) => ({
+  type: 'bar',
+  name,
+  x: allYears,
+  y: allYears.map(yr => ANN[name][yr] ?? null),
+  marker: { color: STRAT_COLORS[ci], opacity: 0.8 },
+  hovertemplate: '%{x}: <b>%{y:.1f}%</b><extra>' + name + '</extra>',
+}));
+
+Plotly.newPlot('chart-ann', annTraces, {
+  ...DARK_LAYOUT,
+  margin: { t: 10, r: 10, b: 50, l: 50 },
+  xaxis: { gridcolor: GRID_COLOR },
+  yaxis: { gridcolor: GRID_COLOR, ticksuffix: '%', zeroline: true, zerolinecolor: '#475569' },
+  barmode: 'group',
+  bargap: 0.15,
+  bargroupgap: 0.05,
+  legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 10 } },
+}, {responsive: true, displayModeBar: false});
+
+// ─── Chart 5: Holdings Timeline ──────────────────────────────────────────
+const assetList = [...new Set(HOLDS)];
+const ASSET_COLORS = {
+  '나스닥100':  '#818cf8',
+  'S&P500':    '#a78bfa',
+  '코스피200':  '#38bdf8',
+  '코스닥150':  '#22d3ee',
+  '반도체':     '#fb923c',
+  '미국채10년': '#34d399',
+  '금':         '#fbbf24',
+  '단기채권':   '#94a3b8',
+};
+
+// Create stacked bar (1 = held, 0 = not held)
+const holdTraces = assetList.map(asset => ({
+  type: 'bar',
+  name: asset,
+  x: BT_M,
+  y: HOLDS.map(h => h === asset ? 1 : 0),
+  marker: { color: ASSET_COLORS[asset] || '#64748b', opacity: 0.85 },
+  hovertemplate: '%{x}: <b>' + asset + '</b><extra></extra>',
+}));
+
+Plotly.newPlot('chart-hold', holdTraces, {
+  ...DARK_LAYOUT,
+  margin: { t: 10, r: 10, b: 50, l: 30 },
+  barmode: 'stack',
+  xaxis: { gridcolor: GRID_COLOR, nticks: 12 },
+  yaxis: { gridcolor: 'transparent', showticklabels: false, range: [0, 1.1] },
+  legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+}, {responsive: true, displayModeBar: false});
+
+// ─── Chart 6: Portfolio Composition Donut ────────────────────────────────
+const catLabels = Object.keys(CAT);
+const catVals = catLabels.map(k => CAT[k]);
+const catColors = catLabels.map(k => CAT_COLORS[k] || '#64748b');
+
+Plotly.newPlot('chart-donut', [{
+  type: 'pie',
+  labels: catLabels,
+  values: catVals,
+  hole: 0.52,
+  marker: { colors: catColors, line: { color: PAPER, width: 2 } },
+  textinfo: 'label+percent',
+  textfont: { size: 11 },
+  hovertemplate: '<b>%{label}</b><br>%{value:,.0f}원<br>%{percent}<extra></extra>',
+}], {
+  ...DARK_LAYOUT,
+  margin: { t: 20, r: 10, b: 20, l: 10 },
+  showlegend: false,
+}, {responsive: true, displayModeBar: false});
+
+</script>
+</body>
+</html>

@@ -97,7 +97,7 @@ export function DividendAnalysis() {
   const col = (n: number) => isMobile ? '1fr' : `repeat(${n}, 1fr)`;
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px' }}>
+    <div style={{ padding: isMobile ? '12px' : '12px' }}>
 
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12 }}>

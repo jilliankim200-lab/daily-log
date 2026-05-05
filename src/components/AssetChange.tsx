@@ -495,7 +495,7 @@ export function AssetChange() {
     <>
     <div
       style={{
-        padding: isMobile ? '16px' : '24px',
+        padding: isMobile ? '12px' : '12px',
         maxWidth: 960,
         margin: '0 auto',
       }}

@@ -551,8 +551,19 @@ function AccountCard({
               })}
             </div>
           ) : account.holdings.length > 0 && (
-            <div style={{ overflowX: 'auto' }}>
-            <table className="toss-table">
+            <div>
+            <table className="toss-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col />{/* 종목명: 나머지 */}
+                <col style={{ width: 110 }} />{/* 수익률 */}
+                <col style={{ width: 88 }} />{/* 평단가 */}
+                <col style={{ width: 88 }} />{/* 현재가 */}
+                <col style={{ width: 55 }} />{/* 수량 */}
+                <col style={{ width: 112 }} />{/* 매입금액 */}
+                <col style={{ width: 112 }} />{/* 평가금액 */}
+                <col style={{ width: 76 }} />{/* 티커 */}
+                <col style={{ width: 60 }} />{/* 액션 */}
+              </colgroup>
               <thead>
                 <tr>
                   <th>종목명</th>
@@ -563,7 +574,7 @@ function AccountCard({
                   <th style={{ textAlign: 'right' }}>매입금액</th>
                   <th style={{ textAlign: 'right' }}>평가금액</th>
                   <th>티커</th>
-                  <th style={{ textAlign: 'center', width: 70 }}></th>
+                  <th style={{ textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -858,7 +869,7 @@ export function CoupleAccounts() {
   const totalAll = wifeTotal + husbandTotal + otherTotal;
 
   return (
-    <div style={{ padding: isMobile ? '16px' : '24px', maxWidth: 960, margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto' }}>
       {/* 헤더 */}
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <div>
