@@ -91,6 +91,7 @@ interface SellCandidate {
 export function MonthlyStrategy() {
   const { accounts, prices, isMobile } = useAppContext();
 
+  const [activeTab, setActiveTab] = useState<'monthly' | 'quant'>('monthly');
   const [signals, setSignals] = useState<Record<string, StockSignal>>({});
 
   useEffect(() => {
@@ -203,8 +204,26 @@ export function MonthlyStrategy() {
     border: '1px solid var(--border-secondary)', padding: isMobile ? 16 : 20, marginBottom: 16,
   };
 
+  const tabStyle = (active: boolean, color: string): React.CSSProperties => ({
+    padding: '7px 20px', borderRadius: 8, fontSize: 'var(--text-sm)', fontWeight: 700,
+    cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border-secondary)'}`,
+    background: active ? `${color}18` : 'transparent',
+    color: active ? color : 'var(--text-tertiary)', transition: 'all .15s',
+  });
+
   return (
     <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto' }}>
+
+      {/* 탭 */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <button style={tabStyle(activeTab === 'monthly', 'var(--color-loss)')}
+          onClick={() => setActiveTab('monthly')}>📅 5월 전략</button>
+        <button style={tabStyle(activeTab === 'quant', '#22c55e')}
+          onClick={() => setActiveTab('quant')}>📈 퀀트투자</button>
+      </div>
+
+      {activeTab === 'quant' && <QuantTab isMobile={isMobile} cardStyle={cardStyle} />}
+      {activeTab !== 'quant' && <>
 
       {/* 헤더 */}
       <div style={{ marginBottom: 24 }}>
@@ -430,6 +449,264 @@ export function MonthlyStrategy() {
         이 분석은 평단가 기준 데이터이며 현재 수익률과 다를 수 있습니다.<br />
         투자 결정은 본인 판단 하에 이루어지며, 이 페이지는 참고용입니다.
       </div>
+      </>}
+    </div>
+  );
+}
+
+// ── 퀀트투자 탭 ──────────────────────────────────────────────────────────────
+
+function CheckItem({ done, children }: { done?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0',
+      borderBottom: '1px solid var(--border-secondary)' }}>
+      <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${done ? '#22c55e' : 'var(--border-secondary)'}`,
+        background: done ? '#22c55e18' : 'transparent', flexShrink: 0, display: 'flex',
+        alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+        {done && <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 800 }}>✓</span>}
+      </div>
+      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{children}</div>
+    </div>
+  );
+}
+
+function Row({ label, val, valColor, sub }: { label: string; val: string; valColor?: string; sub?: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '9px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{label}</span>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: valColor ?? 'var(--text-primary)' }}>{val}</div>
+        {sub && <div style={{ fontSize: 11, color: 'var(--text-quaternary)' }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Tag({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '2px 8px',
+      borderRadius: 4, background: `${color}18`, color, marginRight: 6, marginBottom: 4 }}>
+      {children}
+    </span>
+  );
+}
+
+function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React.CSSProperties }) {
+  return (
+    <div>
+
+      {/* 이달 신호 요약 */}
+      <div style={{ ...cardStyle, background: 'rgba(34,197,94,.05)', border: '1px solid rgba(34,197,94,.2)' }}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: '#22c55e',
+          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #22c55e' }}>
+          📡 2026년 5월 듀얼 모멘텀 신호
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 10 }}>
+          {[
+            { label: '1위 자산', val: '반도체 (091160)', color: '#22c55e' },
+            { label: '6M 수익률', val: '+137.0%', color: '#f97316' },
+            { label: '시장 국면', val: '강세장', color: '#22c55e' },
+            { label: '리밸런싱', val: '5월 말', color: 'var(--text-primary)' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 3 }}>{s.label}</div>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: s.color }}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 전략 vs Sell in May */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
+          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
+          ⚡ 퀀트 전략 vs Sell in May — 이달의 판단
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div style={{ background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)',
+            borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
+              📅 5월 전략 탭 관점
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              Sell in May 계절성 — 5~10월 주식 수익률 저조<br />
+              반도체는 고위험 섹터 → <strong style={{ color: '#ef4444' }}>부분 또는 전량 매도 후보</strong>
+            </div>
+          </div>
+          <div style={{ background: 'rgba(34,197,94,.05)', border: '1px solid rgba(34,197,94,.2)',
+            borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#22c55e', marginBottom: 8 }}>
+              📈 퀀트 모멘텀 관점
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              6M +137% — 7개 자산 중 압도적 1위<br />
+              모멘텀 신호 살아있는 한 <strong style={{ color: '#22c55e' }}>100% 집중 보유 유지</strong>
+            </div>
+          </div>
+        </div>
+        <div style={{ background: 'rgba(59,130,246,.07)', border: '1px solid rgba(59,130,246,.2)',
+          borderLeft: '3px solid #3b82f6', borderRadius: '0 8px 8px 0', padding: '10px 14px',
+          fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          <strong style={{ color: '#3b82f6' }}>이달 결론:</strong> 두 전략이 충돌합니다.
+          퀀트 모멘텀 전략은 신호 기반 규칙 매매이므로 <strong style={{ color: 'var(--text-primary)' }}>크래시 신호가 뜨기 전까지 유지</strong>가 원칙.
+          단, +137%는 극단 모멘텀 구간 — <strong style={{ color: '#f59e0b' }}>크래시 탐지를 평소보다 자주(주 2회 이상) 확인</strong>하는 것이 핵심입니다.
+        </div>
+      </div>
+
+      {/* 이달 액션 플랜 */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
+          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #22c55e' }}>
+          🎯 5월 퀀트 액션 플랜
+        </div>
+
+        {[
+          {
+            num: 1, color: '#22c55e',
+            title: '반도체 ETF (091160) 100% 보유 유지',
+            detail: '듀얼 모멘텀 1위 자산. KODEX 반도체(091160) 또는 TIGER 반도체(091230) 중 보유 중인 것 유지.',
+            tag: '즉시',
+          },
+          {
+            num: 2, color: '#ef4444',
+            title: '반도체 외 위험자산 전량 매도 → 단기채권 통합',
+            detail: '코스피200, 코스닥150, 나스닥100, S&P500 ETF 보유 중이면 전량 매도. KODEX 단기채권(153130)으로 통합. 이 전략은 1위 단일 자산만 보유.',
+            tag: '이달 내',
+          },
+          {
+            num: 3, color: '#f97316',
+            title: '크래시 탐지 대시보드 주 2회 이상 점검',
+            detail: '퀀트 대시보드 → 모멘텀 크래시 감지 섹션. 🔴 적색(3M < -5%) 출현 시 반도체 전량 매도 → 단기채권(153130) 즉시 전환. +137% 극단 모멘텀 구간이라 평소보다 자주 확인 필요.',
+            tag: '상시',
+          },
+          {
+            num: 4, color: '#3b82f6',
+            title: '5월 말 6M 수익률 재계산 → 1위 자산 교체 여부 확인',
+            detail: '매월 말 7개 자산(반도체/코스피200/코스닥150/나스닥100/S&P500/금/미국장기채) 수익률 재산출. 1위가 바뀌면 다음 달 초 교체 실행.',
+            tag: '5월 말',
+          },
+        ].map((item, i, arr) => (
+          <div key={item.num} style={{ display: 'flex', gap: 12, alignItems: 'flex-start',
+            paddingBottom: i < arr.length - 1 ? 14 : 0,
+            borderBottom: i < arr.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+            marginBottom: i < arr.length - 1 ? 14 : 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: `${item.color}22`,
+              color: item.color, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', flexShrink: 0 }}>{item.num}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{item.title}</span>
+                <Tag color={item.color}>{item.tag}</Tag>
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{item.detail}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 7대 자산 현황 */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
+          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
+          📊 7대 자산 6M 수익률 순위 (2026-05-06 기준)
+        </div>
+        {[
+          { rank: 1, name: '반도체',    ticker: '091160', r6m: 137.0, action: '✓ 보유 유지',     ac: '#22c55e' },
+          { rank: 2, name: '코스피200', ticker: '069500', r6m: 94.1,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
+          { rank: 3, name: '코스닥150', ticker: '229200', r6m: 36.6,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
+          { rank: 4, name: '나스닥100', ticker: '133690', r6m: 13.1,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
+          { rank: 5, name: 'S&P500',   ticker: '360750', r6m: 10.4,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
+          { rank: 6, name: '금',        ticker: '411060', r6m: 9.1,   action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
+          { rank: 7, name: '미국장기채',ticker: '305080', r6m: 0.6,   action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
+        ].map((row, i) => (
+          <div key={row.ticker} style={{ display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 0', borderBottom: i < 6 ? '1px solid var(--border-secondary)' : 'none' }}>
+            <div style={{ width: 22, fontSize: 12, fontWeight: 700, flexShrink: 0,
+              color: row.rank === 1 ? '#22c55e' : 'var(--text-tertiary)' }}>{row.rank}위</div>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700,
+                color: row.rank === 1 ? '#22c55e' : 'var(--text-primary)' }}>{row.name}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-quaternary)', marginLeft: 6 }}>{row.ticker}</span>
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#22c55e', width: 64, textAlign: 'right' }}>
+              +{row.r6m}%
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: row.ac, width: isMobile ? 90 : 130, textAlign: 'right' }}>
+              {row.action}
+            </div>
+          </div>
+        ))}
+        <div style={{ marginTop: 12, background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.15)',
+          borderRadius: 8, padding: '8px 12px', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.7 }}>
+          <strong style={{ color: '#ef4444' }}>✕ 보유 금지</strong> = 현재 보유 중이면{' '}
+          <strong style={{ color: '#ef4444' }}>전량 매도</strong> →{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>반도체(091160)</strong>으로 통합
+        </div>
+      </div>
+
+      {/* 리스크 경고 */}
+      <div style={{ ...cardStyle, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.25)' }}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: '#f59e0b',
+          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #f59e0b' }}>
+          ⚠️ 이달 핵심 리스크
+        </div>
+        {[
+          {
+            icon: '🔥', color: '#ef4444', title: '극단 모멘텀 크래시 위험',
+            desc: '반도체 6M +137%는 상위 1~2% 수준의 극단값. Barroso & Santa-Clara (2015) 연구에 따르면 이 구간에서 급격한 모멘텀 반전(크래시) 확률이 통계적으로 유의미하게 높아집니다.',
+          },
+          {
+            icon: '📡', color: '#f59e0b', title: '크래시 탐지 지연 (하루 1회 갱신)',
+            desc: '현재 Worker 크론이 하루 1회(UTC 03:00) 돌아 전날 데이터 기준으로 신호를 갱신합니다. 장중 급락은 당일 캐치 불가. 수동 갱신 버튼(퀀트 기초 → 액션 플랜)으로 보완 가능.',
+          },
+          {
+            icon: '⚡', color: '#3b82f6', title: '절대 모멘텀 음전 시 즉시 전환',
+            desc: '반도체 6M 수익률이 0% 이하로 떨어지면 1위라도 단기채권(153130)으로 전환. 듀얼 모멘텀의 절대 모멘텀 필터가 이 조건.',
+          },
+        ].map((item, i) => (
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0',
+            borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none' }}>
+            <div style={{ fontSize: 20, flexShrink: 0, lineHeight: 1.4 }}>{item.icon}</div>
+            <div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: item.color, marginBottom: 4 }}>{item.title}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{item.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 5월 체크리스트 */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
+          marginBottom: 4, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
+          ✅ 5월 퀀트 체크리스트
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <CheckItem><strong style={{ color: 'var(--text-primary)' }}>반도체(091160)</strong> 보유 확인 — 비중 100%</CheckItem>
+          <CheckItem><strong style={{ color: '#ef4444' }}>반도체 외 위험자산</strong> 전량 매도 → 단기채권(153130) 통합</CheckItem>
+          <CheckItem>퀀트 대시보드 <strong style={{ color: 'var(--text-primary)' }}>크래시 탐지</strong> 주 2회 이상 점검 (🔴 시 즉시 대응)</CheckItem>
+          <CheckItem><strong style={{ color: 'var(--text-primary)' }}>수동 신호 갱신</strong> — 퀀트 기초 → 🔄 신호 갱신 버튼 주기적 클릭</CheckItem>
+          <CheckItem><strong style={{ color: 'var(--text-primary)' }}>5월 말</strong> 7대 자산 6M 수익률 재계산 → 1위 자산 교체 여부 확인</CheckItem>
+        </div>
+      </div>
+
+      {/* 성과 참고 */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
+          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
+          📈 전략 성과 참고 (역사적 백테스트)
+        </div>
+        <Row label="CAGR (연복리 수익률)" val="~22%" valColor="#22c55e" sub="집중 투자 Top-1 기준" />
+        <Row label="MDD (최대 낙폭)" val="-30~45%" valColor="#ef4444" sub="분산 없음 — 리스크 최대" />
+        <Row label="Sharpe Ratio" val="0.70~0.95" valColor="#f97316" />
+        <Row label="평균 턴오버" val="~120%/년" valColor="var(--text-primary)" sub="월 1회 리밸런싱" />
+        <div style={{ marginTop: 12, fontSize: 'var(--text-sm)', color: 'var(--text-quaternary)', lineHeight: 1.6 }}>
+          ※ 백테스트 결과는 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.<br />
+          ※ 거래 비용·슬리피지·세금 미반영 기준.
+        </div>
+      </div>
+
     </div>
   );
 }
