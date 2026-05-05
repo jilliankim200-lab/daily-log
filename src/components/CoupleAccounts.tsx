@@ -551,8 +551,8 @@ function AccountCard({
               })}
             </div>
           ) : account.holdings.length > 0 && (
-            <div>
-            <table className="toss-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+            <div style={!isMobile ? { overflowX: 'auto' } : undefined}>
+            <table className="toss-table" style={{ tableLayout: 'fixed', width: '100%', ...(!isMobile ? { minWidth: 780 } : {}) }}>
               <colgroup>
                 <col />{/* 종목명: 나머지 */}
                 <col style={{ width: 110 }} />{/* 수익률 */}
@@ -1307,7 +1307,7 @@ function SummaryCard({ label, value, sub, isAmountHidden, accent, icon }: {
         {icon && <span className="material-symbols-rounded" style={{ fontSize: 'var(--text-sm)' }}>{icon}</span>}
         {label}
       </p>
-      <p className="toss-number" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: accent ? 'var(--accent-blue-fg)' : 'var(--text-primary)' }}>
+      <p className="toss-number" style={{ fontSize: 'clamp(14px, 1.8vw, 20px)', fontWeight: 'var(--font-bold)', color: accent ? 'var(--accent-blue-fg)' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>
         {isAmountHidden ? '••••' : `${fmt(value)}원`}
       </p>
       <p style={{ fontSize: 'var(--text-xs)', color: accent ? 'color-mix(in srgb, var(--accent-blue-fg) 70%, transparent)' : 'var(--text-tertiary)', marginTop: 4 }}>{sub}</p>

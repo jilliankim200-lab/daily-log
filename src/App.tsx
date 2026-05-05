@@ -17,6 +17,7 @@ import { MacroSectorViz } from "./components/MacroSectorViz";
 import { DeepResearchViz } from "./components/DeepResearchViz";
 import { FinancialScoring } from "./components/FinancialScoring";
 import { QuantDashboard } from "./components/QuantDashboard";
+import { QuantBasics } from "./components/QuantBasics";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -73,6 +74,7 @@ const MENU_ITEMS = [
 ];
 
 const FONT_SCALE = 1.15;
+const INDICATOR_IDS = ['macro-sector', 'deep-research', 'financial-scoring', 'quant-dashboard', 'quant-basics'] as const;
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -82,6 +84,7 @@ export default function App() {
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(() => window.innerWidth >= 768);
+  const [isIndicatorOpen, setIsIndicatorOpen] = useState(() => (INDICATOR_IDS as readonly string[]).includes(currentPage));
   const [isAmountHidden, setIsAmountHidden] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -89,6 +92,7 @@ export default function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [otherAssets, setOtherAssetsState] = useState<OtherAsset[]>([]);
   const [isHappyMode, setIsHappyMode] = useState(false);
+  const [showHappyBtn, setShowHappyBtn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
@@ -221,6 +225,7 @@ export default function App() {
       case "deep-research": return <DeepResearchViz />;
       case "financial-scoring": return <FinancialScoring />;
       case "quant-dashboard": return <QuantDashboard />;
+      case "quant-basics": return <QuantBasics />;
     }
   };
 
@@ -309,99 +314,64 @@ export default function App() {
               );
             })}
 
-            {/* 지표 섹션 */}
+            {/* 지표 섹션 — 접힘/펼침 */}
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '0 12px', marginBottom: 4 }}>
-                지표
-              </p>
-              {(() => {
-                const id = 'macro-sector';
-                const active = currentPage === id;
-                return (
-                  <button
-                    onClick={() => { setCurrentPage(id); setIsSidebarOpen(false); setIsLeftSidebarOpen(isMobile ? false : isLeftSidebarOpen); }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      marginBottom: 2, transition: 'background 0.15s',
-                      background: active ? 'var(--bg-tertiary)' : 'transparent',
-                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: active ? 600 : 500, fontSize: 14,
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'; }}
-                  >
-                    <MIcon name="travel_explore" size={20} style={{ opacity: active ? 1 : 0.6 }} />
-                    <span>매크로 섹터</span>
-                  </button>
-                );
-              })()}
-              {(() => {
-                const id = 'deep-research';
-                const active = currentPage === id;
-                return (
-                  <button
-                    onClick={() => { setCurrentPage(id); setIsSidebarOpen(false); setIsLeftSidebarOpen(isMobile ? false : isLeftSidebarOpen); }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      marginBottom: 2, transition: 'background 0.15s',
-                      background: active ? 'var(--bg-tertiary)' : 'transparent',
-                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: active ? 600 : 500, fontSize: 14,
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'; }}
-                  >
-                    <MIcon name="auto_stories" size={20} style={{ opacity: active ? 1 : 0.6 }} />
-                    <span>딥리서치</span>
-                  </button>
-                );
-              })()}
-              {(() => {
-                const id = 'financial-scoring';
-                const active = currentPage === id;
-                return (
-                  <button
-                    onClick={() => { setCurrentPage(id); setIsSidebarOpen(false); setIsLeftSidebarOpen(isMobile ? false : isLeftSidebarOpen); }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      marginBottom: 2, transition: 'background 0.15s',
-                      background: active ? 'var(--bg-tertiary)' : 'transparent',
-                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: active ? 600 : 500, fontSize: 14,
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'; }}
-                  >
-                    <MIcon name="query_stats" size={20} style={{ opacity: active ? 1 : 0.6 }} />
-                    <span>재무 스코어링</span>
-                  </button>
-                );
-              })()}
-              {(() => {
-                const id = 'quant-dashboard';
-                const active = currentPage === id;
-                return (
-                  <button
-                    onClick={() => { setCurrentPage(id); setIsSidebarOpen(false); setIsLeftSidebarOpen(isMobile ? false : isLeftSidebarOpen); }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      marginBottom: 2, transition: 'background 0.15s',
-                      background: active ? 'var(--bg-tertiary)' : 'transparent',
-                      color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: active ? 600 : 500, fontSize: 14,
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'; }}
-                  >
-                    <MIcon name="insights" size={20} style={{ opacity: active ? 1 : 0.6 }} />
-                    <span>퀀트 대시보드</span>
-                  </button>
-                );
-              })()}
+              {/* 섹션 헤더 (클릭으로 토글) */}
+              <button
+                onClick={() => setIsIndicatorOpen(v => !v)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '4px 12px 6px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: 'transparent', transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  지표
+                </span>
+                <MIcon
+                  name={isIndicatorOpen ? 'expand_less' : 'expand_more'}
+                  size={16}
+                  style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s' }}
+                />
+              </button>
+
+              {/* 하위 메뉴 — 접힘 애니메이션 */}
+              <div style={{
+                overflow: 'hidden',
+                maxHeight: isIndicatorOpen ? 360 : 0,
+                transition: 'max-height 0.25s ease',
+              }}>
+                {([
+                  { id: 'macro-sector',     icon: 'travel_explore', label: '매크로 섹터' },
+                  { id: 'deep-research',    icon: 'auto_stories',   label: '딥리서치' },
+                  { id: 'financial-scoring',icon: 'query_stats',    label: '재무 스코어링' },
+                  { id: 'quant-dashboard',  icon: 'insights',       label: '퀀트 대시보드' },
+                  { id: 'quant-basics',     icon: 'school',         label: '퀀트투자 기본' },
+                ] as const).map(({ id, icon, label }) => {
+                  const active = currentPage === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => { setCurrentPage(id); setIsSidebarOpen(false); setIsLeftSidebarOpen(isMobile ? false : isLeftSidebarOpen); }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        marginBottom: 2, transition: 'background 0.15s',
+                        background: active ? 'var(--bg-tertiary)' : 'transparent',
+                        color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        fontWeight: active ? 600 : 500, fontSize: 14,
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'; }}
+                    >
+                      <MIcon name={icon} size={20} style={{ opacity: active ? 1 : 0.6 }} />
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </nav>
         </aside>
@@ -469,22 +439,30 @@ export default function App() {
 
         </div>
 
-        {/* HAPPY 모드 버튼 — 좌측 하단 고정 */}
-        <button
-          onClick={() => setIsHappyMode(p => !p)}
-          style={{
-            position: 'fixed', bottom: 24, left: 24, zIndex: 999,
-            width: 40, height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: isHappyMode ? '#f59e0b' : 'var(--bg-secondary)',
-            color: isHappyMode ? '#fff' : 'var(--text-tertiary)',
-            boxShadow: isHappyMode ? '0 2px 12px rgba(245,158,11,0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.2s',
-          }}
-          title={isHappyMode ? 'HAPPY 모드 해제' : 'HAPPY 모드 (오빠주식 +1,124,565,712)'}
+        {/* HAPPY 모드 버튼 — 우측 하단 hover 존 */}
+        <div
+          onMouseEnter={() => setShowHappyBtn(true)}
+          onMouseLeave={() => !isHappyMode && setShowHappyBtn(false)}
+          style={{ position: 'fixed', bottom: 0, right: 0, width: 80, height: 80, zIndex: 999 }}
         >
-          <MIcon name="celebration" size={20} />
-        </button>
+          <button
+            onClick={() => setIsHappyMode(p => !p)}
+            style={{
+              position: 'absolute', bottom: 20, right: 20,
+              width: 40, height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: isHappyMode ? '#f59e0b' : 'var(--bg-secondary)',
+              color: isHappyMode ? '#fff' : 'var(--text-tertiary)',
+              boxShadow: isHappyMode ? '0 2px 12px rgba(245,158,11,0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: showHappyBtn || isHappyMode ? 1 : 0,
+              pointerEvents: showHappyBtn || isHappyMode ? 'auto' : 'none',
+              transition: 'opacity 0.2s, background 0.2s, box-shadow 0.2s',
+            }}
+            title={isHappyMode ? 'HAPPY 모드 해제' : 'HAPPY 모드 (오빠주식 +1,124,565,712)'}
+          >
+            <MIcon name="celebration" size={20} />
+          </button>
+        </div>
 
         <PasswordModal
           open={isPasswordModalOpen}

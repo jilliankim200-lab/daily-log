@@ -391,6 +391,188 @@ async function fetchAndStoreEtfRanking(env: Env): Promise<string> {
   }
 }
 
+// ── 37개 ETF 모멘텀 크래시 신호 계산 & KV 저장 ──
+async function updateCrashSignals(env: Env): Promise<string> {
+  const ETFS = [
+    { ticker: '456600', name: 'TIME 글로벌AI인공지능', cat: '국내주식' },
+    { ticker: '483340', name: 'ACE 구글밸류체인액티브', cat: '국내주식' },
+    { ticker: '381180', name: 'TIGER 미국필라델피아반', cat: '국내주식' },
+    { ticker: '491010', name: 'TIGER 글로벌AI전력인', cat: '국내주식' },
+    { ticker: '498400', name: 'KODEX 200타겟위클리', cat: '국내주식' },
+    { ticker: '226490', name: 'KODEX 코스피100', cat: '국내주식' },
+    { ticker: '487230', name: 'KODEX 미국AI전력핵심', cat: '국내주식' },
+    { ticker: '469170', name: 'ACE 포스코그룹포커스', cat: '국내주식' },
+    { ticker: '486450', name: 'SOL 미국AI전력인프라', cat: '국내주식' },
+    { ticker: '465580', name: 'ACE 미국빅테크TOP7', cat: '국내주식' },
+    { ticker: '133690', name: 'TIGER 미국나스닥100', cat: '국내주식' },
+    { ticker: '161510', name: 'PLUS 고배당주', cat: '국내주식' },
+    { ticker: '491620', name: 'RISE 미국테크100데일', cat: '국내주식' },
+    { ticker: '229200', name: 'KODEX 코스닥150', cat: '국내주식' },
+    { ticker: '232080', name: 'TIGER 코스닥150', cat: '국내주식' },
+    { ticker: '466940', name: 'TIGER 은행고배당플러스', cat: '국내주식' },
+    { ticker: '360200', name: 'ACE 미국S&P500', cat: '국내주식' },
+    { ticker: '379800', name: 'KODEX 미국S&P500', cat: '국내주식' },
+    { ticker: '438100', name: 'ACE 미국나스닥100채권', cat: '국내채권' },
+    { ticker: '448540', name: 'ACE 엔비디아채권혼합', cat: '국내채권' },
+    { ticker: '453870', name: 'TIGER 미국배당다우존스', cat: '국내주식' },
+    { ticker: '453810', name: 'KODEX 인도Nifty5', cat: '국내주식' },
+    { ticker: '447770', name: 'TIGER 테슬라채권혼합F', cat: '국내채권' },
+    { ticker: '489030', name: 'PLUS 고배당주위클리커버', cat: '국내주식' },
+    { ticker: '272580', name: 'TIGER 단기채권액티브', cat: '국내채권' },
+    { ticker: '475630', name: 'TIGER CD1년금리액티', cat: '원자재/기타' },
+    { ticker: '148070', name: 'KIWOOM 국고채10년', cat: '국내주식' },
+    { ticker: '475080', name: 'KODEX 테슬라커버드콜채', cat: '국내채권' },
+    { ticker: '153130', name: 'KODEX 단기채권', cat: '국내채권' },
+    { ticker: '402970', name: 'ACE 미국배당다우존스', cat: '국내주식' },
+    { ticker: '481060', name: 'KODEX 미국30년국채타', cat: '국내채권' },
+    { ticker: '453850', name: 'ACE 미국30년국채액티브', cat: '국내채권' },
+    { ticker: '458250', name: 'TIGER 미국30년국채스', cat: '국내채권' },
+    { ticker: '411060', name: 'ACE KRX금현물', cat: '원자재/기타' },
+    { ticker: '308620', name: 'KODEX 미국10년국채선', cat: '국내채권' },
+    { ticker: '305080', name: 'TIGER 미국채10년선물', cat: '국내채권' },
+    { ticker: '473330', name: 'SOL 미국30년국채커버드', cat: '국내채권' },
+  ];
+
+  const results: { ticker: string; name: string; cat: string; r1m: number | null; r3m: number | null; r6m: number | null; r12m: number | null }[] = [];
+  const BATCH = 5;
+
+  for (let i = 0; i < ETFS.length; i += BATCH) {
+    const batch = ETFS.slice(i, i + BATCH);
+    const batchResults = await Promise.all(batch.map(async etf => {
+      const prices = await fetchHistoricalPrices(etf.ticker, 270);
+      const dates = Object.keys(prices).sort();
+      if (dates.length < 10) return { ...etf, r1m: null, r3m: null, r6m: null, r12m: null };
+      const latest = prices[dates[dates.length - 1]];
+      const calc = (offset: number) => {
+        const idx = Math.max(0, dates.length - offset);
+        const past = prices[dates[idx]];
+        return past > 0 ? Math.round(((latest / past) - 1) * 1000) / 10 : null;
+      };
+      return { ...etf, r1m: calc(23), r3m: calc(66), r6m: calc(131), r12m: calc(262) };
+    }));
+    results.push(...batchResults);
+  }
+
+  const updatedAt = new Date().toISOString().slice(0, 10);
+  await env.KV.put('crash_signals', JSON.stringify({ data: results, updatedAt }));
+  const greenCount = results.filter(r => r.r3m !== null && r.r6m !== null && r.r3m > 0 && r.r6m > 0).length;
+  return `crash_signals updated: ${results.length} ETFs, GREEN=${greenCount}, ${updatedAt}`;
+}
+
+// ── 듀얼 모멘텀 신호 계산 & KV 저장 ──
+async function updateMomentumSignal(env: Env): Promise<string> {
+  const ASSETS = [
+    { name: '반도체',    ticker: '091160' },
+    { name: '코스피200', ticker: '069500' },
+    { name: '코스닥150', ticker: '229200' },
+    { name: '나스닥100', ticker: '133690' },
+    { name: 'S&P500',    ticker: '360750' },
+    { name: '금',        ticker: '411060' },
+    { name: '미국장기채', ticker: '305080' },
+  ];
+  const SAFE = { name: '단기채권', ticker: '153130' };
+
+  // 자산별 6M 수익률 계산
+  const results: { name: string; ticker: string; r6m: number | null }[] = [];
+  for (const asset of ASSETS) {
+    const prices = await fetchHistoricalPrices(asset.ticker, 140);
+    const dates = Object.keys(prices).sort();
+    if (dates.length < 20) { results.push({ ...asset, r6m: null }); continue; }
+    const latest = prices[dates[dates.length - 1]];
+    const idx6m  = Math.max(0, dates.length - 131);   // ~6개월 전
+    const past   = prices[dates[idx6m]];
+    const r6m    = past > 0 ? Math.round(((latest / past) - 1) * 1000) / 10 : null;
+    results.push({ ...asset, r6m });
+  }
+
+  // 상대 모멘텀: 6M 수익률 1위 선택
+  const valid = results.filter(a => a.r6m !== null) as { name: string; ticker: string; r6m: number }[];
+  valid.sort((a, b) => b.r6m - a.r6m);
+  const top = valid[0];
+
+  // 절대 모멘텀: 1위 자산의 6M > 0 이면 보유, 아니면 단기채권
+  const isSafe     = !top || top.r6m <= 0;
+  const signalName = isSafe ? SAFE.name   : top.name;
+  const signalTick = isSafe ? SAFE.ticker : top.ticker;
+  const signalR6m  = isSafe ? 0           : top.r6m;
+
+  // 시장 국면 판단
+  const positiveCount = valid.filter(a => a.r6m > 0).length;
+  const marketPhase = isSafe ? '약세장'
+    : positiveCount >= 5 ? '강세장'
+    : positiveCount >= 3 ? '상승장' : '혼조';
+
+  // 다음 리밸런싱 월 — 이번 달 말 (월 1회 리밸런싱 원칙: 당월 말에 실행)
+  const now = new Date();
+  const nextRebalancing = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const data = {
+    updatedAt: now.toISOString().slice(0, 10),
+    marketPhase,
+    topAsset: signalName,
+    topTicker: signalTick,
+    topR6m: signalR6m,
+    isSafe,
+    assets: results,
+    nextRebalancing,
+  };
+
+  // 자산 교체 감지 → 리밸런싱 이력 저장
+  const prevRaw = await env.KV.get('momentum_signal');
+  if (prevRaw) {
+    const prev = JSON.parse(prevRaw);
+    const prevAsset = prev.isSafe ? '단기채권' : prev.topAsset;
+    const newAsset  = data.isSafe  ? '단기채권' : data.topAsset;
+    if (prevAsset !== newAsset) {
+      const history: any[] = JSON.parse(await env.KV.get('rebalancing_history') || '[]');
+      history.unshift({
+        date:        data.updatedAt,
+        from:        prevAsset,
+        fromTicker:  prev.isSafe ? '153130' : prev.topTicker,
+        fromR6m:     prev.topR6m,
+        to:          newAsset,
+        toTicker:    data.isSafe ? '153130' : data.topTicker,
+        toR6m:       data.topR6m,
+        marketPhase: data.marketPhase,
+      });
+      await env.KV.put('rebalancing_history', JSON.stringify(history.slice(0, 36)));
+    }
+  }
+
+  await env.KV.put('momentum_signal', JSON.stringify(data));
+  return `momentum_signal updated: ${signalName} r6m=${signalR6m}% (${marketPhase})`;
+}
+
+// ── Cron 실행 로그 저장 ──
+async function saveCronLog(env: Env, results: string[]): Promise<void> {
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const entry = {
+    ts: kstNow.toISOString().slice(0, 19).replace('T', ' ') + ' KST',
+    results,
+  };
+  const existing: any[] = JSON.parse(await env.KV.get('cron_log') || '[]');
+  existing.unshift(entry);
+  await env.KV.put('cron_log', JSON.stringify(existing.slice(0, 30)));
+}
+
+// ── 모멘텀 신호 히스토리 저장 (최근 90일) ──
+async function saveMomentumHistory(env: Env): Promise<void> {
+  const current = await env.KV.get('momentum_signal');
+  if (!current) return;
+  const data = JSON.parse(current);
+  const history: any[] = JSON.parse(await env.KV.get('momentum_signal_history') || '[]');
+  const filtered = history.filter((h: any) => h.updatedAt !== data.updatedAt);
+  filtered.unshift({
+    updatedAt: data.updatedAt,
+    topAsset: data.topAsset,
+    topTicker: data.topTicker,
+    topR6m: data.topR6m,
+    isSafe: data.isSafe,
+    marketPhase: data.marketPhase,
+  });
+  await env.KV.put('momentum_signal_history', JSON.stringify(filtered.slice(0, 90)));
+}
+
 // ── 일일 스냅샷 저장 + 매도 알림 ──
 async function runDailySnapshot(env: Env) {
   const kv = env.KV;
@@ -514,6 +696,18 @@ export default {
     // POST /etf-ranking/refresh (수동 ETF 랭킹 업데이트)
     if (request.method === 'POST' && url.pathname === '/etf-ranking/refresh') {
       const result = await fetchAndStoreEtfRanking(env);
+      return json({ ok: true, result });
+    }
+
+    // POST /momentum-signal/refresh (수동 모멘텀 신호 갱신)
+    if (request.method === 'POST' && url.pathname === '/momentum-signal/refresh') {
+      const result = await updateMomentumSignal(env);
+      return json({ ok: true, result });
+    }
+
+    // POST /crash-signals/refresh (수동 크래시 신호 갱신)
+    if (request.method === 'POST' && url.pathname === '/crash-signals/refresh') {
+      const result = await updateCrashSignals(env);
       return json({ ok: true, result });
     }
 
@@ -683,6 +877,16 @@ export default {
 
   // ── Cron 트리거 (매일 UTC 03:00 → 일일 스냅샷) ──
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runDailySnapshot(env));
+    ctx.waitUntil((async () => {
+      const [snapshotResult, signalResult, crashResult] = await Promise.all([
+        runDailySnapshot(env).catch((e: unknown) => `snapshot error: ${String(e)}`),
+        updateMomentumSignal(env).catch((e: unknown) => `signal error: ${String(e)}`),
+        updateCrashSignals(env).catch((e: unknown) => `crash error: ${String(e)}`),
+      ]);
+      await Promise.all([
+        saveCronLog(env, [snapshotResult, signalResult, crashResult]),
+        saveMomentumHistory(env),
+      ]);
+    })());
   },
 };

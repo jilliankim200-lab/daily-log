@@ -374,9 +374,9 @@
     <div class="source-item"><span class="material-icons">warning</span><span class="source-desc">isFund(펀드) 종목은 currentReturn=null로 전달 → sellEngine에서 손절/수익실현 조건 건너뜀</span></div>
   </div>
   <div class="formula-box">
-    <code>currentReturn = (currentPrice - avgCost) / avgCost     ← 소수점 (0.25 = +25%)</code>
-    <code>sellEngine에 전달 시: calcReturn() / 100 으로 변환</code>
-    <code>표시: (currentReturn × 100).toFixed(1) + '%'</code>
+    <code>currentReturn = (currentPrice - avgCost) / avgCost × 100   ← 퍼센트 (25 = +25%)</code>
+    <code>sellEngine에 전달 시: currentReturn / 100 으로 변환 (OptimalGuide.tsx L1720)</code>
+    <code>표시: currentReturn.toFixed(1) + '%'</code>
   </div>
   <table id="tbl-return">
     <thead><tr><th>케이스</th><th>입력값</th><th>예상</th><th>실제</th><th>판정</th></tr></thead>
@@ -431,20 +431,17 @@ function getSellSignal(s) {
 function getBuySignal(s) {
   const trend = getTrend(s);
   const pos = s.position;
-  const ma20Pct = ((s.currentPrice - s.ma20) / s.ma20 * 100).toFixed(1);
-  if (trend === 'down' && pos <= 0.2)
-    return { label: '반등 대기', cautious: true };
-  if (trend === 'down')
-    return { label: '반등 대기', cautious: true };
-  if (trend === 'sideways' && pos <= 0.4)
-    return { label: '매수 적합', cautious: false };
-  if (trend === 'sideways')
-    return { label: '분할 매수', cautious: true };
-  if (trend === 'up' && pos >= 0.8)
-    return { label: '조정 대기', cautious: true };
-  if (trend === 'up' && pos >= 0.6)
-    return { label: '분할 매수', cautious: true };
-  return { label: '매수 가능', cautious: false };
+  let label;
+  if (trend === 'down' && pos <= 0.2) label = '반등 대기';
+  else if (trend === 'down') label = '반등 대기';
+  else if (trend === 'sideways' && pos <= 0.4) label = '매수 적합';
+  else if (trend === 'sideways') label = '분할 매수';
+  else if (trend === 'up' && pos >= 0.8) label = '조정 대기';
+  else if (trend === 'up' && pos >= 0.6) label = '분할 매수';
+  else label = '매수 가능';
+  // OptimalGuide.tsx와 동일: label.includes('조정 대기') || label.includes('반등 대기')
+  const cautious = label.includes('조정 대기') || label.includes('반등 대기');
+  return { label, cautious };
 }
 
 function calcPosition(currentPrice, low, high) {
@@ -459,7 +456,7 @@ function calcChangeRate(lastPrice, prevPrice) {
 
 function calcReturn(currentPrice, avgCost) {
   if (avgCost === 0) return 0;
-  return (currentPrice - avgCost) / avgCost;
+  return (currentPrice - avgCost) / avgCost * 100;  // % 형태 (25 = +25%), 실제 OptimalGuide.tsx와 동일
 }
 
 function calcMA(prices, period) {
@@ -652,9 +649,9 @@ const TESTS = {
       check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
     },
     {
-      name: '분할 매수 (분할) — 횡보 + position 60%',
+      name: '분할 매수 — 횡보 + position 60%',
       s: { currentPrice: 26000, ma20: 24000, ma60: 28000, high: 30000, low: 20000, position: 0.6 },
-      expectedLabel: '분할 매수', expectedCautious: true,
+      expectedLabel: '분할 매수', expectedCautious: false,
       run: (t) => getBuySignal(t.s),
       fmt: (r) => r.label,
       check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
@@ -668,9 +665,9 @@ const TESTS = {
       check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
     },
     {
-      name: '분할 매수 (분할) — 상승 + position 70%',
+      name: '분할 매수 — 상승 + position 70%',
       s: { currentPrice: 27000, ma20: 25000, ma60: 23000, high: 30000, low: 20000, position: 0.7 },
-      expectedLabel: '분할 매수', expectedCautious: true,
+      expectedLabel: '분할 매수', expectedCautious: false,
       run: (t) => getBuySignal(t.s),
       fmt: (r) => r.label,
       check: (r, e) => r.label === e.expectedLabel && r.cautious === e.expectedCautious,
@@ -729,10 +726,10 @@ const TESTS = {
   ],
 
   return: [
-    { name: '+25% 수익', currentPrice: 25000, avgCost: 20000, expected: 0.25 },
-    { name: '-10% 손실', currentPrice: 18000, avgCost: 20000, expected: -0.10 },
-    { name: '원금 동일 0%', currentPrice: 20000, avgCost: 20000, expected: 0.00 },
-    { name: '+39.6% (TIGER 케이스)', currentPrice: 26175, avgCost: 18750, expected: parseFloat((( 26175-18750)/18750).toFixed(4)) },
+    { name: '+25% 수익', currentPrice: 25000, avgCost: 20000, expected: 25 },
+    { name: '-10% 손실', currentPrice: 18000, avgCost: 20000, expected: -10 },
+    { name: '원금 동일 0%', currentPrice: 20000, avgCost: 20000, expected: 0 },
+    { name: '+39.6% (TIGER 케이스)', currentPrice: 26175, avgCost: 18750, expected: parseFloat(((26175-18750)/18750*100).toFixed(4)) },
   ],
 };
 
@@ -826,10 +823,10 @@ function runSection(sectionId) {
       actualStr = result === null ? 'null' : String(result);
     } else if (sectionId === 'return') {
       result = calcReturn(t.currentPrice, t.avgCost);
-      passed = Math.abs(result - t.expected) < 0.0001;
+      passed = Math.abs(result - t.expected) < 0.01;
       inputStr = `price=${t.currentPrice.toLocaleString()} avgCost=${t.avgCost.toLocaleString()}`;
-      expectedStr = (t.expected * 100).toFixed(2) + '%';
-      actualStr = (result * 100).toFixed(2) + '%';
+      expectedStr = t.expected.toFixed(2) + '%';
+      actualStr = result.toFixed(2) + '%';
     }
 
     if (passed) pass++; else fail++;

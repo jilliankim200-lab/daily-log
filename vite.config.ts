@@ -2,9 +2,33 @@
   import { defineConfig } from 'vite';
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
+  import { spawn, type ChildProcess } from 'child_process';
 
   export default defineConfig({
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        name: 'streamlit-launcher',
+        configureServer() {
+          let proc: ChildProcess | null = null;
+          const start = () => {
+            proc = spawn(
+              'streamlit',
+              ['run', 'C:\\workspace\\daily-log\\stock_app.py', '--server.headless', 'true'],
+              { shell: true, stdio: 'inherit' }
+            );
+            proc.on('exit', code => {
+              if (code !== 0 && code !== null) {
+                console.warn(`[streamlit] 종료 (code ${code}). 3초 후 재시작...`);
+                setTimeout(start, 3000);
+              }
+            });
+          };
+          start();
+          process.on('exit', () => proc?.kill());
+        },
+      },
+    ],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {

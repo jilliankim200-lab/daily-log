@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>퀀트투자 기본 개념</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.7}
+
+/* ── 레이아웃 ── */
+.wrap{display:flex;min-height:100vh}
+.toc{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+  padding:24px 14px;border-right:1px solid #1e293b;background:#0a1120}
+.content{flex:1;padding:36px 40px;max-width:900px}
+
+/* ── TOC ── */
+.toc-title{font-size:10px;font-weight:700;color:#475569;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.toc a{display:block;font-size:12px;color:#64748b;padding:5px 8px;border-radius:6px;text-decoration:none;
+  transition:color .15s,background .15s;margin-bottom:2px}
+.toc a:hover,.toc a.active{color:#38bdf8;background:rgba(56,189,248,.08)}
+.toc-sep{height:1px;background:#1e293b;margin:10px 0}
+
+/* ── 섹션 ── */
+.section{margin-bottom:52px;scroll-margin-top:24px}
+.sec-label{font-size:10px;font-weight:700;color:#38bdf8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.sec-title{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;margin-bottom:6px}
+.sec-sub{font-size:14px;color:#64748b;margin-bottom:24px}
+.divider{height:1px;background:linear-gradient(90deg,#334155,transparent);margin-bottom:24px}
+
+/* ── 카드 ── */
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px 24px;margin-bottom:14px}
+.card-title{font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.card-body{font-size:13.5px;color:#94a3b8;line-height:1.8}
+.card-body strong{color:#e2e8f0}
+.card-body em{color:#38bdf8;font-style:normal}
+
+/* ── 그리드 ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* ── 하이라이트 박스 ── */
+.highlight{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.25);
+  border-left:4px solid #38bdf8;border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:16px}
+.highlight p{font-size:14px;color:#cbd5e1;line-height:1.8}
+.highlight strong{color:#38bdf8}
+
+/* ── 비교 표 ── */
+.compare-table{width:100%;border-collapse:collapse;font-size:13px}
+.compare-table th{background:#0f172a;color:#64748b;font-size:11px;font-weight:600;
+  letter-spacing:.05em;padding:10px 14px;text-align:left;border-bottom:1px solid #334155}
+.compare-table td{padding:11px 14px;border-bottom:1px solid #1e3a5f;color:#cbd5e1;vertical-align:top}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table tr:hover td{background:rgba(255,255,255,.02)}
+.tag-good{color:#34d399;font-weight:600}
+.tag-warn{color:#fbbf24;font-weight:600}
+.tag-bad{color:#f87171;font-weight:600}
+
+/* ── 프로세스 플로우 ── */
+.flow{display:flex;flex-direction:column;gap:0}
+.flow-item{display:flex;gap:16px;align-items:flex-start}
+.flow-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.flow-num{width:32px;height:32px;border-radius:50%;background:#38bdf8;color:#0f172a;
+  font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.flow-line{width:2px;flex:1;min-height:20px;background:linear-gradient(#334155,transparent);margin:4px 0}
+.flow-body{padding-bottom:20px;flex:1}
+.flow-title{font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:4px}
+.flow-desc{font-size:13px;color:#64748b;line-height:1.7}
+.flow-desc strong{color:#94a3b8}
+.flow-tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;margin-top:6px;font-weight:600}
+.tag-blue{background:rgba(56,189,248,.15);color:#38bdf8}
+.tag-purple{background:rgba(167,139,250,.15);color:#a78bfa}
+.tag-amber{background:rgba(251,191,36,.15);color:#fbbf24}
+
+/* ── 팩터 카드 ── */
+.factor-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px 20px;
+  border-top:3px solid}
+.factor-card.momentum{border-top-color:#fb923c}
+.factor-card.value{border-top-color:#34d399}
+.factor-card.quality{border-top-color:#38bdf8}
+.factor-card.lowvol{border-top-color:#a78bfa}
+.factor-card.size{border-top-color:#fbbf24}
+.fc-name{font-size:15px;font-weight:800;color:#f1f5f9;margin-bottom:4px}
+.fc-kor{font-size:12px;color:#64748b;margin-bottom:12px}
+.fc-row{display:flex;justify-content:space-between;margin-bottom:6px}
+.fc-label{font-size:11px;color:#475569}
+.fc-val{font-size:12px;color:#94a3b8;font-weight:500;text-align:right;max-width:60%}
+.fc-strength{display:flex;gap:3px;margin-top:10px}
+.fc-dot{width:8px;height:8px;border-radius:2px}
+.fc-dot.on{background:#38bdf8}
+.fc-dot.off{background:#1e3a5f}
+.fc-str-label{font-size:10px;color:#475569;margin-left:4px}
+
+/* ── 함정 카드 ── */
+.trap-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px 22px;
+  display:flex;gap:16px;margin-bottom:12px}
+.trap-num{width:36px;height:36px;border-radius:10px;background:#f87171;color:#fff;
+  font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.trap-body .trap-title{font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:6px}
+.trap-body .trap-desc{font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:8px}
+.trap-body .trap-fix{font-size:12.5px;color:#34d399}
+.trap-body .trap-fix::before{content:'✓ 해결 ';font-weight:700}
+
+/* ── 전략 유형 태그 ── */
+.strat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.strat-tag{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid}
+
+/* ── 인용 ── */
+.quote{background:#0f172a;border-left:4px solid #a78bfa;border-radius:0 8px 8px 0;
+  padding:14px 18px;font-size:14px;color:#94a3b8;line-height:1.8;margin:16px 0}
+.quote cite{display:block;font-size:12px;color:#475569;margin-top:6px;font-style:normal}
+
+/* ── 모바일 ── */
+@media(max-width:640px){
+  .toc{display:none}
+  .content{padding:20px 16px}
+  .grid2,.grid3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 목차 -->
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <a href="#def" class="active">퀀트 투자란</a>
+  <a href="#why">왜 작동하는가</a>
+  <div class="toc-sep"></div>
+  <a href="#process">투자 프로세스</a>
+  <div class="toc-sep"></div>
+  <a href="#factors">5대 팩터</a>
+  <div class="toc-sep"></div>
+  <a href="#strategies">전략 유형</a>
+  <div class="toc-sep"></div>
+  <a href="#traps">주요 함정</a>
+  <div class="toc-sep"></div>
+  <a href="#summary">핵심 요약</a>
+</nav>
+
+<!-- 본문 -->
+<main class="content">
+
+  <!-- ① 정의 -->
+  <section class="section" id="def">
+    <div class="sec-label">Chapter 1</div>
+    <div class="sec-title">퀀트 투자란 무엇인가</div>
+    <div class="sec-sub">감이나 직관 대신 데이터와 수학으로 투자 의사결정을 내리는 체계적 접근법</div>
+    <div class="divider"></div>
+
+    <div class="highlight">
+      <p><strong>"데이터와 수학으로 만든 규칙이 사람 대신 투자 결정을 내린다"</strong><br>
+      모든 매매 신호는 사전에 정의된 알고리즘에서 나오며, 실행 단계에서는 감정이 개입하지 않습니다.</p>
+    </div>
+
+    <table class="compare-table" style="margin-bottom:24px">
+      <thead><tr><th>구분</th><th>전통적 투자</th><th>퀀트 투자</th></tr></thead>
+      <tbody>
+        <tr><td>의사결정 근거</td><td>애널리스트 보고서, 감</td><td class="tag-good">데이터, 통계 모델</td></tr>
+        <tr><td>분석 방식</td><td>종목 스토리 중심</td><td class="tag-good">팩터(변수) 중심</td></tr>
+        <tr><td>일관성</td><td>판단이 상황마다 다름</td><td class="tag-good">규칙이 항상 동일하게 실행</td></tr>
+        <tr><td>종목 수</td><td>소수 집중</td><td class="tag-good">다수 분산으로 통계적 우위 확보</td></tr>
+        <tr><td>감정 개입</td><td>공포·탐욕에 흔들림</td><td class="tag-good">신호대로만 기계적 실행</td></tr>
+        <tr><td>검증 방식</td><td>사후 해석</td><td class="tag-good">백테스트로 사전 검증</td></tr>
+      </tbody>
+    </table>
+
+    <div class="quote">
+      "If you can't describe what you are doing as a process, you don't know what you're doing."
+      <cite>— W. Edwards Deming</cite>
+    </div>
+  </section>
+
+  <!-- ② 왜 작동하는가 -->
+  <section class="section" id="why">
+    <div class="sec-label">Chapter 2</div>
+    <div class="sec-title">왜 퀀트가 작동하는가</div>
+    <div class="sec-sub">시장은 완전히 효율적이지 않다 — 두 가지 구조적 비효율이 꾸준히 존재한다</div>
+    <div class="divider"></div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">🧠 행동 편향 (Behavioral Bias)</div>
+        <div class="card-body">
+          인간은 <strong>시스템적으로 잘못된 판단</strong>을 반복합니다.<br><br>
+          • 오르는 종목을 너무 늦게 쫓아감 → <em>모멘텀 프리미엄</em> 발생<br>
+          • 싼 종목을 이유 없이 외면 → <em>밸류 프리미엄</em> 발생<br>
+          • 손실을 인정 못하고 버팀 → 과잉반응 후 반전<br>
+          • 최근 정보에 과도하게 반응 → 뉴스 모멘텀<br><br>
+          퀀트는 이런 편향이 만드는 <strong>가격 비효율을 체계적으로 수확</strong>합니다.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏛️ 구조적 제약 (Structural Constraint)</div>
+        <div class="card-body">
+          기관 투자자는 <strong>규정·운용 규모</strong> 때문에 못 하는 것들이 있습니다.<br><br>
+          • 소형주 매수 불가(유동성 부족) → <em>소형주 프리미엄</em><br>
+          • 레버리지 제한 → <em>저베타 자산의 위험 대비 수익 우위</em><br>
+          • 분기 실적 압박 → 장기 팩터를 활용 못함<br>
+          • 벤치마크 제약 → 지수 이탈 종목 강제 매도<br><br>
+          개인 퀀트는 이런 <strong>기관의 제약이 만드는 빈틈</strong>에서 알파를 찾습니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight" style="margin-top:8px">
+      <p>핵심: 이 두 비효율은 <strong>행동 편향이 사라지지 않는 한</strong> 구조적으로 지속됩니다. 사람이 감정적 판단을 멈추지 않는 한 퀀트 알파는 계속 존재합니다.</p>
+    </div>
+  </section>
+
+  <!-- ③ 프로세스 -->
+  <section class="section" id="process">
+    <div class="sec-label">Chapter 3</div>
+    <div class="sec-title">퀀트 투자 프로세스</div>
+    <div class="sec-sub">알파 발굴부터 실전 운용까지 — 7단계 순환 구조</div>
+    <div class="divider"></div>
+
+    <div class="flow">
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div>
+        <div class="flow-body">
+          <div class="flow-title">가설 설정</div>
+          <div class="flow-desc">투자 아이디어를 <strong>검증 가능한 명제</strong>로 변환합니다.<br>
+          예: "6개월 많이 오른 자산이 다음 달도 오를 것이다" → 모멘텀 가설</div>
+          <span class="flow-tag tag-blue">Research</span>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div>
+        <div class="flow-body">
+          <div class="flow-title">팩터 정의 & 데이터 수집</div>
+          <div class="flow-desc">가설을 <strong>수치 변수(팩터)</strong>로 정의하고 데이터를 확보합니다.<br>
+          6개월 수익률, PBR, ROE 등 — 데이터 품질이 알파의 품질을 결정합니다.</div>
+          <span class="flow-tag tag-blue">Data Engineering</span>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div>
+        <div class="flow-body">
+          <div class="flow-title">백테스트</div>
+          <div class="flow-desc">과거 데이터로 전략의 성과를 검증합니다.<br>
+          <strong>CAGR / MDD / Sharpe / 턴오버</strong> 4가지 지표를 반드시 확인합니다.</div>
+          <span class="flow-tag tag-blue">Backtesting</span>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div>
+        <div class="flow-body">
+          <div class="flow-title">과적합 검증 (가장 중요)</div>
+          <div class="flow-desc">백테스트가 좋은 이유가 "과거에 맞춰서"인지 "진짜 알파"인지 검증합니다.<br>
+          <strong>학습 기간(in-sample)</strong>과 <strong>검증 기간(out-of-sample)</strong>을 분리하고,<br>
+          Walk-forward test로 미래 강건성을 확인합니다.</div>
+          <span class="flow-tag tag-amber">Critical Step</span>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">5</div><div class="flow-line"></div></div>
+        <div class="flow-body">
+          <div class="flow-title">비용 현실화</div>
+          <div class="flow-desc">수수료 · 슬리피지 · 세금 반영 후에도 알파가 남는지 확인합니다.<br>
+          비용 반영 전후 CAGR 차이가 1%p 이내여야 실전 적용 가능합니다.</div>
+          <span class="flow-tag tag-purple">Cost Analysis</span>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">6</div><div class="flow-line"></div></div>
+        <div class="flow-body">
+          <div class="flow-title">실전 실행</div>
+          <div class="flow-desc">신호대로만 <strong>기계적으로 매매</strong>합니다.<br>
+          감정이 개입하는 순간 퀀트 전략의 의미가 사라집니다. 규칙을 신뢰하세요.</div>
+          <span class="flow-tag tag-blue">Execution</span>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-left"><div class="flow-num">7</div></div>
+        <div class="flow-body">
+          <div class="flow-title">모니터링 & 붕괴 감지</div>
+          <div class="flow-desc">팩터가 여전히 작동하는지 지속 점검합니다.<br>
+          알파는 알려지면 차익거래로 사라집니다(팩터 붕괴). 성과 저하 시 원인 분석 후 1번으로 돌아갑니다.</div>
+          <span class="flow-tag tag-amber">Monitoring</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 5대 팩터 -->
+  <section class="section" id="factors">
+    <div class="sec-label">Chapter 4</div>
+    <div class="sec-title">5대 팩터</div>
+    <div class="sec-sub">학계에서 수십 년간 검증된 초과수익의 원천 — Fama-French 5-Factor Model</div>
+    <div class="divider"></div>
+
+    <div class="grid2" style="margin-bottom:14px">
+      <!-- 모멘텀 -->
+      <div class="factor-card momentum">
+        <div class="fc-name">Momentum</div>
+        <div class="fc-kor">모멘텀 (추세 팩터)</div>
+        <div class="fc-row"><span class="fc-label">원리</span><span class="fc-val">최근 3~12개월 많이 오른 자산이 계속 오른다</span></div>
+        <div class="fc-row"><span class="fc-label">대표 지표</span><span class="fc-val">3M / 6M / 12M 수익률</span></div>
+        <div class="fc-row"><span class="fc-label">왜 작동하나</span><span class="fc-val">정보 확산 속도 차이, 투자자의 과소반응</span></div>
+        <div class="fc-row"><span class="fc-label">붕괴 조건</span><span class="fc-val" style="color:#f87171">시장 급반전 구간 (2009.3, 2020.3)</span></div>
+        <div class="fc-row"><span class="fc-label">학술 근거</span><span class="fc-val">Jegadeesh &amp; Titman (1993)</span></div>
+        <div class="fc-strength">
+          <div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div>
+          <span class="fc-str-label">강도 5/5 — 가장 강력한 팩터</span>
+        </div>
+      </div>
+      <!-- 밸류 -->
+      <div class="factor-card value">
+        <div class="fc-name">Value</div>
+        <div class="fc-kor">밸류 (가치 팩터)</div>
+        <div class="fc-row"><span class="fc-label">원리</span><span class="fc-val">PBR·PER 낮은 저평가 자산이 장기 우위</span></div>
+        <div class="fc-row"><span class="fc-label">대표 지표</span><span class="fc-val">PBR, PER, EV/EBITDA</span></div>
+        <div class="fc-row"><span class="fc-label">왜 작동하나</span><span class="fc-val">투자자의 과잉반응 후 평균 회귀</span></div>
+        <div class="fc-row"><span class="fc-label">붕괴 조건</span><span class="fc-val" style="color:#f87171">성장주 강세장 장기화 (2010~2020)</span></div>
+        <div class="fc-row"><span class="fc-label">학술 근거</span><span class="fc-val">Fama &amp; French (1992)</span></div>
+        <div class="fc-strength">
+          <div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot off"></div>
+          <span class="fc-str-label">강도 4/5</span>
+        </div>
+      </div>
+      <!-- 퀄리티 -->
+      <div class="factor-card quality">
+        <div class="fc-name">Quality</div>
+        <div class="fc-kor">퀄리티 (우량 팩터)</div>
+        <div class="fc-row"><span class="fc-label">원리</span><span class="fc-val">ROE·ROIC 높고 부채 낮은 기업이 꾸준히 우위</span></div>
+        <div class="fc-row"><span class="fc-label">대표 지표</span><span class="fc-val">ROE, ROIC, 부채비율, FCF 마진</span></div>
+        <div class="fc-row"><span class="fc-label">왜 작동하나</span><span class="fc-val">재무 건전성이 장기 생존과 직결</span></div>
+        <div class="fc-row"><span class="fc-label">특징</span><span class="fc-val" style="color:#34d399">경기 사이클 타지 않아 가장 안정적</span></div>
+        <div class="fc-row"><span class="fc-label">학술 근거</span><span class="fc-val">Novy-Marx (2013), Asness et al. (2019)</span></div>
+        <div class="fc-strength">
+          <div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div>
+          <span class="fc-str-label">강도 5/5 — 가장 안정적</span>
+        </div>
+      </div>
+      <!-- 저변동성 -->
+      <div class="factor-card lowvol">
+        <div class="fc-name">Low Volatility</div>
+        <div class="fc-kor">저변동성 (방어 팩터)</div>
+        <div class="fc-row"><span class="fc-label">원리</span><span class="fc-val">덜 흔들리는 자산이 장기 위험조정수익 우위</span></div>
+        <div class="fc-row"><span class="fc-label">대표 지표</span><span class="fc-val">표준편차, 베타, 최대낙폭(MDD)</span></div>
+        <div class="fc-row"><span class="fc-label">왜 작동하나</span><span class="fc-val">기관 레버리지 제한으로 고베타 자산 과대평가</span></div>
+        <div class="fc-row"><span class="fc-label">특징</span><span class="fc-val" style="color:#34d399">CAPM 예측과 반대로 작동하는 이례현상</span></div>
+        <div class="fc-row"><span class="fc-label">학술 근거</span><span class="fc-val">Black (1972), Baker et al. (2011)</span></div>
+        <div class="fc-strength">
+          <div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot off"></div><div class="fc-dot off"></div>
+          <span class="fc-str-label">강도 3/5 — MDD 관리에 유리</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사이즈 -->
+    <div class="factor-card size" style="margin-bottom:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="fc-name">Size</div>
+          <div class="fc-kor">사이즈 팩터 — 소형주 효과</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div class="fc-strength">
+            <div class="fc-dot on"></div><div class="fc-dot on"></div><div class="fc-dot off"></div><div class="fc-dot off"></div><div class="fc-dot off"></div>
+            <span class="fc-str-label" style="color:#fbbf24">최근 약화됨</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px">
+        <div><span class="fc-label">원리</span><br><span class="fc-val">소형주가 대형주보다 장기 초과수익</span></div>
+        <div><span class="fc-label">대표 지표</span><br><span class="fc-val">시가총액</span></div>
+        <div><span class="fc-label">약화 이유</span><br><span class="fc-val" style="color:#fbbf24">ETF 대중화로 소형주 프리미엄 압축</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 전략 유형 -->
+  <section class="section" id="strategies">
+    <div class="sec-label">Chapter 5</div>
+    <div class="sec-title">전략 유형</div>
+    <div class="sec-sub">퀀트 전략은 크게 다섯 가지 접근법으로 분류된다</div>
+    <div class="divider"></div>
+
+    <table class="compare-table">
+      <thead><tr><th>전략</th><th>원리</th><th>예시</th><th>적합 시장</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong style="color:#fb923c">추세 추종</strong><br><span style="font-size:11px;color:#64748b">Trend Following</span></td>
+          <td>오르는 방향을 따라간다.<br>가격에 이미 정보가 반영됐다고 가정</td>
+          <td>듀얼 모멘텀, MA 교차,<br>52주 신고가 전략</td>
+          <td class="tag-good">트렌드가 명확한 상승·하락장</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#34d399">평균 회귀</strong><br><span style="font-size:11px;color:#64748b">Mean Reversion</span></td>
+          <td>과도하게 벗어나면 돌아온다.<br>가격이 장기 평균에 수렴한다고 가정</td>
+          <td>RSI 역발상, 페어 트레이딩,<br>볼린저 밴드 이탈 전략</td>
+          <td class="tag-warn">횡보·박스권 시장</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#38bdf8">팩터 투자</strong><br><span style="font-size:11px;color:#64748b">Factor Investing</span></td>
+          <td>검증된 변수(팩터)로 종목 선별.<br>팩터 프리미엄이 구조적으로 존재한다고 가정</td>
+          <td>스마트베타 ETF,<br>멀티팩터 포트폴리오</td>
+          <td class="tag-good">장기 모든 시장 환경</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#a78bfa">차익거래</strong><br><span style="font-size:11px;color:#64748b">Arbitrage</span></td>
+          <td>같은 자산의 가격 차이를 수확.<br>시장의 일시적 비효율을 이용</td>
+          <td>합병 차익, ETF-NAV 스프레드,<br>선물-현물 베이시스</td>
+          <td class="tag-good">시장 환경 무관 (중립 전략)</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#fbbf24">머신러닝</strong><br><span style="font-size:11px;color:#64748b">ML/AI</span></td>
+          <td>패턴을 모델이 직접 학습.<br>비선형 관계와 복잡한 상호작용 포착</td>
+          <td>뉴스 감성 분석, 앙상블 모델,<br>강화학습 포트폴리오</td>
+          <td class="tag-warn">데이터 충분할 때 — 과적합 주의</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="highlight" style="margin-top:16px">
+      <p><strong>현실에서는 전략을 결합</strong>합니다. 예: 모멘텀(추세) + 퀄리티(팩터) → 오르는 종목 중 재무 탄탄한 것만 선택. 팩터 결합은 각 팩터의 약점을 상호 보완합니다.</p>
+    </div>
+  </section>
+
+  <!-- ⑥ 주요 함정 -->
+  <section class="section" id="traps">
+    <div class="sec-label">Chapter 6</div>
+    <div class="sec-title">퀀트의 3대 함정</div>
+    <div class="sec-sub">백테스트가 좋아도 실전에서 실패하는 이유</div>
+    <div class="divider"></div>
+
+    <div class="trap-card">
+      <div class="trap-num">1</div>
+      <div class="trap-body">
+        <div class="trap-title">과적합 (Overfitting)</div>
+        <div class="trap-desc">
+          백테스트가 좋은 이유가 <strong>"진짜 알파"</strong>가 아닌 <strong>"과거에 맞춰서"</strong>일 수 있습니다.<br>
+          파라미터를 많이 조정할수록 과거에는 완벽하게 맞지만 미래에는 무너집니다.<br>
+          룰의 복잡도 ↑ = 과적합 위험 ↑. 단순한 규칙이 종종 더 강건합니다.
+        </div>
+        <div class="trap-fix">파라미터 최소화, Out-of-sample 검증 필수, Walk-forward test 적용</div>
+      </div>
+    </div>
+
+    <div class="trap-card">
+      <div class="trap-num">2</div>
+      <div class="trap-body">
+        <div class="trap-title">데이터 마이닝 편향 (Data Mining Bias)</div>
+        <div class="trap-desc">
+          수백 가지 가설을 테스트하면 <strong>우연히 좋아 보이는 결과</strong>가 반드시 나옵니다.<br>
+          이것은 알파가 아니라 <strong>통계적 우연</strong>입니다.<br>
+          "이 파라미터가 제일 좋더라" 식의 후향적 최적화가 대표적 함정입니다.
+        </div>
+        <div class="trap-fix">가설을 먼저 세우고 테스트, p-value Bonferroni 보정, 테스트 횟수 기록</div>
+      </div>
+    </div>
+
+    <div class="trap-card">
+      <div class="trap-num">3</div>
+      <div class="trap-body">
+        <div class="trap-title">팩터 붕괴 (Factor Decay)</div>
+        <div class="trap-desc">
+          알파가 <strong>학계나 시장에 알려지면</strong> 차익거래로 수익이 사라집니다.<br>
+          단, 행동 편향 기반 팩터(모멘텀, 퀄리티)는 인간의 심리가 바뀌지 않는 한 붕괴 속도가 느립니다.<br>
+          순수 통계적 이례현상은 알려진 후 빠르게 사라집니다.
+        </div>
+        <div class="trap-fix">행동 편향 기반 팩터 선호, 성과 지속적 모니터링, 붕괴 감지 시 전략 교체</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ 핵심 요약 -->
+  <section class="section" id="summary">
+    <div class="sec-label">Summary</div>
+    <div class="sec-title">핵심 요약</div>
+    <div class="sec-sub">퀀트 투자의 본질을 세 문장으로</div>
+    <div class="divider"></div>
+
+    <div class="grid3">
+      <div class="card" style="border-top:3px solid #38bdf8;text-align:center;padding:24px 16px">
+        <div style="font-size:28px;margin-bottom:10px">📐</div>
+        <div class="card-title" style="justify-content:center;margin-bottom:6px">규칙을 만든다</div>
+        <div class="card-body" style="font-size:12px">데이터에서 패턴을 발굴하고, 검증 가능한 규칙으로 정의한다</div>
+      </div>
+      <div class="card" style="border-top:3px solid #34d399;text-align:center;padding:24px 16px">
+        <div style="font-size:28px;margin-bottom:10px">🔬</div>
+        <div class="card-title" style="justify-content:center;margin-bottom:6px">엄격히 검증한다</div>
+        <div class="card-body" style="font-size:12px">백테스트 + 비용 반영 + 과적합 검증 — 세 단계를 모두 통과해야 한다</div>
+      </div>
+      <div class="card" style="border-top:3px solid #a78bfa;text-align:center;padding:24px 16px">
+        <div style="font-size:28px;margin-bottom:10px">🤖</div>
+        <div class="card-title" style="justify-content:center;margin-bottom:6px">기계처럼 실행한다</div>
+        <div class="card-body" style="font-size:12px">신호대로만 매매한다. 감정이 개입하는 순간 퀀트가 아니다</div>
+      </div>
+    </div>
+
+    <div class="quote" style="margin-top:20px">
+      "In the short run, the market is a voting machine. In the long run, it's a weighing machine."
+      <cite>— Benjamin Graham</cite>
+    </div>
+
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px 24px;margin-top:16px">
+      <div style="font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em">퀀트 투자 핵심 성과 지표</div>
+      <table class="compare-table">
+        <thead><tr><th>지표</th><th>설명</th><th>좋은 기준 (주식형)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>CAGR</strong></td><td>연복리 수익률 — 투자의 연평균 성장률</td><td class="tag-good">시장 수익률(KOSPI 약 8%) 상회</td></tr>
+          <tr><td><strong>MDD</strong></td><td>최대 낙폭 — 전고점 대비 최대 하락률</td><td class="tag-good">-20% 이내 (공격적 전략은 -30% 허용)</td></tr>
+          <tr><td><strong>Sharpe Ratio</strong></td><td>위험 단위당 초과수익 — (수익률-무위험이자율)/변동성</td><td class="tag-good">1.0 이상 우수, 0.5 이상 양호</td></tr>
+          <tr><td><strong>Calmar Ratio</strong></td><td>CAGR / MDD — 낙폭 대비 수익 효율</td><td class="tag-good">0.5 이상</td></tr>
+          <tr><td><strong>턴오버</strong></td><td>연간 포트폴리오 교체 비율</td><td class="tag-warn">낮을수록 비용 절감 — 100% 이하 권장</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<script>
+// 스크롤에 따른 TOC 활성화
+const sections = document.querySelectorAll('.section');
+const links = document.querySelectorAll('.toc a');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.toc a[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => observer.observe(s));
+
+// 부드러운 스크롤
+links.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>

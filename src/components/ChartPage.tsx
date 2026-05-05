@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { useAppContext } from '../App';
 import { MIcon } from './MIcon';
+import { calcMA } from '../utils/calcUtils';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
@@ -14,14 +15,6 @@ interface ChartPoint {
   ma5: number | null;
   ma20: number | null;
   ma60: number | null;
-}
-
-function calcMA(prices: number[], period: number): (number | null)[] {
-  return prices.map((_, i) => {
-    if (i < period - 1) return null;
-    const slice = prices.slice(i - period + 1, i + 1);
-    return Math.round(slice.reduce((s, p) => s + p, 0) / period);
-  });
 }
 
 function fmtPrice(n: number): string {

@@ -28,13 +28,321 @@ body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFo
 .panel .sub{font-size:12px;color:#475569;margin-bottom:12px}
 .plotly-chart{width:100%}
 .sep{height:1px;background:#1e293b;margin:8px 0}
+
+/* ── 인포 아이콘 ── */
+.info-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;
+  background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.5);
+  color:#38bdf8;font-size:10px;font-weight:700;
+  cursor:pointer;margin-left:6px;vertical-align:middle;
+  transition:background .15s,transform .15s;user-select:none;
+  flex-shrink:0;
+}
+.info-btn:hover{background:rgba(56,189,248,0.35);transform:scale(1.15)}
+
+/* ── 모달 오버레이 ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex}
+
+/* ── 모달 박스 ── */
+.modal{
+  background:#1e293b;border:1px solid #334155;border-radius:14px;
+  width:100%;max-width:680px;max-height:88vh;overflow-y:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,0.6);
+  animation:modal-in .2s ease;
+}
+@keyframes modal-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px 16px;border-bottom:1px solid #334155;
+  position:sticky;top:0;background:#1e293b;z-index:1;
+}
+.modal-head h3{font-size:17px;font-weight:700;color:#f1f5f9;letter-spacing:-.3px}
+.modal-head .tag{font-size:11px;background:rgba(56,189,248,.15);color:#38bdf8;
+  border:1px solid rgba(56,189,248,.3);border-radius:20px;padding:2px 10px;margin-left:8px}
+.modal-close{
+  width:28px;height:28px;border-radius:6px;border:none;
+  background:#334155;color:#94a3b8;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.modal-close:hover{background:#475569;color:#f1f5f9}
+
+.modal-body{padding:20px 24px 28px}
+
+/* ── 모달 내부 컴포넌트 ── */
+.m-lead{font-size:15px;color:#e2e8f0;background:rgba(56,189,248,.08);
+  border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;
+  padding:12px 16px;margin-bottom:22px;line-height:1.7}
+
+.m-section{margin-bottom:22px}
+.m-section h4{font-size:13px;font-weight:700;color:#38bdf8;
+  letter-spacing:.6px;text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px}
+.m-section h4::before{content:'';display:block;width:3px;height:14px;
+  background:#38bdf8;border-radius:2px}
+
+.m-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.m-table th{background:#0f172a;color:#64748b;font-size:11px;font-weight:600;
+  letter-spacing:.05em;padding:8px 12px;text-align:left;border-bottom:1px solid #334155}
+.m-table td{padding:9px 12px;border-bottom:1px solid #1e3a5f;color:#cbd5e1;vertical-align:top}
+.m-table tr:last-child td{border-bottom:none}
+.m-table .hi{color:#34d399;font-weight:700}
+.m-table .lo{color:#f87171;font-weight:700}
+
+.m-step{display:flex;gap:14px;margin-bottom:10px;align-items:flex-start}
+.m-step .num{
+  flex-shrink:0;width:24px;height:24px;border-radius:50%;
+  background:#38bdf8;color:#0f172a;font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;margin-top:1px}
+.m-step .txt{font-size:13.5px;color:#cbd5e1;line-height:1.6}
+.m-step .txt strong{color:#f1f5f9}
+
+.m-analogy{
+  background:#0f172a;border:1px solid #334155;border-radius:10px;
+  padding:14px 16px;font-size:13px;color:#94a3b8;line-height:1.7;
+  margin-top:4px;
+}
+.m-analogy strong{color:#fbbf24}
+
+.m-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.m-result-card{
+  background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px 14px}
+.m-result-card .rc-name{font-size:11px;color:#64748b;margin-bottom:4px}
+.m-result-card .rc-val{font-size:20px;font-weight:700;color:#34d399}
+.m-result-card .rc-sub{font-size:11.5px;color:#475569;margin-top:2px}
+
+/* ── 현재 신호 배너 ── */
+.signal-banner{display:flex;align-items:center;gap:0;margin-bottom:20px;
+  background:#1e293b;border:1px solid #334155;border-radius:12px;overflow:hidden}
+.sb-main{flex:1;display:flex;align-items:center;gap:20px;padding:14px 20px;flex-wrap:wrap}
+.sb-pulse{width:10px;height:10px;border-radius:50%;background:#34d399;flex-shrink:0;
+  animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
+.sb-signal{font-size:15px;font-weight:800;color:#f1f5f9;letter-spacing:-.3px}
+.sb-r6m{font-size:14px;font-weight:700;color:#34d399}
+.sb-divider{width:1px;height:28px;background:#334155}
+.sb-meta{font-size:12px;color:#64748b}
+.sb-meta strong{color:#94a3b8}
+.sb-updated{padding:14px 18px;background:#0f172a;border-left:1px solid #334155;
+  font-size:11px;color:#475569;white-space:nowrap;text-align:center;line-height:1.6}
+.sb-updated strong{display:block;font-size:13px;color:#64748b;margin-bottom:2px}
+.sb-safe{color:#fbbf24!important}
+
+/* ── 모멘텀 크래시 감지 ── */
+.crash-stat{display:flex;align-items:center;gap:6px;font-size:13px}
+.signal-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.signal-dot.green{background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.5)}
+.signal-dot.yellow{background:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,.5)}
+.signal-dot.red{background:#f87171;box-shadow:0 0 6px rgba(248,113,113,.5)}
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.ftab{padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid #334155;background:#0f172a;color:#94a3b8;transition:all .15s}
+.ftab.active,.ftab:hover{border-color:#38bdf8;color:#38bdf8;background:rgba(56,189,248,.1)}
+.signal-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.legend-item{border-radius:8px;padding:12px 14px;border:1px solid}
+.legend-item.green{background:rgba(52,211,153,.06);border-color:rgba(52,211,153,.3)}
+.legend-item.yellow{background:rgba(251,191,36,.06);border-color:rgba(251,191,36,.3)}
+.legend-item.red{background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.3)}
+.legend-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.legend-rule{font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:4px}
+.legend-action{font-size:11px;font-weight:600;margin-top:6px;padding:3px 8px;border-radius:4px;display:inline-block}
+.legend-item.green .legend-action{background:rgba(52,211,153,.15);color:#34d399}
+.legend-item.yellow .legend-action{background:rgba(251,191,36,.15);color:#fbbf24}
+.legend-item.red .legend-action{background:rgba(248,113,113,.15);color:#f87171}
+.signal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.signal-card{background:#0f172a;border:1px solid #334155;border-left:4px solid transparent;border-radius:10px;padding:16px 18px;transition:background .15s}
+.signal-card:hover{background:#162032}
+.signal-card.green{border-left-color:#34d399}
+.signal-card.yellow{border-left-color:#fbbf24}
+.signal-card.red{border-left-color:#f87171}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sc-left{display:flex;align-items:center;gap:9px}
+.sc-ticker{font-size:15px;font-weight:800;color:#f1f5f9;letter-spacing:-.3px}
+.sc-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
+.sc-badge.green{background:rgba(52,211,153,.15);color:#34d399}
+.sc-badge.yellow{background:rgba(251,191,36,.15);color:#fbbf24}
+.sc-badge.red{background:rgba(248,113,113,.15);color:#f87171}
+.sc-cat{font-size:10px;color:#64748b;background:#1e293b;border-radius:4px;padding:2px 7px;flex-shrink:0}
+.sc-name{font-size:12px;color:#64748b;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-rets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc-ret-box{background:#1e293b;border-radius:6px;padding:8px 10px}
+.sc-ret-label{font-size:10px;color:#475569;margin-bottom:2px}
+.sc-ret-val{font-size:15px;font-weight:700}
 </style>
 </head>
 <body>
+<!-- ══ 듀얼 모멘텀 설명 모달 ══ -->
+<div class="modal-overlay" id="dm-modal" onclick="if(event.target===this)closeDmModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="display:flex;align-items:center">
+        <h3>듀얼 모멘텀 전략</h3>
+        <span class="tag">Gary Antonacci, 2014</span>
+      </div>
+      <button class="modal-close" onclick="closeDmModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="m-lead">
+        <strong>"오르는 자산 중 가장 많이 오른 것을 사고,<br>전부 하락 중이면 안전자산으로 피한다"</strong>
+      </div>
+
+      <!-- 핵심 구조 -->
+      <div class="m-section">
+        <h4>두 가지 모멘텀의 결합</h4>
+        <table class="m-table">
+          <thead><tr><th>모멘텀</th><th>역할</th><th>질문</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:#38bdf8">① 상대 모멘텀</strong></td>
+              <td>위험자산 5개 중 <strong>무엇을</strong> 살지 결정</td>
+              <td>6개월 수익률 1위는 누구인가?</td>
+            </tr>
+            <tr>
+              <td><strong style="color:#a78bfa">② 절대 모멘텀</strong></td>
+              <td><strong>살지 말지</strong> 결정 (시장 전체 하락 시 대피)</td>
+              <td>1위 자산의 6M 수익률 &gt; 0% 인가?</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 작동 방식 -->
+      <div class="m-section">
+        <h4>매월 작동 방식</h4>
+        <div class="m-step">
+          <div class="num">1</div>
+          <div class="txt">위험자산 5개(나스닥100·S&P500·코스피200·코스닥150·반도체)의 <strong>6개월 수익률</strong>을 계산</div>
+        </div>
+        <div class="m-step">
+          <div class="num">2</div>
+          <div class="txt"><strong>상대 모멘텀:</strong> 1위 자산을 선택 → 현재 반도체 +117.3%로 1위</div>
+        </div>
+        <div class="m-step">
+          <div class="num">3</div>
+          <div class="txt"><strong>절대 모멘텀:</strong> 1위 자산의 6M 수익률 &gt; 0% 이면 매수, 아니면 단기채권으로 전환</div>
+        </div>
+        <div class="m-step">
+          <div class="num">4</div>
+          <div class="txt">다음 달 말 동일 과정 반복 — <strong>월 1회 리밸런싱</strong></div>
+        </div>
+      </div>
+
+      <!-- 왜 두 개인가 -->
+      <div class="m-section">
+        <h4>왜 하나만 쓰면 안 되는가</h4>
+        <table class="m-table">
+          <thead><tr><th>방식</th><th>문제점</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>상대 모멘텀만</td>
+              <td>전체 시장이 폭락해도 "그나마 덜 빠진 것"을 강제 매수 → 손실</td>
+            </tr>
+            <tr>
+              <td>절대 모멘텀만</td>
+              <td>어떤 자산을 살지 기준이 없음</td>
+            </tr>
+            <tr>
+              <td><strong style="color:#34d399">둘을 결합</strong></td>
+              <td>상방은 최강 자산 포착, 하방은 채권으로 대피 → <strong style="color:#34d399">비대칭 수익 구조</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 비유 -->
+      <div class="m-section">
+        <h4>쉬운 비유</h4>
+        <div class="m-analogy">
+          육상 대회에서 선수 5명이 달리고 있습니다.<br><br>
+          <strong>상대 모멘텀</strong> = "5명 중 <strong>1등 선수를 응원</strong>해라"<br>
+          <strong>절대 모멘텀</strong> = "그런데 1등 선수도 <strong>출발선보다 뒤로 가고 있으면</strong>(역주행), 관중석에 앉아서 기다려라"
+        </div>
+      </div>
+
+      <!-- 이론적 근거 -->
+      <div class="m-section">
+        <h4>통계적 근거</h4>
+        <table class="m-table">
+          <thead><tr><th>연구</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Jegadeesh &amp; Titman (1993)</td>
+              <td>3~12개월 모멘텀이 통계적으로 유의미한 초과수익 발생을 최초 입증</td>
+            </tr>
+            <tr>
+              <td>Antonacci (2014)</td>
+              <td>1927년 이후 데이터에서 듀얼 모멘텀이 단순 BH 대비 MDD를 줄이면서 수익 우위</td>
+            </tr>
+            <tr>
+              <td>행동재무학</td>
+              <td>투자자 과잉반응 + 뒤늦은 추격매수 → 모멘텀 프리미엄이 지속적으로 발생</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 현재 적용 결과 -->
+      <div class="m-section">
+        <h4>이 포트폴리오 적용 결과 (2021-07 ~ 2026-05)</h4>
+        <div class="m-result-grid">
+          <div class="m-result-card">
+            <div class="rc-name">듀얼모멘텀 누적수익률</div>
+            <div class="rc-val">+1,254%</div>
+            <div class="rc-sub">수수료+슬리피지 0.13% 반영</div>
+          </div>
+          <div class="m-result-card">
+            <div class="rc-name">S&amp;P500 단순보유 대비</div>
+            <div class="rc-val" style="color:#38bdf8">+1,136%p</div>
+            <div class="rc-sub">S&P500 BH +118% 대비 초과수익</div>
+          </div>
+          <div class="m-result-card">
+            <div class="rc-name">CAGR (연복리)</div>
+            <div class="rc-val">69.9%</div>
+            <div class="rc-sub">S&P500 BH 17.6% 대비 4배</div>
+          </div>
+          <div class="m-result-card">
+            <div class="rc-name">MDD (최대낙폭)</div>
+            <div class="rc-val" style="color:#fbbf24">-17.6%</div>
+            <div class="rc-sub">반도체 BH -43.8% 대비 절반 수준</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:#475569;text-align:right">
+          ※ 현재 신호: <strong style="color:#fb923c">반도체 ETF (091160.KS)</strong> 보유 — 다음 리밸런싱 2026-05월 말
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <div class="page">
   <div class="hdr">
     <h1>퀀트 분석 대시보드 <span class="badge">듀얼 모멘텀 전략</span></h1>
     <p>백테스트 기간: 2022-01 ~ 2026-05 &nbsp;|&nbsp; 분석 ETF: 43종목 &nbsp;|&nbsp; 리밸런싱: 월 1회 &nbsp;|&nbsp; 룩백: 6개월</p>
+  </div>
+
+  <!-- 현재 신호 배너 -->
+  <div class="signal-banner" id="signal-banner">
+    <div class="sb-main">
+      <div class="sb-pulse" id="sb-pulse"></div>
+      <span class="sb-signal" id="sb-asset">신호 로딩 중…</span>
+      <span class="sb-r6m" id="sb-r6m"></span>
+      <div class="sb-divider"></div>
+      <span class="sb-meta">다음 리밸런싱 <strong id="sb-next">—</strong></span>
+      <div class="sb-divider"></div>
+      <span class="sb-meta" id="sb-assets-row"></span>
+    </div>
+    <div class="sb-updated">
+      <strong>마지막 업데이트</strong>
+      <span id="sb-updated">—</span>
+    </div>
   </div>
 
   <!-- Metric Cards -->
@@ -52,8 +360,18 @@ body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFo
   <!-- ETF Momentum -->
   <div class="chart-row" style="margin-bottom:16px">
     <div class="panel">
-      <h2>포트폴리오 ETF 모멘텀 (3개월 수익률 기준)</h2>
-      <div class="sub">보유 43개 종목 정렬 — 초록: 상승모멘텀 / 빨강: 하락모멘텀</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <h2 style="margin-bottom:2px">포트폴리오 ETF 모멘텀</h2>
+          <div class="sub" style="margin-bottom:0">보유 종목 수익률 정렬 — 초록: 상승 / 빨강: 하락</div>
+        </div>
+        <div class="filter-tabs" id="mom-period-tabs">
+          <button class="ftab" data-period="r1m" onclick="setMomPeriod('r1m')">1개월</button>
+          <button class="ftab active" data-period="r3m" onclick="setMomPeriod('r3m')">3개월</button>
+          <button class="ftab" data-period="r6m" onclick="setMomPeriod('r6m')">6개월</button>
+          <button class="ftab" data-period="r12m" onclick="setMomPeriod('r12m')">12개월</button>
+        </div>
+      </div>
       <div id="chart-mom" style="height:480px"></div>
     </div>
   </div>
@@ -85,11 +403,98 @@ body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFo
       <div id="chart-donut" style="height:300px"></div>
     </div>
   </div>
+
+  <!-- Momentum Crash Detection -->
+  <div class="panel" style="margin-bottom:16px">
+    <h2>모멘텀 크래시 감지 <span id="crash-date" style="font-size:11px;color:#475569;font-weight:400;text-transform:none;letter-spacing:0">| 기준: 로딩 중… &nbsp;·&nbsp; 3M/6M 수익률 기반</span></h2>
+    <div class="sub">🟢 추세 유지 (3M&gt;0 &amp; 6M&gt;0) &nbsp;/&nbsp; 🟡 경고 (혼재 또는 약세) &nbsp;/&nbsp; 🔴 크래시 위험 (3M&lt;-5% 또는 3M&amp;6M 동반 하락)</div>
+    <!-- 신호 기준 범례 -->
+    <div class="signal-legend">
+      <div class="legend-item green">
+        <div class="legend-title"><div class="signal-dot green"></div><span style="color:#34d399">상승 유지</span></div>
+        <div class="legend-rule">✓ 3개월 수익률 &gt; 0%</div>
+        <div class="legend-rule">✓ 6개월 수익률 &gt; 0%</div>
+        <div class="legend-rule" style="color:#64748b;font-size:11px">중기·장기 추세 모두 양수<br>모멘텀 건재, 추가 매수 또는 보유</div>
+        <span class="legend-action">HOLD / ADD</span>
+      </div>
+      <div class="legend-item yellow">
+        <div class="legend-title"><div class="signal-dot yellow"></div><span style="color:#fbbf24">경고</span></div>
+        <div class="legend-rule">△ 3M&gt;0 이지만 6M&lt;0 (단기 반등)</div>
+        <div class="legend-rule">△ 3M&lt;0 이지만 -5% 이내</div>
+        <div class="legend-rule" style="color:#64748b;font-size:11px">혼재 신호, 추세 확인 필요<br>신규 매수 자제, 포지션 축소 검토</div>
+        <span class="legend-action">WATCH</span>
+      </div>
+      <div class="legend-item red">
+        <div class="legend-title"><div class="signal-dot red"></div><span style="color:#f87171">크래시 위험</span></div>
+        <div class="legend-rule">✗ 3개월 수익률 &lt; -5%</div>
+        <div class="legend-rule">✗ 3M&lt;0 &amp; 6M &lt; -10% 동반 하락</div>
+        <div class="legend-rule" style="color:#64748b;font-size:11px">모멘텀 붕괴 신호<br>손절·비중 축소 적극 검토</div>
+        <span class="legend-action">REDUCE / EXIT</span>
+      </div>
+    </div>
+
+    <!-- 요약 + 필터 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+      <div style="display:flex;gap:24px;flex-wrap:wrap" id="crash-summary"></div>
+      <div class="filter-tabs">
+        <button class="ftab active" data-filter="all" onclick="filterCrash('all')">전체</button>
+        <button class="ftab" data-filter="green" onclick="filterCrash('green')">🟢 상승 유지</button>
+        <button class="ftab" data-filter="yellow" onclick="filterCrash('yellow')">🟡 경고</button>
+        <button class="ftab" data-filter="red" onclick="filterCrash('red')">🔴 위험</button>
+      </div>
+    </div>
+    <div class="signal-grid" id="signal-grid"></div>
+  </div>
 </div>
 
 <script>
+// ─── 현재 신호 배너 (KV fetch) ──────────────────────────────────────────
+(async () => {
+  try {
+    const res = await fetch('https://asset-dashboard-api.jilliankim200.workers.dev/kv/momentum_signal');
+    const d = await res.json();
+    if (!d) return;
+
+    const isSafe = d.isSafe;
+    const pulse  = document.getElementById('sb-pulse');
+    const assetEl = document.getElementById('sb-asset');
+    const r6mEl  = document.getElementById('sb-r6m');
+
+    if (isSafe) {
+      pulse.style.background = '#94a3b8';
+      pulse.style.animation  = 'none';
+      assetEl.innerHTML = '⚠️ 단기채권 보유 (절대모멘텀 음전)';
+      assetEl.classList.add('sb-safe');
+    } else {
+      assetEl.textContent = `현재 신호: ${d.topAsset} ETF 보유`;
+    }
+
+    r6mEl.textContent = `6M ${d.topR6m >= 0 ? '+' : ''}${d.topR6m}%`;
+    r6mEl.style.color = d.topR6m >= 0 ? '#34d399' : '#f87171';
+
+    document.getElementById('sb-next').textContent    = d.nextRebalancing;
+    document.getElementById('sb-updated').textContent = d.updatedAt;
+
+    // 자산별 수익률 한 줄 요약
+    if (d.assets && d.assets.length) {
+      const row = d.assets
+        .filter(a => a.r6m !== null)
+        .sort((a, b) => b.r6m - a.r6m)
+        .map(a => {
+          const c = a.r6m >= 0 ? '#34d399' : '#f87171';
+          const sign = a.r6m >= 0 ? '+' : '';
+          return `<span style="color:${c};font-weight:600">${a.name} ${sign}${a.r6m}%</span>`;
+        })
+        .join('<span style="color:#334155"> · </span>');
+      document.getElementById('sb-assets-row').innerHTML = row;
+    }
+  } catch(e) {
+    document.getElementById('sb-asset').textContent = '신호 로드 실패';
+  }
+})();
+
 // ─── Data ───────────────────────────────────────────────────────────────
-const MOM  = [{"ticker": "456600", "name": "TIME 글로벌AI인공지능", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 50.2, "r6m": 68.0, "r12m": 97.0}, {"ticker": "483340", "name": "ACE 구글밸류체인액티브", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 45.0, "r6m": 52.2, "r12m": 113.4}, {"ticker": "381180", "name": "TIGER 미국필라델피아반", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 41.8, "r6m": 51.0, "r12m": 106.6}, {"ticker": "491010", "name": "TIGER 글로벌AI전력인", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 38.3, "r6m": 67.3, "r12m": 113.7}, {"ticker": "498400", "name": "KODEX 200타겟위클리", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 36.1, "r6m": 56.0, "r12m": 93.8}, {"ticker": "226490", "name": "KODEX 코스피100", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 36.0, "r6m": 63.9, "r12m": 126.6}, {"ticker": "487230", "name": "KODEX 미국AI전력핵심", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 35.5, "r6m": 58.7, "r12m": 74.6}, {"ticker": "469170", "name": "ACE 포스코그룹포커스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 31.5, "r6m": 54.4, "r12m": 89.2}, {"ticker": "MSTY", "name": "MSTY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 27.1, "r6m": -8.6, "r12m": -75.6}, {"ticker": "486450", "name": "SOL 미국AI전력인프라", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 21.5, "r6m": 31.3, "r12m": 54.0}, {"ticker": "465580", "name": "ACE 미국빅테크TOP7 ", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 18.2, "r6m": 7.8, "r12m": 37.1}, {"ticker": "133690", "name": "TIGER 미국나스닥100", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 14.7, "r6m": 10.4, "r12m": 32.4}, {"ticker": "161510", "name": "PLUS 고배당주", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 12.1, "r6m": 29.9, "r12m": 45.6}, {"ticker": "491620", "name": "RISE 미국테크100데일", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 11.5, "r6m": 1.6, "r12m": 14.1}, {"ticker": "229200", "name": "KODEX 코스닥150", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 11.1, "r6m": 30.8, "r12m": 59.5}, {"ticker": "232080", "name": "TIGER 코스닥150", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 10.7, "r6m": 30.7, "r12m": 59.2}, {"ticker": "466940", "name": "TIGER 은행고배당플러스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 8.8, "r6m": 22.6, "r12m": 43.6}, {"ticker": "360200", "name": "ACE 미국S&P500", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 8.0, "r6m": 6.2, "r12m": 26.2}, {"ticker": "379800", "name": "KODEX 미국S&P500", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 7.9, "r6m": 5.9, "r12m": 25.0}, {"ticker": "CONY", "name": "CONY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 6.1, "r6m": -29.0, "r12m": -69.4}, {"ticker": "438100", "name": "ACE 미국나스닥100채권", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 5.0, "r6m": 6.6, "r12m": 18.3}, {"ticker": "448540", "name": "ACE 엔비디아채권혼합", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 4.8, "r6m": 3.2, "r12m": 11.0}, {"ticker": "NVDY", "name": "NVDY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 3.5, "r6m": -8.0, "r12m": -19.9}, {"ticker": "ULTY", "name": "ULTY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": 3.5, "r6m": -15.0, "r12m": -49.6}, {"ticker": "453870", "name": "TIGER 미국배당다우존스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 2.4, "r6m": -10.0, "r12m": -7.5}, {"ticker": "453810", "name": "KODEX 인도Nifty5", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 2.2, "r6m": -10.5, "r12m": -8.1}, {"ticker": "447770", "name": "TIGER 테슬라채권혼합F", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 1.1, "r6m": -6.5, "r12m": 5.6}, {"ticker": "489030", "name": "PLUS 고배당주위클리커버", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 0.7, "r6m": -4.3, "r12m": -19.0}, {"ticker": "272580", "name": "TIGER 단기채권액티브", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.4, "r6m": 1.0, "r12m": 1.4}, {"ticker": "475630", "name": "TIGER CD1년금리액티", "value": 0, "cat": "원자재/기타", "r1m": 0.0, "r3m": 0.3, "r6m": 0.9, "r12m": 1.7}, {"ticker": "148070", "name": "KIWOOM 국고채10년", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 0.2, "r6m": -2.6, "r12m": -8.7}, {"ticker": "475080", "name": "KODEX 테슬라커버드콜채", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.0, "r6m": -7.5, "r12m": -1.5}, {"ticker": "153130", "name": "KODEX 단기채권", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.0, "r6m": -0.1, "r12m": -0.1}, {"ticker": "TSLY", "name": "TSLY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": -0.6, "r6m": -20.6, "r12m": -27.0}, {"ticker": "402970", "name": "ACE 미국배당다우존스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": -1.0, "r6m": 16.7, "r12m": 29.3}, {"ticker": "481060", "name": "KODEX 미국30년국채타", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -1.4, "r6m": -5.2, "r12m": -8.9}, {"ticker": "453850", "name": "ACE 미국30년국채액티브", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -1.5, "r6m": -3.1, "r12m": -3.5}, {"ticker": "458250", "name": "TIGER 미국30년국채스", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -2.0, "r6m": -4.1, "r12m": -3.9}, {"ticker": "411060", "name": "ACE KRX금현물", "value": 0, "cat": "원자재/기타", "r1m": 0.0, "r3m": -4.1, "r6m": 4.3, "r12m": 50.5}, {"ticker": "308620", "name": "KODEX 미국10년국채선", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -4.6, "r6m": 0.7, "r12m": 7.7}, {"ticker": "305080", "name": "TIGER 미국채10년선물", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -4.8, "r6m": 0.3, "r12m": 8.6}, {"ticker": "473330", "name": "SOL 미국30년국채커버드", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -5.2, "r6m": -2.0, "r12m": 3.3}, {"ticker": "PLTY", "name": "PLTY", "value": 0, "cat": "커버드콜", "r1m": 0.0, "r3m": -5.7, "r6m": -29.4, "r12m": -43.3}];
+const MOM  = [{"ticker": "456600", "name": "TIME 글로벌AI인공지능", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 50.2, "r6m": 68.0, "r12m": 97.0}, {"ticker": "483340", "name": "ACE 구글밸류체인액티브", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 45.0, "r6m": 52.2, "r12m": 113.4}, {"ticker": "381180", "name": "TIGER 미국필라델피아반", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 41.8, "r6m": 51.0, "r12m": 106.6}, {"ticker": "491010", "name": "TIGER 글로벌AI전력인", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 38.3, "r6m": 67.3, "r12m": 113.7}, {"ticker": "498400", "name": "KODEX 200타겟위클리", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 36.1, "r6m": 56.0, "r12m": 93.8}, {"ticker": "226490", "name": "KODEX 코스피100", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 36.0, "r6m": 63.9, "r12m": 126.6}, {"ticker": "487230", "name": "KODEX 미국AI전력핵심", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 35.5, "r6m": 58.7, "r12m": 74.6}, {"ticker": "469170", "name": "ACE 포스코그룹포커스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 31.5, "r6m": 54.4, "r12m": 89.2}, {"ticker": "486450", "name": "SOL 미국AI전력인프라", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 21.5, "r6m": 31.3, "r12m": 54.0}, {"ticker": "465580", "name": "ACE 미국빅테크TOP7 ", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 18.2, "r6m": 7.8, "r12m": 37.1}, {"ticker": "133690", "name": "TIGER 미국나스닥100", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 14.7, "r6m": 10.4, "r12m": 32.4}, {"ticker": "161510", "name": "PLUS 고배당주", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 12.1, "r6m": 29.9, "r12m": 45.6}, {"ticker": "491620", "name": "RISE 미국테크100데일", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 11.5, "r6m": 1.6, "r12m": 14.1}, {"ticker": "229200", "name": "KODEX 코스닥150", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 11.1, "r6m": 30.8, "r12m": 59.5}, {"ticker": "232080", "name": "TIGER 코스닥150", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 10.7, "r6m": 30.7, "r12m": 59.2}, {"ticker": "466940", "name": "TIGER 은행고배당플러스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 8.8, "r6m": 22.6, "r12m": 43.6}, {"ticker": "360200", "name": "ACE 미국S&P500", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 8.0, "r6m": 6.2, "r12m": 26.2}, {"ticker": "379800", "name": "KODEX 미국S&P500", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 7.9, "r6m": 5.9, "r12m": 25.0}, {"ticker": "438100", "name": "ACE 미국나스닥100채권", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 5.0, "r6m": 6.6, "r12m": 18.3}, {"ticker": "448540", "name": "ACE 엔비디아채권혼합", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 4.8, "r6m": 3.2, "r12m": 11.0}, {"ticker": "453870", "name": "TIGER 미국배당다우존스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 2.4, "r6m": -10.0, "r12m": -7.5}, {"ticker": "453810", "name": "KODEX 인도Nifty5", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 2.2, "r6m": -10.5, "r12m": -8.1}, {"ticker": "447770", "name": "TIGER 테슬라채권혼합F", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 1.1, "r6m": -6.5, "r12m": 5.6}, {"ticker": "489030", "name": "PLUS 고배당주위클리커버", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 0.7, "r6m": -4.3, "r12m": -19.0}, {"ticker": "272580", "name": "TIGER 단기채권액티브", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.4, "r6m": 1.0, "r12m": 1.4}, {"ticker": "475630", "name": "TIGER CD1년금리액티", "value": 0, "cat": "원자재/기타", "r1m": 0.0, "r3m": 0.3, "r6m": 0.9, "r12m": 1.7}, {"ticker": "148070", "name": "KIWOOM 국고채10년", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": 0.2, "r6m": -2.6, "r12m": -8.7}, {"ticker": "475080", "name": "KODEX 테슬라커버드콜채", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.0, "r6m": -7.5, "r12m": -1.5}, {"ticker": "153130", "name": "KODEX 단기채권", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": 0.0, "r6m": -0.1, "r12m": -0.1}, {"ticker": "402970", "name": "ACE 미국배당다우존스", "value": 0, "cat": "국내주식", "r1m": 0.0, "r3m": -1.0, "r6m": 16.7, "r12m": 29.3}, {"ticker": "481060", "name": "KODEX 미국30년국채타", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -1.4, "r6m": -5.2, "r12m": -8.9}, {"ticker": "453850", "name": "ACE 미국30년국채액티브", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -1.5, "r6m": -3.1, "r12m": -3.5}, {"ticker": "458250", "name": "TIGER 미국30년국채스", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -2.0, "r6m": -4.1, "r12m": -3.9}, {"ticker": "411060", "name": "ACE KRX금현물", "value": 0, "cat": "원자재/기타", "r1m": 0.0, "r3m": -4.1, "r6m": 4.3, "r12m": 50.5}, {"ticker": "308620", "name": "KODEX 미국10년국채선", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -4.6, "r6m": 0.7, "r12m": 7.7}, {"ticker": "305080", "name": "TIGER 미국채10년선물", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -4.8, "r6m": 0.3, "r12m": 8.6}, {"ticker": "473330", "name": "SOL 미국30년국채커버드", "value": 0, "cat": "국내채권", "r1m": 0.0, "r3m": -5.2, "r6m": -2.0, "r12m": 3.3}];
 const BT_M = ["2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05"];
 const STRAT= {"듀얼모멘텀": [100.0, 87.1185, 85.7325, 85.7698, 82.5286, 80.1123, 80.0774, 80.1548, 80.8443, 78.716, 78.8336, 74.3516, 68.2809, 68.5488, 68.6632, 75.6978, 78.0127, 78.5538, 79.3054, 86.592, 85.722, 79.1505, 77.2405, 83.0379, 86.0629, 81.3178, 83.6299, 86.8125, 83.1271, 84.2532, 90.0635, 86.2207, 85.7613, 85.8761, 91.851, 95.6125, 100.3062, 100.787, 96.6135, 89.9893, 86.667, 86.8394, 104.4403, 110.0129, 108.1971, 119.3049, 152.4631, 144.4688, 159.1077, 228.9283, 273.5719, 225.5541, 321.4599], "나스닥100 BH": [100.0, 87.1185, 84.9943, 93.5877, 85.6834, 80.2107, 76.2984, 85.2961, 84.8462, 81.754, 83.4169, 77.3918, 69.2483, 74.59, 81.418, 85.9624, 89.4875, 96.549, 100.5524, 100.8485, 104.0376, 100.2961, 97.8759, 105.2221, 111.1845, 117.5683, 120.9112, 125.5125, 124.6241, 129.9772, 138.9408, 133.0125, 131.6401, 132.3519, 141.5604, 147.3576, 160.4556, 159.254, 152.6595, 142.1925, 139.8462, 148.7415, 154.8861, 165.8087, 166.3098, 174.6298, 187.3292, 187.9271, 185.6777, 186.3155, 181.1503, 178.7642, 202.7221], "코스피200 BH": [100.0, 90.9205, 91.8109, 93.0023, 89.0645, 88.8889, 77.4392, 81.2265, 80.8377, 70.918, 75.1568, 80.449, 74.2287, 80.6496, 80.0226, 81.9915, 81.8284, 85.2019, 85.1768, 86.4811, 84.2112, 82.4555, 76.8999, 85.1643, 90.7198, 84.8508, 89.8796, 95.1843, 91.9238, 90.3185, 96.6767, 95.6233, 91.0459, 87.083, 85.4903, 81.8661, 80.4113, 83.8851, 84.7254, 84.9386, 85.1141, 90.6446, 104.5899, 110.1706, 108.3521, 119.4758, 145.8365, 139.5786, 152.7339, 193.8927, 236.0672, 189.1899, 250.5769], "S&P500 BH": [100.0, 91.9861, 90.5226, 98.1533, 94.007, 90.2091, 86.0627, 93.1707, 93.9721, 91.4983, 96.8293, 91.324, 83.8676, 86.3763, 92.0906, 92.23, 96.3763, 96.899, 101.324, 101.2544, 104.216, 101.0105, 97.5958, 102.5436, 107.77, 113.8676, 117.5261, 124.669, 122.5784, 125.8885, 131.6376, 130.7666, 130.0697, 130.2439, 138.4669, 145.5052, 152.6481, 153.3798, 148.8502, 141.5679, 136.3415, 141.0105, 145.122, 154.1463, 156.3066, 161.9164, 169.1986, 173.9373, 172.4739, 171.9512, 171.1847, 169.6516, 182.2997], "코스피60/미채40": [100.0, 94.042, 94.2967, 94.0799, 91.917, 91.2727, 85.4885, 89.0747, 88.6447, 82.9744, 85.4725, 87.0595, 81.5196, 85.5155, 86.6376, 88.2779, 89.3719, 90.8691, 90.0357, 89.5342, 89.254, 88.1531, 83.9735, 89.1195, 93.6458, 90.9892, 93.5454, 97.5537, 95.6148, 94.921, 99.3292, 99.2418, 95.903, 92.9045, 92.6824, 90.8898, 91.2187, 93.3115, 94.815, 95.4983, 94.4715, 96.5726, 105.1873, 109.5418, 109.1441, 116.4028, 132.6683, 131.2498, 137.273, 158.8838, 180.8896, 162.5272, 191.7286]};
 const MET  = {"듀얼모멘텀": {"cagr": 30.26, "mdd": -31.72, "sharpe": 0.88, "total": 221.46}, "나스닥100 BH": {"cagr": 17.35, "mdd": -30.75, "sharpe": 0.92, "total": 102.72}, "코스피200 BH": {"cagr": 23.12, "mdd": -29.08, "sharpe": 0.81, "total": 150.58}, "S&P500 BH": {"cagr": 14.56, "mdd": -16.13, "sharpe": 1.04, "total": 82.3}, "코스피60/미채40": {"cagr": 15.88, "mdd": -18.48, "sharpe": 0.89, "total": 91.73}};
@@ -121,14 +526,27 @@ const METRIC_LABELS = [
 const cardsEl = document.getElementById('metric-cards');
 STRAT_NAMES.forEach((name, ci) => {
   const m = MET[name];
+  const infoIcon = ci === 0
+    ? `<span class="info-btn" onclick="openDmModal()" title="듀얼 모멘텀 전략 설명">i</span>`
+    : '';
   cardsEl.innerHTML += `
     <div class="card">
-      <div class="label" style="color:${STRAT_COLORS[ci]}">${name}</div>
+      <div class="label" style="color:${STRAT_COLORS[ci]};display:flex;align-items:center">${name}${infoIcon}</div>
       <div class="val ${m.total >= 0 ? 'pos':'neg'}">${m.total >= 0 ? '+' : ''}${m.total}%</div>
       <div class="sub">CAGR ${m.cagr >= 0 ? '+' : ''}${m.cagr}% &nbsp;|&nbsp; MDD ${m.mdd}%</div>
       <div class="sub">샤프 ${m.sharpe}</div>
     </div>`;
 });
+
+function openDmModal() {
+  document.getElementById('dm-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDmModal() {
+  document.getElementById('dm-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDmModal(); });
 
 // ─── Chart 1: Cumulative Return ──────────────────────────────────────────
 const navTraces = STRAT_NAMES.map((name, ci) => ({
@@ -151,44 +569,41 @@ Plotly.newPlot('chart-nav', navTraces, {
 }, {responsive: true, displayModeBar: false});
 
 // ─── Chart 2: ETF Momentum ───────────────────────────────────────────────
-const CAT_COLORS = {
-  '국내주식':  '#38bdf8',
-  '미국주식':  '#818cf8',
-  '커버드콜':  '#fb923c',
-  '국내채권':  '#34d399',
-  '미국채권':  '#a78bfa',
-  '원자재/기타':'#fbbf24',
-};
+const PERIOD_LABEL = { r1m: '1개월', r3m: '3개월', r6m: '6개월', r12m: '12개월' };
+let momPeriod = 'r3m';
 
-// Group by category, top 30 by |r3m|
-const displayMom = MOM.slice(0, 35);
-const momY = displayMom.map(d => d.ticker + ' ' + (d.name || ''));
-const momX = displayMom.map(d => d.r3m);
-const momColors = displayMom.map(d => d.r3m >= 0 ? '#34d399' : '#f87171');
-const momOpacity = displayMom.map(d => Math.min(0.4 + Math.abs(d.r3m) / 30, 1.0));
+function renderMomChart() {
+  const sorted = [...MOM].sort((a, b) => (b[momPeriod] ?? -999) - (a[momPeriod] ?? -999));
+  const display = sorted.slice(0, 37);
+  const label = PERIOD_LABEL[momPeriod];
+  const momY = display.map(d => d.ticker + ' ' + (d.name || ''));
+  const momX = display.map(d => d[momPeriod] ?? 0);
+  const momColors = display.map(d => (d[momPeriod] ?? 0) >= 0 ? '#34d399' : '#f87171');
+  const momOpacity = display.map(d => Math.min(0.4 + Math.abs(d[momPeriod] ?? 0) / 30, 1.0));
 
-Plotly.newPlot('chart-mom', [{
-  type: 'bar',
-  orientation: 'h',
-  x: momX,
-  y: momY,
-  marker: {
-    color: momColors,
-    opacity: momOpacity,
-    line: { color: momColors, width: 0.5 },
-  },
-  hovertemplate: '<b>%{y}</b><br>3M: %{x:.1f}%<extra></extra>',
-  text: displayMom.map(d => d.r3m >= 0 ? '+' + d.r3m + '%' : d.r3m + '%'),
-  textposition: 'outside',
-  textfont: { size: 10, color: FONT_COLOR },
-  cliponaxis: false,
-}], {
-  ...DARK_LAYOUT,
-  margin: { t: 10, r: 60, b: 40, l: 160 },
-  xaxis: { gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: '#475569', ticksuffix: '%' },
-  yaxis: { gridcolor: 'transparent', automargin: true, tickfont: { size: 11 } },
-  bargap: 0.25,
-}, {responsive: true, displayModeBar: false});
+  Plotly.react('chart-mom', [{
+    type: 'bar', orientation: 'h',
+    x: momX, y: momY,
+    marker: { color: momColors, opacity: momOpacity, line: { color: momColors, width: 0.5 } },
+    hovertemplate: `<b>%{y}</b><br>${label}: %{x:.1f}%<extra></extra>`,
+    text: display.map(d => { const v = d[momPeriod] ?? 0; return (v >= 0 ? '+' : '') + v + '%'; }),
+    textposition: 'outside', textfont: { size: 10, color: FONT_COLOR }, cliponaxis: false,
+  }], {
+    ...DARK_LAYOUT,
+    margin: { t: 10, r: 60, b: 40, l: 160 },
+    xaxis: { gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: '#475569', ticksuffix: '%', title: label + ' 수익률' },
+    yaxis: { gridcolor: 'transparent', automargin: true, tickfont: { size: 11 } },
+    bargap: 0.25,
+  }, {responsive: true, displayModeBar: false});
+}
+
+function setMomPeriod(p) {
+  momPeriod = p;
+  document.querySelectorAll('#mom-period-tabs .ftab').forEach(t => t.classList.toggle('active', t.dataset.period === p));
+  renderMomChart();
+}
+
+renderMomChart();
 
 // ─── Chart 3: Risk/Return Scatter ────────────────────────────────────────
 const rrTraces = STRAT_NAMES.map((name, ci) => {
@@ -276,6 +691,106 @@ Plotly.newPlot('chart-hold', holdTraces, {
   yaxis: { gridcolor: 'transparent', showticklabels: false, range: [0, 1.1] },
   legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
 }, {responsive: true, displayModeBar: false});
+
+// ─── Momentum Crash Detection ────────────────────────────────────────────
+function getMomentumSignal(d) {
+  const r3 = d.r3m, r6 = d.r6m;
+  // RED: 3M 대폭락 OR 3M·6M 동반 하락
+  if (r3 < -5) return 'red';
+  if (r3 < 0 && r6 < -10) return 'red';
+  // GREEN: 3M·6M 모두 양수
+  if (r3 > 0 && r6 > 0) return 'green';
+  // YELLOW: 나머지 (혼재·약세)
+  return 'yellow';
+}
+
+const CAT_SHORT = {'국내주식':'국내주','커버드콜':'커버드','국내채권':'채권','원자재/기타':'원자재'};
+const SIGNAL_LABEL  = {green:'상승 유지', yellow:'경고', red:'크래시 위험'};
+const SIGNAL_COLOR  = {green:'#34d399',   yellow:'#fbbf24', red:'#f87171'};
+const SIGNAL_EMOJI  = {green:'🟢', yellow:'🟡', red:'🔴'};
+
+let signalData = [];
+let crashFilter = 'all';
+
+function renderCrashSection() {
+  signalData = MOM.map(d => ({ ...d, signal: getMomentumSignal(d) }));
+  const sigCounts = {green:0, yellow:0, red:0};
+  signalData.forEach(d => sigCounts[d.signal]++);
+
+  const summaryEl = document.getElementById('crash-summary');
+  summaryEl.innerHTML = '';
+  ['green','yellow','red'].forEach(s => {
+    summaryEl.innerHTML += `
+      <div class="crash-stat">
+        <div class="signal-dot ${s}"></div>
+        <span style="color:${SIGNAL_COLOR[s]};font-weight:800;font-size:22px;line-height:1">${sigCounts[s]}</span>
+        <span style="color:#94a3b8;font-size:13px">${SIGNAL_LABEL[s]}</span>
+      </div>`;
+  });
+  renderSignalGrid();
+}
+
+function renderSignalGrid() {
+  const grid = document.getElementById('signal-grid');
+  const list = crashFilter === 'all' ? signalData : signalData.filter(d => d.signal === crashFilter);
+  const fmt = v => v === null ? 'N/A' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  grid.innerHTML = list.map(d => {
+    const r3c = d.r3m === null ? '#64748b' : d.r3m >= 0 ? '#34d399' : '#f87171';
+    const r6c = d.r6m === null ? '#64748b' : d.r6m >= 0 ? '#34d399' : '#f87171';
+    return `
+      <div class="signal-card ${d.signal}">
+        <div class="sc-top">
+          <div class="sc-left">
+            <div class="signal-dot ${d.signal}"></div>
+            <span class="sc-ticker">${d.ticker}</span>
+          </div>
+          <span class="sc-cat">${CAT_SHORT[d.cat] || d.cat}</span>
+        </div>
+        <div class="sc-name" title="${d.name}">${d.name}</div>
+        <div class="sc-rets">
+          <div class="sc-ret-box">
+            <div class="sc-ret-label">3개월</div>
+            <div class="sc-ret-val" style="color:${r3c}">${fmt(d.r3m)}</div>
+          </div>
+          <div class="sc-ret-box">
+            <div class="sc-ret-label">6개월</div>
+            <div class="sc-ret-val" style="color:${r6c}">${fmt(d.r6m)}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterCrash(f) {
+  crashFilter = f;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+  renderSignalGrid();
+}
+
+// 초기 렌더링 (정적 데이터)
+renderCrashSection();
+
+// KV에서 실시간 데이터 로딩
+(async () => {
+  try {
+    const res = await fetch('https://asset-dashboard-api.jilliankim200.workers.dev/kv/crash_signals');
+    const d = await res.json();
+    if (!d || !d.data) return;
+    d.data.forEach(fresh => {
+      const existing = MOM.find(m => m.ticker === fresh.ticker);
+      if (existing) {
+        if (fresh.r1m !== null) existing.r1m = fresh.r1m;
+        if (fresh.r3m !== null) existing.r3m = fresh.r3m;
+        if (fresh.r6m !== null) existing.r6m = fresh.r6m;
+        if (fresh.r12m !== null) existing.r12m = fresh.r12m;
+      }
+    });
+    document.getElementById('crash-date').textContent = `| 기준: ${d.updatedAt} · 3M/6M 수익률 기반`;
+    renderCrashSection();
+  } catch(e) {
+    document.getElementById('crash-date').textContent = '| 기준: 정적 데이터 · 3M/6M 수익률 기반';
+  }
+})();
 
 // ─── Chart 6: Portfolio Composition Donut ────────────────────────────────
 const catLabels = Object.keys(CAT);
