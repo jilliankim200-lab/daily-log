@@ -1282,6 +1282,8 @@ export function OptimalGuide() {
     return saved === null ? true : saved === 'true';
   });
   const [showFilterTip, setShowFilterTip] = useState(false);
+  const [filterTipDir, setFilterTipDir] = useState<'up' | 'down'>('up');
+  const filterTipRef = React.useRef<HTMLDivElement>(null);
 
   const handleSellConfigChange = (key: keyof SellConfig, delta: number) => {
     setSellConfig(prev => {
@@ -1659,8 +1661,14 @@ export function OptimalGuide() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>자동 저장</span>
-          <div style={{ position: 'relative' }}
-            onMouseEnter={() => setShowFilterTip(true)}
+          <div ref={filterTipRef} style={{ position: 'relative' }}
+            onMouseEnter={() => {
+              if (filterTipRef.current) {
+                const rect = filterTipRef.current.getBoundingClientRect();
+                setFilterTipDir(rect.top < 280 ? 'down' : 'up');
+              }
+              setShowFilterTip(true);
+            }}
             onMouseLeave={() => setShowFilterTip(false)}>
             <button
               onClick={() => {
@@ -1681,7 +1689,9 @@ export function OptimalGuide() {
             </button>
             {showFilterTip && (
               <div style={{
-                position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 400,
+                position: 'absolute',
+                ...(filterTipDir === 'up' ? { bottom: 'calc(100% + 8px)' } : { top: 'calc(100% + 8px)' }),
+                right: 0, zIndex: 400,
                 background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
                 borderRadius: 10, padding: '10px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)',
                 width: 260, lineHeight: 1.65, boxShadow: 'var(--shadow-tooltip)',
