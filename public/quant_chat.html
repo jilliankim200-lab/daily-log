@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>퀀트 Q&A 대화 아카이브</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.7}
+
+/* ── 레이아웃 ── */
+.wrap{display:flex;min-height:100vh}
+.toc{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+  padding:24px 14px;border-right:1px solid #1e293b;background:#0a1120}
+.content{flex:1;padding:36px 44px 80px;max-width:860px}
+
+/* ── TOC ── */
+.toc-title{font-size:10px;font-weight:700;color:#475569;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.toc a{display:block;font-size:12px;color:#64748b;padding:5px 8px;border-radius:6px;text-decoration:none;
+  transition:color .15s,background .15s;margin-bottom:2px}
+.toc a:hover,.toc a.active{color:#38bdf8;background:rgba(56,189,248,.08)}
+.toc-sep{height:1px;background:#1e293b;margin:10px 0}
+.toc-back{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;
+  padding:5px 8px;border-radius:6px;text-decoration:none;margin-bottom:14px;
+  border:1px solid #1e293b;transition:all .15s}
+.toc-back:hover{color:#38bdf8;border-color:#38bdf8;background:rgba(56,189,248,.06)}
+
+/* ── 헤더 ── */
+.page-label{font-size:10px;font-weight:700;color:#38bdf8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.page-title{font-size:24px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;margin-bottom:6px}
+.page-sub{font-size:13px;color:#64748b;margin-bottom:28px}
+.divider{height:1px;background:linear-gradient(90deg,#334155,transparent);margin-bottom:28px}
+
+/* ── 날짜 구분선 ── */
+.date-sep{text-align:center;font-size:11px;color:#475569;letter-spacing:.08em;
+  margin:36px 0 28px;position:relative}
+.date-sep::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:#1e293b}
+.date-sep span{position:relative;background:#0f172a;padding:0 14px}
+
+/* ── 주제 태그 ── */
+.topic{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  padding:3px 10px;border-radius:20px;background:rgba(56,189,248,.1);color:#38bdf8;
+  border:1px solid rgba(56,189,248,.2);margin-bottom:20px}
+
+/* ── 채팅 버블 ── */
+.chat-section{margin-bottom:40px;scroll-margin-top:24px}
+.q-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:#475569;margin-bottom:10px;padding-left:4px}
+
+.msg-row{display:flex;gap:12px;margin-bottom:20px;align-items:flex-start}
+.msg-row.user{flex-direction:row-reverse}
+
+.avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.av-user{background:#1d4ed8;color:#fff}
+.av-ai{background:#1e293b;color:#94a3b8;border:1px solid #334155;font-size:11px}
+
+.bubble{max-width:80%;padding:12px 16px;border-radius:14px;font-size:13.5px;line-height:1.8;color:#cbd5e1}
+.bubble-user{background:#1d4ed8;border-radius:14px 4px 14px 14px;color:#eff6ff;font-size:14px;font-weight:500}
+.bubble-ai{background:#1e293b;border:1px solid #334155;border-radius:4px 14px 14px 14px}
+
+/* ── 버블 내부 스타일 ── */
+.bubble-ai h4{color:#f1f5f9;font-size:13px;font-weight:700;margin:14px 0 6px}
+.bubble-ai h4:first-child{margin-top:0}
+.bubble-ai p{margin:5px 0;color:#94a3b8}
+.bubble-ai strong{color:#e2e8f0}
+.bubble-ai ul{padding-left:16px;margin:6px 0}
+.bubble-ai li{margin-bottom:4px;color:#94a3b8}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
+.tbl th{background:#0f172a;color:#64748b;font-weight:600;padding:7px 10px;
+  border-bottom:1px solid #334155;text-align:left}
+.tbl td{padding:7px 10px;border-bottom:1px solid #1e293b;color:#94a3b8}
+.tbl td.g{color:#22c55e;font-weight:700}
+.tbl td.r{color:#ef4444;font-weight:700}
+.tbl td.o{color:#f97316;font-weight:700}
+.tbl td.b{color:#3b82f6;font-weight:700}
+
+.note{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);
+  border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;
+  padding:10px 14px;margin:10px 0;font-size:13px;color:#94a3b8;line-height:1.7}
+.warn{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);
+  border-left:3px solid #ef4444;border-radius:0 8px 8px 0;
+  padding:10px 14px;margin:10px 0;font-size:13px;color:#94a3b8;line-height:1.7}
+.tip{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);
+  border-left:3px solid #22c55e;border-radius:0 8px 8px 0;
+  padding:10px 14px;margin:10px 0;font-size:13px;color:#94a3b8;line-height:1.7}
+
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;
+  border-radius:4px;margin-right:5px;margin-bottom:3px}
+.tag-g{background:rgba(34,197,94,.15);color:#22c55e}
+.tag-r{background:rgba(239,68,68,.15);color:#ef4444}
+.tag-b{background:rgba(59,130,246,.15);color:#3b82f6}
+.tag-o{background:rgba(249,115,22,.15);color:#f97316}
+.tag-y{background:rgba(234,179,8,.15);color:#eab308}
+
+/* ── 반응형 ── */
+@media(max-width:640px){
+  .toc{display:none}
+  .content{padding:20px 16px 60px}
+  .bubble{max-width:92%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOC -->
+  <nav class="toc">
+    <a class="toc-back" href="/quant_basics.html">← 퀀트투자 기초</a>
+    <div class="toc-title">대화 목록</div>
+    <a href="#q1">보유 금지 = 매도?</a>
+    <a href="#q2">사상최고가 고점 물림?</a>
+    <a href="#q3">크래시 탐지 위치</a>
+    <a href="#q4">크래시 감지 주기</a>
+    <div class="toc-sep"></div>
+    <a href="#q5">가장 좋은 반도체 ETF?</a>
+    <a href="#q6">여러 종목 분산 효과</a>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="page-label">퀀트 Q&A 아카이브</div>
+    <div class="page-title">💬 퀀트투자 대화</div>
+    <div class="page-sub">듀얼 모멘텀 전략 운용 중 실제 나눈 질문과 답변 — 2026년 5월 6일</div>
+    <div class="divider"></div>
+
+    <div class="date-sep"><span>📅 2026년 5월 6일 — 듀얼 모멘텀 전략 Q&A</span></div>
+
+    <!-- Q1 -->
+    <div class="chat-section" id="q1">
+      <div class="topic">🔴 보유 금지 액션</div>
+
+      <div class="msg-row user">
+        <div class="avatar av-user">나</div>
+        <div class="bubble bubble-user">보유 금지이면 다 팔아야 해?</div>
+      </div>
+
+      <div class="msg-row">
+        <div class="avatar av-ai">Q</div>
+        <div class="bubble bubble-ai">
+          <p>네, <strong style="color:#ef4444">전량 매도</strong>가 맞습니다.</p>
+          <p>이 전략은 <span class="tag tag-b">Top-1 집중 전략</span>입니다. 매월 7개 자산 중 6M 수익률 1위 자산 <strong>하나만</strong> 보유합니다.</p>
+          <table class="tbl">
+            <tr><th>액션</th><th>대상</th><th>설명</th></tr>
+            <tr><td class="g">✓ 보유 유지</td><td>1위 자산</td><td>6M 모멘텀 1위만 100% 유지</td></tr>
+            <tr><td class="r">✕ 보유 금지 → 매도</td><td>2~7위 자산</td><td>현재 보유 중이면 전량 매도 후 1위 자산으로 통합</td></tr>
+          </table>
+          <div class="note">절대 모멘텀이 음수(6M &lt; 0)이면 전 자산 매도 후 <strong>단기채권(153130)</strong>으로 전환</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="chat-section" id="q2">
+      <div class="topic">📈 고점 매수 리스크</div>
+
+      <div class="msg-row user">
+        <div class="avatar av-user">나</div>
+        <div class="bubble bubble-user">반도체 섹터가 지금 사상최고가인데, 여기로 자산을 몰면 고점에 물리지 않을까?</div>
+      </div>
+
+      <div class="msg-row">
+        <div class="avatar av-ai">Q</div>
+        <div class="bubble bubble-ai">
+          <p>퀀트적으로 정확히 짚어낸 질문입니다. 결론: <strong>"그럴 수 있다. 단, 그게 모멘텀 전략의 구조적 특성이고 보호 장치가 있다"</strong></p>
+          <h4>왜 모멘텀 전략은 사상최고가에 매수하나</h4>
+          <table class="tbl">
+            <tr><th>사고방식</th><th>논리</th><th>전략 유형</th></tr>
+            <tr><td>"사상최고가 = 곧 꺾인다"</td><td>평균회귀</td><td>가치투자·역추세</td></tr>
+            <tr><td>"사상최고가 = 트렌드 강세"</td><td>추세추종</td><td class="g">듀얼 모멘텀 (현재 전략)</td></tr>
+          </table>
+          <p>Jegadeesh &amp; Titman (1993): 과거 수익률 상위 자산이 향후 3~12개월 지속 초과수익. ATH 자체는 반전 신호가 아닙니다.</p>
+          <h4>진짜 리스크 — 모멘텀 크래시</h4>
+          <div class="warn"><strong>반도체 6M +137%</strong> → 상위 1~2% 수준의 극단 모멘텀<br>
+          Barroso &amp; Santa-Clara (2015): 극단 모멘텀 이후 크래시 확률 통계적으로 유의미하게 상승</div>
+          <h4>전략의 보호 장치</h4>
+          <ul>
+            <li><span class="tag tag-g">월말 자동 교체</span> 매월 말 6M 수익률 재계산 → 1위 변경 시 다음 달 초 교체</li>
+            <li><span class="tag tag-o">크래시 탐지</span> 3M 급락 신호 → 단기채권 즉시 전환 트리거</li>
+          </ul>
+          <table class="tbl">
+            <tr><th>항목</th><th>내용</th></tr>
+            <tr><td>고점 매수 자체</td><td>모멘텀 전략의 의도된 설계</td></tr>
+            <tr><td>실제 위험</td><td>모멘텀 크래시 (극단 모멘텀 후 급반전)</td></tr>
+            <tr><td>현재 상황</td><td class="r">+137% 경계 수준 — 크래시 탐지 자주 확인 필요</td></tr>
+            <tr><td>대응</td><td>월말 신호 재계산 + 크래시 탐지 주 2회 점검</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="chat-section" id="q3">
+      <div class="topic">🗺️ UI 위치 안내</div>
+
+      <div class="msg-row user">
+        <div class="avatar av-user">나</div>
+        <div class="bubble bubble-user">크래시 탐지 섹션은 어딨어?</div>
+      </div>
+
+      <div class="msg-row">
+        <div class="avatar av-ai">Q</div>
+        <div class="bubble bubble-ai">
+          <p><strong>퀀트 대시보드</strong> 탭 → 아래로 스크롤 → <strong>"모멘텀 크래시 감지"</strong> 섹션입니다.</p>
+          <table class="tbl">
+            <tr><th>신호</th><th>조건</th><th>의미</th></tr>
+            <tr><td>🟢 상승 유지</td><td>3M &gt; 0 &amp; 6M &gt; 0</td><td class="g">추세 정상</td></tr>
+            <tr><td>🟡 경고</td><td>혼재 또는 약세</td><td class="o">주의 모니터링</td></tr>
+            <tr><td>🔴 크래시 위험</td><td>3M &lt; -5% 또는 3M·6M 동반 하락</td><td class="r">즉시 단기채권 전환</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="chat-section" id="q4">
+      <div class="topic">⏱️ 갱신 주기</div>
+
+      <div class="msg-row user">
+        <div class="avatar av-user">나</div>
+        <div class="bubble bubble-user">모멘텀 크래시 감지... 주기는...?</div>
+      </div>
+
+      <div class="msg-row">
+        <div class="avatar av-ai">Q</div>
+        <div class="bubble bubble-ai">
+          <p><span class="tag tag-b">하루 1회</span> — 매일 UTC 03:00 (한국시간 자정) Cloudflare Worker 크론이 돌면서 모멘텀 신호·크래시 신호를 함께 갱신합니다.</p>
+          <div class="warn"><strong>한계:</strong> 전날 데이터 기준으로 표시됩니다.<br>
+          반도체가 <strong>장중 급락</strong>해도 다음 날 새벽 업데이트 전까지 신호가 바뀌지 않습니다.</div>
+          <p>반도체 +137% 같은 극단 모멘텀 구간에서는 일중 급락 대응이 늦을 수 있습니다.<br>
+          <strong>퀀트투자 기초 → 리밸런싱 액션 플랜 → 🔄 신호 갱신</strong> 버튼으로 수동 업데이트 가능합니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="date-sep"><span>📅 2026년 5월 6일 — ETF 선택 & 분산 전략</span></div>
+
+    <!-- Q5 -->
+    <div class="chat-section" id="q5">
+      <div class="topic">🔍 ETF 선택</div>
+
+      <div class="msg-row user">
+        <div class="avatar av-user">나</div>
+        <div class="bubble bubble-user">저 티커(091160)가 반도체 ETF 중 가장 좋은 거야?</div>
+      </div>
+
+      <div class="msg-row">
+        <div class="avatar av-ai">Q</div>
+        <div class="bubble bubble-ai">
+          <p><strong>091160 KODEX 반도체</strong>는 <span class="tag tag-o">전략 신호의 기준 티커</span>입니다. "가장 좋은 ETF"는 별개 문제입니다.</p>
+          <h4>국내 반도체 ETF 비교</h4>
+          <table class="tbl">
+            <tr><th>ETF</th><th>코드</th><th>핵심 구성</th><th>특징</th></tr>
+            <tr><td><strong>KODEX 반도체</strong></td><td class="b">091160</td><td>삼성전자 ~45%, SK하이닉스 ~25%</td><td>대형주 중심. 삼성전자 ETF에 가까움</td></tr>
+            <tr><td><strong>TIGER 반도체</strong></td><td class="b">091230</td><td>비슷한 구성</td><td>091160과 거의 동일</td></tr>
+            <tr><td><strong>KODEX AI반도체핵심장비</strong></td><td class="b">266410</td><td>한미반도체, 리노공업, 원익IPS 장비주</td><td>중소형 장비주. 변동성·수익률 모두 큼</td></tr>
+            <tr><td><strong>TIGER 미국필라델피아반도체</strong></td><td class="b">381180</td><td>엔비디아, TSMC, AMD, 브로드컴</td><td>글로벌. 엔비디아 강세 구간 압도적</td></tr>
+          </table>
+          <div class="warn"><strong>091160의 문제:</strong> 삼성전자 비중이 너무 높아서 반도체 섹터 전체가 올라도 삼성전자 부진 시 수익률 낮음</div>
+          <div class="note"><strong>핵심 주의:</strong> 다른 ETF로 보유 시 신호 기준 티커(091160)와 실제 보유 ETF의 수익률이 괴리됩니다.<br>
+          ETF를 바꾸려면 Worker의 기준 티커도 함께 변경해야 일관성이 유지됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="chat-section" id="q6">
+      <div class="topic">📊 분산 전략</div>
+
+      <div class="msg-row user">
+        <div class="avatar av-user">나</div>
+        <div class="bubble bubble-user">여러 종목에 분산하면 어때?</div>
+      </div>
+
+      <div class="msg-row">
+        <div class="avatar av-ai">Q</div>
+        <div class="bubble bubble-ai">
+          <p>좋은 발상이지만 <strong>어떤 분산이냐</strong>에 따라 효과가 완전히 다릅니다.</p>
+
+          <h4>케이스 1 — 반도체 ETF 여러 개 동시 보유</h4>
+          <table class="tbl">
+            <tr><th>조합</th><th>상관계수</th><th>분산 효과</th></tr>
+            <tr><td>091160 ↔ 091230</td><td class="r">0.97</td><td class="r">없음 (거의 동일)</td></tr>
+            <tr><td>091160 ↔ 381180</td><td class="o">0.75~0.80</td><td class="o">미미함</td></tr>
+            <tr><td>091160 ↔ 266410</td><td class="o">0.82~0.88</td><td class="o">미미함</td></tr>
+          </table>
+          <div class="warn">반도체 사이클이 꺾이면 세 ETF 모두 같이 떨어집니다. 같은 섹터 안에서 나누는 건 진짜 분산이 아닙니다.</div>
+
+          <h4>케이스 2 — 모멘텀 비례 배분 (Top-3 동시 보유)</h4>
+          <p>현재 전략(Top-1) 대신 <strong>퀀트투자 기초 → 포트폴리오 최적화 → "모멘텀 비례 배분"</strong>으로 전환하는 방식입니다.</p>
+          <table class="tbl">
+            <tr><th>지표</th><th>Top-1 집중</th><th>모멘텀 비례 분산</th></tr>
+            <tr><td>CAGR</td><td class="g">~22%</td><td class="g">~18%</td></tr>
+            <tr><td>MDD</td><td class="r">-30~45%</td><td class="o">-18~35%</td></tr>
+            <tr><td>Sharpe</td><td>0.70~0.95</td><td class="g">0.75~1.00</td></tr>
+            <tr><td>턴오버</td><td>~120%/년</td><td>~80%/년</td></tr>
+          </table>
+          <div class="tip"><strong>결론:</strong> 반도체 ETF를 여러 개로 나누는 건 분산 효과 없음.<br>
+          진짜 분산은 <strong>Top-1 → 모멘텀 비례 배분으로 전환</strong>하는 것. MDD 개선 + Sharpe 향상.<br>
+          +137% 극단 모멘텀 구간에서는 비례 배분이 크래시 충격 완화에 유리합니다.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /wrap -->
+
+<script>
+// TOC 활성화
+const links = document.querySelectorAll('.toc a[href^="#"]');
+const sections = [...links].map(l => document.querySelector(l.getAttribute('href')));
+const onScroll = () => {
+  const y = window.scrollY + 80;
+  let active = 0;
+  sections.forEach((s, i) => { if (s && s.offsetTop <= y) active = i; });
+  links.forEach((l, i) => l.classList.toggle('active', i === active));
+};
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+</script>
+</body>
+</html>

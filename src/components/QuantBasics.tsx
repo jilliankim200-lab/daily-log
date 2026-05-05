@@ -307,6 +307,8 @@ const NAV = [
   { href: "backtest",   label: "백테스팅 방법론" },
   { sep: true },
   { href: "summary",    label: "핵심 요약" },
+  { sep: true },
+  { href: "/quant_chat.html", label: "💬 Q&A 아카이브", external: true },
 ];
 
 interface RebalEvent {
@@ -760,7 +762,14 @@ export function QuantBasics() {
               </div>
             : "sep" in n
               ? <div key={i} style={S.tocSep} />
-              : tocLink(n.href!, n.label!)
+              : "external" in n
+                ? <a key={i} href={n.href!} style={{
+                    display: "block", fontSize: 12, padding: "5px 8px", borderRadius: 6,
+                    marginBottom: 2, color: "#38bdf8", textDecoration: "none", fontWeight: 600,
+                    background: "rgba(56,189,248,.07)", border: "1px solid rgba(56,189,248,.15)",
+                    transition: "all .15s",
+                  }}>{n.label!}</a>
+                : tocLink(n.href!, n.label!)
         )}
       </nav>
 
@@ -1499,6 +1508,27 @@ export function QuantBasics() {
           </section>
 
         </div>
+
+        {/* Q&A 아카이브 배너 */}
+        <div style={{ margin: "0 44px 40px", background: "rgba(56,189,248,.06)",
+          border: "1px solid rgba(56,189,248,.2)", borderRadius: 12, padding: "20px 24px",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" as const }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#38bdf8", marginBottom: 4 }}>
+              💬 퀀트투자 Q&amp;A 아카이브
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.7 }}>
+              전략 운용 중 실제 나눈 질문과 답변 6건 수록<br />
+              보유 금지 · 사상최고가 · 크래시 탐지 · ETF 선택 · 분산 전략
+            </div>
+          </div>
+          <a href="/quant_chat.html" style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "9px 20px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+            background: "#38bdf8", color: "#0f172a", textDecoration: "none", flexShrink: 0,
+          }}>대화 보기 →</a>
+        </div>
+
       </div>
     </div>
   );
