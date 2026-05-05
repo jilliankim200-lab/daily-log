@@ -58,8 +58,9 @@ export function NewDashboard() {
   const latestSnap = effectiveSnapshots[0];
   const prevSnap = effectiveSnapshots[1];
 
-  const dailyChange = latestSnap && prevSnap ? latestSnap.totalAsset - prevSnap.totalAsset : 0;
-  const dailyRate = prevSnap && prevSnap.totalAsset > 0 ? (dailyChange / prevSnap.totalAsset) * 100 : 0;
+  // 현재 총자산 vs 마지막 스냅샷 비교 (스냅샷 저장 이후 실질 변동)
+  const dailyChange = latestSnap ? totalAsset - latestSnap.totalAsset : 0;
+  const dailyRate = latestSnap && latestSnap.totalAsset > 0 ? (dailyChange / latestSnap.totalAsset) * 100 : 0;
 
   // 월간/연간 증감
   const thisMonth = today.slice(0, 7);
@@ -138,7 +139,13 @@ export function NewDashboard() {
             { label: '총 자산', value: totalAsset, isTotal: true },
             { label: `${new Date().getMonth()+1}월 증감`, value: monthlyChange },
             {
-              label: (() => { const t = new Date(); const days = ['일','월','화','수','목','금','토']; return `${t.getMonth()+1}/${t.getDate()} ${days[t.getDay()]} 증감`; })(),
+              label: (() => {
+                if (!latestSnap) return '증감';
+                const days = ['일','월','화','수','목','금','토'];
+                const d = new Date(latestSnap.date + 'T00:00:00+09:00');
+                const label = `${d.getMonth()+1}/${d.getDate()} ${days[d.getDay()]}`;
+                return latestSnap.date === today ? `${label} 증감` : `${label} 저장 이후`;
+              })(),
               value: dailyChange,
             },
             { label: `${new Date().getFullYear()}년 증감`, value: yearlyChange },
