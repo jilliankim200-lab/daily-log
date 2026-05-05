@@ -1169,12 +1169,6 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
               padding: '7px 16px', borderBottom: '1px solid var(--border-secondary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>안전자산</span>
-                <div style={{ width: 100, height: 6, background: 'var(--bg-elevated)', borderRadius: 3, position: 'relative', flexShrink: 0 }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, height: 6, borderRadius: 3, width: `${Math.min(projectedSafePct, 100)}%`,
-                    background: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)', transition: 'width 0.5s' }} />
-                  <div style={{ position: 'absolute', left: '30%', top: -2, width: 1.5, height: 10, background: 'var(--color-profit)', borderRadius: 1, opacity: 0.6 }} />
-                  <div style={{ position: 'absolute', left: '35%', top: -2, width: 1.5, height: 10, background: 'var(--color-warning)', borderRadius: 1, opacity: 0.6 }} />
-                </div>
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700,
                   color: safeStatus === 'good' ? 'var(--color-profit)' : safeStatus === 'over' ? 'var(--color-warning)' : 'var(--color-loss)' }}>
                   {projectedSafePct.toFixed(1)}%
