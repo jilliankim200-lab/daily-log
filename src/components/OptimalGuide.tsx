@@ -691,75 +691,111 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
   const sellsCol = (
     <div style={{ padding: '10px 14px', opacity: signalFilter?.type === 'buy' ? 0.25 : 1, transition: 'opacity 0.15s',
       background: 'var(--bg-primary)' }}>
-      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-loss)', marginBottom: 8, letterSpacing: '0.03em' }}>
+      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-loss)', marginBottom: 10, letterSpacing: '0.03em' }}>
         매도 · 총 {fmtKrw(sells.reduce((s, r) => s + r.val, 0))} 현금화
       </div>
-      {sells.map((s, i) => {
-        const sig = s.h.ticker ? signals[s.h.ticker] : undefined;
-        const timing = sig ? getSellSignal(sig) : noSignal();
-        const matched = !signalFilter || signalFilter.type !== 'sell' || isRowMatch(s.h.ticker, 'sell');
-        return (
-          <div key={s.h.id} style={{ borderBottom: i < sells.length - 1 ? '1px solid var(--border-secondary)' : 'none',
-            opacity: matched ? 1 : 0.2, transition: 'opacity 0.15s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {execMode && (
-                <button onClick={() => onToggleSell?.(`${acc.id}__${s.h.id}`)}
-                  style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
-                    border: `2px solid ${checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'var(--color-loss)' : 'var(--text-tertiary)'}`,
-                    background: checkedSells?.has(`${acc.id}__${s.h.id}`) ? 'color-mix(in srgb, var(--color-loss) 20%, transparent)' : 'var(--bg-elevated)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                  {checkedSells?.has(`${acc.id}__${s.h.id}`) && <MIcon name="check" size={14} style={{ color: 'var(--color-loss)' }} />}
-                </button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+        {sells.map((s) => {
+          const sig = s.h.ticker ? signals[s.h.ticker] : undefined;
+          const timing = sig ? getSellSignal(sig) : noSignal();
+          const matched = !signalFilter || signalFilter.type !== 'sell' || isRowMatch(s.h.ticker, 'sell');
+          const rk = `${acc.id}__${s.h.id}`;
+          const isChecked = !!checkedSells?.has(rk);
+          const cr = s.h.ticker && s.h.ticker in changeRates ? changeRates[s.h.ticker!] : null;
+          return (
+            <div key={s.h.id} style={{
+              background: 'var(--bg-secondary)', borderRadius: 10,
+              border: `1px solid ${isChecked ? 'var(--color-loss)' : 'var(--border-secondary)'}`,
+              padding: '10px 12px', opacity: matched ? 1 : 0.25, transition: 'opacity 0.15s, border-color 0.15s',
+              display: 'flex', flexDirection: 'column', gap: 6,
+            }}>
+              {/* 상단: 배지 + execMode 체크박스 */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700,
+                    background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)', color: 'var(--color-loss)',
+                    borderRadius: 5, padding: '2px 7px' }}>전량매도</span>
+                  {s.cls && (
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600,
+                      background: `color-mix(in srgb, ${ASSET_COLORS[s.cls]} var(--badge-mix), transparent)`, color: ASSET_COLORS[s.cls],
+                      borderRadius: 4, padding: '1px 5px' }}>{s.cls}</span>
+                  )}
+                </div>
+                {execMode && (
+                  <button onClick={() => onToggleSell?.(rk)}
+                    style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, cursor: 'pointer',
+                      border: `2px solid ${isChecked ? 'var(--color-loss)' : 'var(--text-tertiary)'}`,
+                      background: isChecked ? 'color-mix(in srgb, var(--color-loss) 20%, transparent)' : 'var(--bg-elevated)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    {isChecked && <MIcon name="check" size={14} style={{ color: 'var(--color-loss)' }} />}
+                  </button>
+                )}
+              </div>
+              {/* 종목명 */}
+              <div
+                onClick={s.h.ticker && onNameClick ? () => onNameClick!(s.h.ticker!, s.h.name) : undefined}
+                style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)',
+                  cursor: s.h.ticker && onNameClick ? 'pointer' : 'default',
+                  lineHeight: 1.35, wordBreak: 'keep-all' }}>
+                {s.h.name}
+              </div>
+              {/* 구분선 */}
+              <div style={{ height: 1, background: 'var(--border-secondary)' }} />
+              {/* 현재가 + 등락률 */}
+              {(sig?.currentPrice || cr !== null) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {sig?.currentPrice && !s.h.isFund && (
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {sig.currentPrice.toLocaleString()}원
+                    </span>
+                  )}
+                  {cr !== null && !s.h.isFund && (
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700,
+                      color: cr > 0 ? 'var(--color-profit)' : cr < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)' }}>
+                      {cr > 0 ? '+' : ''}{cr.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
               )}
-              {execMode && checkedSells?.has(`${acc.id}__${s.h.id}`) && (() => {
-                const rk = `${acc.id}__${s.h.id}`;
-                const max = s.h.isFund ? (s.h.amount || 0) : (s.h.quantity || 0);
-                const val = executionInputs?.[rk] ?? max;
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-                    <input type="number" min={0} max={max} value={val}
-                      onChange={e => onExecutionInputChange?.(rk, Math.max(0, Math.min(max, Number(e.target.value) || 0)))}
-                      onClick={e => e.currentTarget.select()}
-                      style={{
-                        width: 56, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-secondary)',
-                        background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-                        fontSize: 'var(--text-xs)', textAlign: 'right',
-                      }}
-                      aria-label="매도 실행 수량" />
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{s.h.isFund ? '원' : '주'}</span>
-                  </div>
-                );
-              })()}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Row badge="전량매도" badgeColor="var(--color-loss)" name={s.h.name} cls={s.cls}
-                  ticker={s.h.ticker} onNameClick={onNameClick}
-                  ret={s.ret} amount={s.val}
-                  note={s.h.isFund ? undefined : s.h.quantity ? `${s.h.quantity}주` : undefined}
-                  dim={!matched} badgeTip={s.reasonDetail || undefined}
-                  extra={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {sig?.currentPrice && !s.h.isFund && (
-                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                          {sig.currentPrice.toLocaleString()}원
-                        </span>
-                      )}
-                      {s.h.ticker && s.h.ticker in changeRates && !s.h.isFund && (() => {
-                        const cr = changeRates[s.h.ticker!];
-                        return (
-                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap',
-                            color: cr > 0 ? 'var(--color-profit)' : cr < 0 ? 'var(--color-loss)' : 'var(--text-tertiary)' }}>
-                            {cr > 0 ? '+' : ''}{cr.toFixed(2)}%
-                          </span>
-                        );
-                      })()}
-                      <TimingBadge timing={timing} />
+              {/* 평가금액 + 수익률 + 수량 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  {fmtKrw(s.val)}
+                </span>
+                {s.ret != null && (
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700,
+                    color: s.ret >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                    {s.ret >= 0 ? '+' : ''}{s.ret.toFixed(1)}%
+                  </span>
+                )}
+                {!s.h.isFund && s.h.quantity && (
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{s.h.quantity}주</span>
+                )}
+              </div>
+              {/* 매도 신호 + execMode 수량 입력 */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, flexWrap: 'wrap' }}>
+                <TimingBadge timing={timing} />
+                {execMode && isChecked && (() => {
+                  const max = s.h.isFund ? (s.h.amount || 0) : (s.h.quantity || 0);
+                  const val = executionInputs?.[rk] ?? max;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <input type="number" min={0} max={max} value={val}
+                        onChange={e => onExecutionInputChange?.(rk, Math.max(0, Math.min(max, Number(e.target.value) || 0)))}
+                        onClick={e => e.currentTarget.select()}
+                        style={{ width: 56, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-secondary)',
+                          background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                          fontSize: 'var(--text-xs)', textAlign: 'right' }}
+                        aria-label="매도 실행 수량" />
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{s.h.isFund ? '원' : '주'}</span>
                     </div>
-                  } />
+                  );
+                })()}
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 
