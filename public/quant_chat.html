@@ -6,99 +6,99 @@
 <title>퀀트 Q&A 대화 아카이브</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.7}
+body{background:#f8fafc;color:#1e293b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.7}
 
 /* ── 레이아웃 ── */
 .wrap{display:flex;min-height:100vh}
-.toc{width:200px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
-  padding:24px 14px;border-right:1px solid #1e293b;background:#0a1120}
+.toc{width:210px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+  padding:24px 14px;border-right:1px solid #e2e8f0;background:#fff}
 .content{flex:1;padding:36px 44px 80px;max-width:860px}
 
 /* ── TOC ── */
-.toc-title{font-size:10px;font-weight:700;color:#475569;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.toc-title{font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
 .toc a{display:block;font-size:12px;color:#64748b;padding:5px 8px;border-radius:6px;text-decoration:none;
   transition:color .15s,background .15s;margin-bottom:2px}
-.toc a:hover,.toc a.active{color:#38bdf8;background:rgba(56,189,248,.08)}
-.toc-sep{height:1px;background:#1e293b;margin:10px 0}
+.toc a:hover,.toc a.active{color:#2563eb;background:rgba(37,99,235,.07)}
+.toc-sep{height:1px;background:#e2e8f0;margin:10px 0}
 .toc-back{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;
   padding:5px 8px;border-radius:6px;text-decoration:none;margin-bottom:14px;
-  border:1px solid #1e293b;transition:all .15s}
-.toc-back:hover{color:#38bdf8;border-color:#38bdf8;background:rgba(56,189,248,.06)}
+  border:1px solid #e2e8f0;transition:all .15s}
+.toc-back:hover{color:#2563eb;border-color:#2563eb;background:rgba(37,99,235,.05)}
 
 /* ── 헤더 ── */
-.page-label{font-size:10px;font-weight:700;color:#38bdf8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
-.page-title{font-size:24px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;margin-bottom:6px}
-.page-sub{font-size:13px;color:#64748b;margin-bottom:28px}
-.divider{height:1px;background:linear-gradient(90deg,#334155,transparent);margin-bottom:28px}
+.page-label{font-size:10px;font-weight:700;color:#2563eb;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.page-title{font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-.5px;margin-bottom:6px}
+.page-sub{font-size:13px;color:#94a3b8;margin-bottom:28px}
+.divider{height:1px;background:linear-gradient(90deg,#cbd5e1,transparent);margin-bottom:28px}
 
 /* ── 날짜 구분선 ── */
-.date-sep{text-align:center;font-size:11px;color:#475569;letter-spacing:.08em;
+.date-sep{text-align:center;font-size:11px;color:#94a3b8;letter-spacing:.08em;
   margin:36px 0 28px;position:relative}
-.date-sep::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:#1e293b}
-.date-sep span{position:relative;background:#0f172a;padding:0 14px}
+.date-sep::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:#e2e8f0}
+.date-sep span{position:relative;background:#f8fafc;padding:0 14px}
 
 /* ── 주제 태그 ── */
 .topic{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
-  padding:3px 10px;border-radius:20px;background:rgba(56,189,248,.1);color:#38bdf8;
-  border:1px solid rgba(56,189,248,.2);margin-bottom:20px}
+  padding:3px 10px;border-radius:20px;background:rgba(37,99,235,.07);color:#2563eb;
+  border:1px solid rgba(37,99,235,.2);margin-bottom:20px}
 
 /* ── 채팅 버블 ── */
-.chat-section{margin-bottom:40px;scroll-margin-top:24px}
-.q-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:#475569;margin-bottom:10px;padding-left:4px}
+.chat-section{margin-bottom:44px;scroll-margin-top:24px}
 
 .msg-row{display:flex;gap:12px;margin-bottom:20px;align-items:flex-start}
 .msg-row.user{flex-direction:row-reverse}
 
 .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
-.av-user{background:#1d4ed8;color:#fff}
-.av-ai{background:#1e293b;color:#94a3b8;border:1px solid #334155;font-size:11px}
+.av-user{background:#2563eb;color:#fff}
+.av-ai{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-size:11px;font-weight:700}
 
-.bubble{max-width:80%;padding:12px 16px;border-radius:14px;font-size:13.5px;line-height:1.8;color:#cbd5e1}
-.bubble-user{background:#1d4ed8;border-radius:14px 4px 14px 14px;color:#eff6ff;font-size:14px;font-weight:500}
-.bubble-ai{background:#1e293b;border:1px solid #334155;border-radius:4px 14px 14px 14px}
+.bubble{max-width:80%;padding:13px 17px;border-radius:14px;font-size:13.5px;line-height:1.85}
+.bubble-user{background:#2563eb;border-radius:14px 4px 14px 14px;color:#fff;font-size:14px;font-weight:500}
+.bubble-ai{background:#fff;border:1px solid #e2e8f0;border-radius:4px 14px 14px 14px;
+  color:#475569;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 
-/* ── 버블 내부 스타일 ── */
-.bubble-ai h4{color:#f1f5f9;font-size:13px;font-weight:700;margin:14px 0 6px}
+/* ── 버블 내부 ── */
+.bubble-ai h4{color:#0f172a;font-size:13px;font-weight:700;margin:16px 0 6px}
 .bubble-ai h4:first-child{margin-top:0}
-.bubble-ai p{margin:5px 0;color:#94a3b8}
-.bubble-ai strong{color:#e2e8f0}
+.bubble-ai p{margin:5px 0;color:#475569}
+.bubble-ai strong{color:#1e293b}
 .bubble-ai ul{padding-left:16px;margin:6px 0}
-.bubble-ai li{margin-bottom:4px;color:#94a3b8}
+.bubble-ai li{margin-bottom:4px;color:#475569}
 
-.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
-.tbl th{background:#0f172a;color:#64748b;font-weight:600;padding:7px 10px;
-  border-bottom:1px solid #334155;text-align:left}
-.tbl td{padding:7px 10px;border-bottom:1px solid #1e293b;color:#94a3b8}
-.tbl td.g{color:#22c55e;font-weight:700}
-.tbl td.r{color:#ef4444;font-weight:700}
-.tbl td.o{color:#f97316;font-weight:700}
-.tbl td.b{color:#3b82f6;font-weight:700}
+/* ── 테이블 ── */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0;border-radius:8px;overflow:hidden}
+.tbl th{background:#f1f5f9;color:#64748b;font-weight:600;padding:8px 11px;
+  border-bottom:1px solid #e2e8f0;text-align:left}
+.tbl td{padding:8px 11px;border-bottom:1px solid #f1f5f9;color:#475569}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td.g{color:#16a34a;font-weight:700}
+.tbl td.r{color:#dc2626;font-weight:700}
+.tbl td.o{color:#ea580c;font-weight:700}
+.tbl td.b{color:#2563eb;font-weight:700}
 
-.note{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);
-  border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;
-  padding:10px 14px;margin:10px 0;font-size:13px;color:#94a3b8;line-height:1.7}
-.warn{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);
-  border-left:3px solid #ef4444;border-radius:0 8px 8px 0;
-  padding:10px 14px;margin:10px 0;font-size:13px;color:#94a3b8;line-height:1.7}
-.tip{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);
-  border-left:3px solid #22c55e;border-radius:0 8px 8px 0;
-  padding:10px 14px;margin:10px 0;font-size:13px;color:#94a3b8;line-height:1.7}
+/* ── 콜아웃 박스 ── */
+.note{background:#eff6ff;border:1px solid #bfdbfe;border-left:3px solid #3b82f6;
+  border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:13px;color:#1e40af;line-height:1.7}
+.warn{background:#fff7ed;border:1px solid #fed7aa;border-left:3px solid #f97316;
+  border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:13px;color:#9a3412;line-height:1.7}
+.tip{background:#f0fdf4;border:1px solid #bbf7d0;border-left:3px solid #22c55e;
+  border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:13px;color:#15803d;line-height:1.7}
 
+/* ── 태그 ── */
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;
   border-radius:4px;margin-right:5px;margin-bottom:3px}
-.tag-g{background:rgba(34,197,94,.15);color:#22c55e}
-.tag-r{background:rgba(239,68,68,.15);color:#ef4444}
-.tag-b{background:rgba(59,130,246,.15);color:#3b82f6}
-.tag-o{background:rgba(249,115,22,.15);color:#f97316}
-.tag-y{background:rgba(234,179,8,.15);color:#eab308}
+.tag-g{background:#dcfce7;color:#16a34a}
+.tag-r{background:#fee2e2;color:#dc2626}
+.tag-b{background:#dbeafe;color:#2563eb}
+.tag-o{background:#ffedd5;color:#ea580c}
+.tag-y{background:#fef9c3;color:#ca8a04}
 
 /* ── 반응형 ── */
 @media(max-width:640px){
   .toc{display:none}
   .content{padding:20px 16px 60px}
-  .bubble{max-width:92%}
+  .bubble{max-width:93%}
 }
 </style>
 </head>
@@ -125,7 +125,7 @@ body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFo
     <div class="page-sub">듀얼 모멘텀 전략 운용 중 실제 나눈 질문과 답변 — 2026년 5월 6일</div>
     <div class="divider"></div>
 
-    <div class="date-sep"><span>📅 2026년 5월 6일 — 듀얼 모멘텀 전략 Q&A</span></div>
+    <div class="date-sep"><span style="background:#f8fafc">📅 2026년 5월 6일 — 듀얼 모멘텀 전략 Q&A</span></div>
 
     <!-- Q1 -->
     <div class="chat-section" id="q1">
@@ -234,7 +234,7 @@ body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFo
       </div>
     </div>
 
-    <div class="date-sep"><span>📅 2026년 5월 6일 — ETF 선택 & 분산 전략</span></div>
+    <div class="date-sep"><span style="background:#f8fafc">📅 2026년 5월 6일 — ETF 선택 & 분산 전략</span></div>
 
     <!-- Q5 -->
     <div class="chat-section" id="q5">
