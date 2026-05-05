@@ -807,7 +807,10 @@ export function QuantBasics() {
                 </div>
                 <Table>
                   <thead>
-                    <tr><Th>순위</Th><Th>자산명</Th><Th>ETF 코드</Th><Th>6M 수익률</Th><Th>이번 달 액션</Th></tr>
+                    <tr>
+                      <Th>순위</Th><Th>자산명</Th><Th>ETF 코드</Th><Th>6M 수익률</Th>
+                      <Th>이번 달 액션 <span style={{ fontWeight: 400, opacity: 0.6 }}>①만 보유</span></Th>
+                    </tr>
                   </thead>
                   <tbody>
                     {[...signal.assets]
@@ -821,12 +824,20 @@ export function QuantBasics() {
                             {asset.r6m === null ? "—" : `${asset.r6m >= 0 ? "+" : ""}${asset.r6m.toFixed(1)}%`}
                           </Td>
                           <Td color={i === 0 && !signal.isSafe ? "#22c55e" : "#ef4444"}>
-                            {i === 0 && !signal.isSafe ? "✓ 보유 유지" : "✕ 보유 금지"}
+                            {i === 0 && !signal.isSafe ? "✓ 보유 유지" : "✕ 보유 금지 → 매도"}
                           </Td>
                         </tr>
                       ))}
                   </tbody>
                 </Table>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.7,
+                  background: "rgba(239,68,68,.05)", border: "1px solid rgba(239,68,68,.15)",
+                  borderRadius: 8, padding: "8px 12px" }}>
+                  <strong style={{ color: "#ef4444" }}>✕ 보유 금지</strong>란?
+                  &nbsp;이 전략은 <strong style={{ color: "var(--text-primary)" }}>1위 자산 단일 집중 보유</strong>입니다.
+                  &nbsp;현재 보유 중인 자산이 1위가 아니라면 <strong style={{ color: "#ef4444" }}>전량 매도</strong>하고
+                  &nbsp;<strong style={{ color: "#22c55e" }}>{signal.isSafe ? "단기채권(153130)" : `${signal.topAsset}(${signal.topTicker})`}</strong>으로 통합하세요.
+                </div>
               </div>
             )}
 
