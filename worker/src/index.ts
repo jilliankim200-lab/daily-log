@@ -732,17 +732,37 @@ export default {
     // GET /exchange-rates
     if (request.method === 'GET' && url.pathname === '/exchange-rates') {
       try {
-        const [usdRes, jpyRes] = await Promise.all([
+        const [usdRes, jpyRes, wtiRes] = await Promise.all([
           fetch('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
           fetch('https://api.stock.naver.com/marketindex/exchange/FX_JPYKRW', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
         ]);
-        const [usdData, jpyData]: any[] = await Promise.all([usdRes.json(), jpyRes.json()]);
+        const [usdData, jpyData, wtiData]: any[] = await Promise.all([usdRes.json(), jpyRes.json(), wtiRes.json()]);
+
+        const parseFxField = (d: any, field: string) => {
+          const info = d.exchangeInfo ?? d;
+          return parseFloat((info[field] ?? '0').toString().replace(/,/g, '')) || 0;
+        };
+
+        const wtiMeta = wtiData.chart?.result?.[0]?.meta ?? {};
+        const wtiPrice = wtiMeta.regularMarketPrice ?? 0;
+        const wtiPrev  = wtiMeta.chartPreviousClose ?? wtiPrice;
+        const wtiChange = wtiPrice - wtiPrev;
+        const wtiChangeRate = wtiPrev > 0 ? (wtiChange / wtiPrev) * 100 : 0;
+
         return json({
-          usd: parseFloat(usdData.closePrice?.replace(/,/g, '') || '0'),
-          jpy: parseFloat(jpyData.closePrice?.replace(/,/g, '') || '0'),
+          usd: parseFxField(usdData, 'closePrice'),
+          usdChange: parseFxField(usdData, 'fluctuations'),
+          usdChangeRate: parseFxField(usdData, 'fluctuationsRatio'),
+          jpy: parseFxField(jpyData, 'closePrice'),
+          jpyChange: parseFxField(jpyData, 'fluctuations'),
+          jpyChangeRate: parseFxField(jpyData, 'fluctuationsRatio'),
+          wti: parseFloat(wtiPrice.toFixed(2)),
+          wtiChange: parseFloat(wtiChange.toFixed(2)),
+          wtiChangeRate: parseFloat(wtiChangeRate.toFixed(2)),
         });
       } catch {
-        return json({ usd: 0, jpy: 0 });
+        return json({ usd: 0, usdChange: 0, usdChangeRate: 0, jpy: 0, jpyChange: 0, jpyChangeRate: 0, wti: 0, wtiChange: 0, wtiChangeRate: 0 });
       }
     }
 

@@ -71,8 +71,8 @@ const MENU_ITEMS = [
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
-  { id: "calc-checklist", label: "계산식 검증", materialIcon: "fact_check" },
   { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance" },
+  { id: "calc-checklist", label: "계산식 검증", materialIcon: "fact_check" },
 ];
 
 const FONT_SCALE = 1.15;

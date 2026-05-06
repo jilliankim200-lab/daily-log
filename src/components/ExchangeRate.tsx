@@ -4,62 +4,62 @@ import { MIcon } from './MIcon';
 const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 interface ExchangeRateData {
-  usd: number;
-  jpy: number;
+  usd: number; usdChange: number; usdChangeRate: number;
+  jpy: number; jpyChange: number; jpyChangeRate: number;
+  wti: number; wtiChange: number; wtiChangeRate: number;
+}
+
+function RateItem({ label, value, unit, changeRate }: {
+  label: string; value: number; unit: string; changeRate: number;
+}) {
+  const isUp = changeRate > 0;
+  const isDown = changeRate < 0;
+  const color = isUp ? 'var(--color-profit)' : isDown ? 'var(--color-loss)' : 'var(--text-tertiary)';
+  const arrow = isUp ? '▲' : isDown ? '▼' : '';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-blue)' }}>{label}</span>
+      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+        {value.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}
+      </span>
+      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{unit}</span>
+      {changeRate !== 0 && (
+        <span style={{ fontSize: 11, fontWeight: 600, color }}>
+          {arrow}{Math.abs(changeRate).toFixed(2)}%
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function ExchangeRate() {
-  const [rates, setRates] = useState<ExchangeRateData>({ usd: 0, jpy: 0 });
-  const [loading, setLoading] = useState(true);
+  const [rates, setRates] = useState<ExchangeRateData | null>(null);
 
   useEffect(() => {
-    fetchExchangeRates();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    fetch(`${WORKER_URL}/exchange-rates`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(setRates)
+      .catch(() => {})
+      .finally(() => clearTimeout(timeoutId));
   }, []);
 
-  const fetchExchangeRates = async () => {
-    try {
-      setLoading(true);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+  if (!rates) return null;
 
-      const response = await fetch(`${WORKER_URL}/exchange-rates`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error(`Failed to fetch exchange rates: ${response.statusText}`);
-
-      const data = await response.json();
-      setRates({ usd: data.usd || 0, jpy: data.jpy || 0 });
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log('Exchange rate request timed out');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return null;
+  const divider = (
+    <div style={{ width: 1, height: 14, background: 'var(--border-primary)', flexShrink: 0 }} />
+  );
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2">
-      <MIcon name="trending_up" size={16} style={{ color: 'rgb(37 99 235)' }} />
-      <div className="flex items-center gap-4">
-        <div className="flex items-baseline gap-1">
-          <span className="text-[13px] font-semibold text-blue-600 dark:text-blue-400">USD</span>
-          <span className="text-[15px] font-bold text-[#1d1d1f] dark:text-white">
-            {rates.usd.toLocaleString()}
-          </span>
-          <span className="text-[12px] text-[#86868b] dark:text-[#d1d5dc]">원</span>
-        </div>
-        <div className="w-px h-4 bg-[--color-gray-300] dark:bg-gray-600" />
-        <div className="flex items-baseline gap-1">
-          <span className="text-[13px] font-semibold text-blue-600 dark:text-blue-400">JPY</span>
-          <span className="text-[15px] font-bold text-[#1d1d1f] dark:text-white">
-            {rates.jpy.toLocaleString()}
-          </span>
-          <span className="text-[12px] text-[#86868b] dark:text-[#d1d5dc]">원</span>
-        </div>
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
+      <MIcon name="trending_up" size={16} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
+      <RateItem label="USD" value={rates.usd} unit="원" changeRate={rates.usdChangeRate} />
+      {divider}
+      <RateItem label="JPY" value={rates.jpy} unit="원" changeRate={rates.jpyChangeRate} />
+      {divider}
+      <RateItem label="WTI" value={rates.wti} unit="$" changeRate={rates.wtiChangeRate} />
     </div>
   );
 }
