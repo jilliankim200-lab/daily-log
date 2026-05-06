@@ -1,22 +1,10 @@
 import React, { useState } from 'react';
-import { useAppContext } from '../App';
-import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
-import { MIcon } from './MIcon';
 
 type NgfEtf = {
   ticker: string;
   name: string;
   sector: string;  // "A" ~ "F"
   label: string;   // "AI·반도체" 등
-};
-
-const SECTOR_COLORS: Record<string, string> = {
-  A: '#4FC3F7',
-  B: '#81C784',
-  C: '#FFB74D',
-  D: '#E57373',
-  E: '#BA68C8',
-  F: '#4DB6AC',
 };
 
 const DEFAULT_ETFS: NgfEtf[] = [
