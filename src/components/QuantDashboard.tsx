@@ -83,16 +83,26 @@ const CAT: Record<string, number> = { "국내주식": 0, "커버드콜": 0, "국
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STRAT_NAMES = Object.keys(STRAT);
 const STRAT_COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fb923c", "#a78bfa"];
-const FONT_COLOR = "#94a3b8";
-const GRID_COLOR = "#334155";
-const PAPER = "#1e293b";
 
-const DARK_LAYOUT = {
-  paper_bgcolor: PAPER,
-  plot_bgcolor: PAPER,
-  font: { color: FONT_COLOR, family: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", size: 12 },
-  margin: { t: 10, r: 10, b: 40, l: 50 },
-};
+function getCSSVar(n: string) {
+  return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || undefined;
+}
+
+function getPlotLayout(extra?: object) {
+  return {
+    paper_bgcolor: "transparent",
+    plot_bgcolor: "transparent",
+    font: {
+      color: getCSSVar("--text-tertiary") || "#94a3b8",
+      family: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      size: 12,
+    },
+    margin: { t: 10, r: 10, b: 40, l: 50 },
+    ...extra,
+  };
+}
+
+function getGridColor() { return getCSSVar("--border-primary") || "#E5E8EB"; }
 
 const ASSET_COLORS: Record<string, string> = {
   "나스닥100":  "#818cf8",
@@ -101,7 +111,7 @@ const ASSET_COLORS: Record<string, string> = {
   "코스닥150":  "#22d3ee",
   "반도체":     "#fb923c",
   "미국채10년": "#34d399",
-  "금":         "#fbbf24",
+  "금":         "#b45309",
   "단기채권":   "#94a3b8",
 };
 
@@ -111,7 +121,7 @@ const CAT_COLORS: Record<string, string> = {
   "커버드콜":   "#fb923c",
   "국내채권":   "#34d399",
   "미국채권":   "#a78bfa",
-  "원자재/기타":"#fbbf24",
+  "원자재/기타":"#b45309",
 };
 
 const CAT_SHORT: Record<string, string> = {
@@ -122,7 +132,7 @@ const CAT_SHORT: Record<string, string> = {
 };
 
 const SIGNAL_LABEL: Record<string, string> = { green: "상승 유지", yellow: "경고", red: "크래시 위험" };
-const SIGNAL_COLOR: Record<string, string> = { green: "#34d399", yellow: "#fbbf24", red: "#f87171" };
+const SIGNAL_COLOR: Record<string, string> = { green: "#34d399", yellow: "#b45309", red: "#f87171" };
 
 // ─── Signal helpers ───────────────────────────────────────────────────────────
 function getMomentumSignal(d: { r3m: number; r6m: number }): "green" | "yellow" | "red" {
@@ -136,6 +146,7 @@ function getMomentumSignal(d: { r3m: number; r6m: number }): "green" | "yellow" 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function QuantDashboard() {
   const [plotlyReady, setPlotlyReady] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [dmModalOpen, setDmModalOpen] = useState(false);
   const [crashFilter, setCrashFilter] = useState<"all" | "green" | "yellow" | "red">("all");
   const [crashGuideOpen, setCrashGuideOpen] = useState(false);
@@ -147,6 +158,15 @@ export function QuantDashboard() {
   const refAnn   = useRef<HTMLDivElement>(null);
   const refHold  = useRef<HTMLDivElement>(null);
   const refDonut = useRef<HTMLDivElement>(null);
+
+  // Track dark mode changes
+  useEffect(() => {
+    const obs = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    obs.observe(document.documentElement, { attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
 
   // Load Plotly
   useEffect(() => {
@@ -165,10 +185,12 @@ export function QuantDashboard() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  // Initialize all charts
+  // Initialize all charts — re-renders on dark/light switch
   useEffect(() => {
     if (!plotlyReady) return;
     const Plotly = (window as any).Plotly;
+    const layout = getPlotLayout();
+    const gridColor = getGridColor();
 
     // Chart 1: Cumulative Return (NAV)
     if (refNav.current) {
@@ -186,10 +208,10 @@ export function QuantDashboard() {
         hovertemplate: "%{x}<br>" + name + ": <b>%{y:.1f}</b><extra></extra>",
       }));
       Plotly.newPlot(refNav.current, navTraces, {
-        ...DARK_LAYOUT,
+        ...layout,
         margin: { t: 10, r: 20, b: 50, l: 55 },
-        xaxis: { gridcolor: GRID_COLOR, tickformat: "%Y-%m", nticks: 12 },
-        yaxis: { gridcolor: GRID_COLOR, ticksuffix: "" },
+        xaxis: { gridcolor: gridColor, tickformat: "%Y-%m", nticks: 12 },
+        yaxis: { gridcolor: gridColor, ticksuffix: "" },
         legend: { orientation: "h", y: -0.2, x: 0.5, xanchor: "center", font: { size: 11 } },
         hovermode: "x unified",
       }, { responsive: true, displayModeBar: false });
@@ -202,6 +224,7 @@ export function QuantDashboard() {
       const momX = displayMom.map(d => d.r3m);
       const momColors = displayMom.map(d => d.r3m >= 0 ? "#34d399" : "#f87171");
       const momOpacity = displayMom.map(d => Math.min(0.4 + Math.abs(d.r3m) / 30, 1.0));
+      const fontColor = getCSSVar("--text-tertiary") || "#94a3b8";
       Plotly.newPlot(refMom.current, [{
         type: "bar",
         orientation: "h",
@@ -211,12 +234,12 @@ export function QuantDashboard() {
         hovertemplate: "<b>%{y}</b><br>3M: %{x:.1f}%<extra></extra>",
         text: displayMom.map(d => d.r3m >= 0 ? "+" + d.r3m + "%" : d.r3m + "%"),
         textposition: "outside",
-        textfont: { size: 10, color: FONT_COLOR },
+        textfont: { size: 10, color: fontColor },
         cliponaxis: false,
       }], {
-        ...DARK_LAYOUT,
+        ...layout,
         margin: { t: 10, r: 60, b: 40, l: 160 },
-        xaxis: { gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: "#475569", ticksuffix: "%" },
+        xaxis: { gridcolor: gridColor, zeroline: true, zerolinecolor: gridColor, ticksuffix: "%" },
         yaxis: { gridcolor: "transparent", automargin: true, tickfont: { size: 11 } },
         bargap: 0.25,
       }, { responsive: true, displayModeBar: false });
@@ -245,10 +268,10 @@ export function QuantDashboard() {
         };
       });
       Plotly.newPlot(refRR.current, rrTraces, {
-        ...DARK_LAYOUT,
+        ...layout,
         margin: { t: 20, r: 20, b: 45, l: 50 },
-        xaxis: { gridcolor: GRID_COLOR, title: "MDD (%)", autorange: "reversed", ticksuffix: "%" },
-        yaxis: { gridcolor: GRID_COLOR, title: "CAGR (%)", ticksuffix: "%" },
+        xaxis: { gridcolor: gridColor, title: "MDD (%)", autorange: "reversed", ticksuffix: "%" },
+        yaxis: { gridcolor: gridColor, title: "CAGR (%)", ticksuffix: "%" },
         showlegend: false,
       }, { responsive: true, displayModeBar: false });
     }
@@ -267,10 +290,10 @@ export function QuantDashboard() {
         hovertemplate: "%{x}: <b>%{y:.1f}%</b><extra>" + name + "</extra>",
       }));
       Plotly.newPlot(refAnn.current, annTraces, {
-        ...DARK_LAYOUT,
+        ...layout,
         margin: { t: 10, r: 10, b: 50, l: 50 },
-        xaxis: { gridcolor: GRID_COLOR },
-        yaxis: { gridcolor: GRID_COLOR, ticksuffix: "%", zeroline: true, zerolinecolor: "#475569" },
+        xaxis: { gridcolor: gridColor },
+        yaxis: { gridcolor: gridColor, ticksuffix: "%", zeroline: true, zerolinecolor: gridColor },
         barmode: "group",
         bargap: 0.15,
         bargroupgap: 0.05,
@@ -286,14 +309,14 @@ export function QuantDashboard() {
         name: asset,
         x: BT_M,
         y: HOLDS.map(h => (h === asset ? 1 : 0)),
-        marker: { color: ASSET_COLORS[asset] || "#64748b", opacity: 0.85 },
+        marker: { color: ASSET_COLORS[asset] || "#94a3b8", opacity: 0.85 },
         hovertemplate: "%{x}: <b>" + asset + "</b><extra></extra>",
       }));
       Plotly.newPlot(refHold.current, holdTraces, {
-        ...DARK_LAYOUT,
+        ...layout,
         margin: { t: 10, r: 10, b: 50, l: 30 },
         barmode: "stack",
-        xaxis: { gridcolor: GRID_COLOR, nticks: 12 },
+        xaxis: { gridcolor: gridColor, nticks: 12 },
         yaxis: { gridcolor: "transparent", showticklabels: false, range: [0, 1.1] },
         legend: { orientation: "h", y: -0.25, x: 0.5, xanchor: "center", font: { size: 11 } },
       }, { responsive: true, displayModeBar: false });
@@ -303,30 +326,29 @@ export function QuantDashboard() {
     if (refDonut.current) {
       const catLabels = Object.keys(CAT);
       const catVals = catLabels.map(k => CAT[k]);
-      const catColors = catLabels.map(k => CAT_COLORS[k] || "#64748b");
+      const catColors = catLabels.map(k => CAT_COLORS[k] || "#94a3b8");
       Plotly.newPlot(refDonut.current, [{
         type: "pie",
         labels: catLabels,
         values: catVals,
         hole: 0.52,
-        marker: { colors: catColors, line: { color: PAPER, width: 2 } },
+        marker: { colors: catColors, line: { color: "transparent", width: 2 } },
         textinfo: "label+percent",
         textfont: { size: 11 },
         hovertemplate: "<b>%{label}</b><br>%{value:,.0f}원<br>%{percent}<extra></extra>",
       }], {
-        ...DARK_LAYOUT,
+        ...layout,
         margin: { t: 20, r: 10, b: 20, l: 10 },
         showlegend: false,
       }, { responsive: true, displayModeBar: false });
     }
 
-    // Cleanup
     return () => {
       [refNav, refMom, refRR, refAnn, refHold, refDonut].forEach(ref => {
         if (ref.current) { try { Plotly.purge(ref.current); } catch (_) {} }
       });
     };
-  }, [plotlyReady]);
+  }, [plotlyReady, isDark]);
 
   // ─── Crash detection data ─────────────────────────────────────────────────
   const signalData = MOM.map(d => ({ ...d, signal: getMomentumSignal(d) }));
@@ -338,7 +360,7 @@ export function QuantDashboard() {
 
   // ─── Panel style ──────────────────────────────────────────────────────────
   const panelStyle: React.CSSProperties = {
-    background: "var(--bg-card)",
+    background: "var(--bg-secondary)",
     border: "1px solid var(--border-primary)",
     borderRadius: 10,
     padding: 16,
@@ -347,7 +369,7 @@ export function QuantDashboard() {
   const panelTitleStyle: React.CSSProperties = {
     fontSize: 13,
     fontWeight: 600,
-    color: "#94a3b8",
+    color: "var(--text-tertiary)",
     letterSpacing: "0.5px",
     textTransform: "uppercase",
     marginBottom: 4,
@@ -355,7 +377,7 @@ export function QuantDashboard() {
 
   const panelSubStyle: React.CSSProperties = {
     fontSize: 12,
-    color: "#475569",
+    color: "var(--text-tertiary)",
     marginBottom: 12,
   };
 
@@ -373,21 +395,21 @@ export function QuantDashboard() {
           }}
         >
           <div style={{
-            background: "var(--bg-elevated, #1e293b)",
-            border: "1px solid var(--border-primary, #334155)",
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-primary)",
             borderRadius: 14,
             width: "100%", maxWidth: 680, maxHeight: "88vh", overflowY: "auto",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.4)",
           }}>
             {/* Modal header */}
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "20px 24px 16px",
-              borderBottom: "1px solid #334155",
-              position: "sticky", top: 0, background: "#1e293b", zIndex: 1,
+              borderBottom: "1px solid var(--border-primary)",
+              position: "sticky", top: 0, background: "var(--bg-elevated)", zIndex: 1,
             }}>
               <div style={{ display: "flex", alignItems: "center" }}>
-                <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", letterSpacing: "-0.3px", margin: 0 }}>
+                <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
                   듀얼 모멘텀 전략
                 </h3>
                 <span style={{
@@ -400,7 +422,7 @@ export function QuantDashboard() {
                 onClick={() => setDmModalOpen(false)}
                 style={{
                   width: 28, height: 28, borderRadius: 6, border: "none",
-                  background: "#334155", color: "#94a3b8", fontSize: 16, cursor: "pointer",
+                  background: "var(--bg-tertiary)", color: "var(--text-tertiary)", fontSize: 16, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}
               >✕</button>
@@ -409,7 +431,7 @@ export function QuantDashboard() {
             {/* Modal body */}
             <div style={{ padding: "20px 24px 28px" }}>
               <div style={{
-                fontSize: 15, color: "#e2e8f0", background: "rgba(56,189,248,.08)",
+                fontSize: 15, color: "var(--text-secondary)", background: "rgba(56,189,248,.08)",
                 borderLeft: "3px solid #38bdf8", borderRadius: "0 8px 8px 0",
                 padding: "12px 16px", marginBottom: 22, lineHeight: 1.7,
               }}>
@@ -426,20 +448,20 @@ export function QuantDashboard() {
                   <thead>
                     <tr>
                       {["모멘텀","역할","질문"].map(h => (
-                        <th key={h} style={{ background: "#0f172a", color: "#64748b", fontSize: 11, fontWeight: 600, letterSpacing: ".05em", padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #334155" }}>{h}</th>
+                        <th key={h} style={{ background: "var(--bg-secondary)", color: "var(--text-tertiary)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em", padding: "8px 12px", textAlign: "left", borderBottom: "1px solid var(--border-primary)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}><strong style={{ color: "#38bdf8" }}>① 상대 모멘텀</strong></td>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}>위험자산 5개 중 <strong>무엇을</strong> 살지 결정</td>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}>6개월 수익률 1위는 누구인가?</td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}><strong style={{ color: "#38bdf8" }}>① 상대 모멘텀</strong></td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}>위험자산 5개 중 <strong>무엇을</strong> 살지 결정</td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}>6개월 수익률 1위는 누구인가?</td>
                     </tr>
                     <tr>
-                      <td style={{ padding: "9px 12px", color: "#cbd5e1" }}><strong style={{ color: "#a78bfa" }}>② 절대 모멘텀</strong></td>
-                      <td style={{ padding: "9px 12px", color: "#cbd5e1" }}><strong>살지 말지</strong> 결정 (시장 전체 하락 시 대피)</td>
-                      <td style={{ padding: "9px 12px", color: "#cbd5e1" }}>1위 자산의 6M 수익률 &gt; 0% 인가?</td>
+                      <td style={{ padding: "9px 12px", color: "var(--text-secondary)" }}><strong style={{ color: "#a78bfa" }}>② 절대 모멘텀</strong></td>
+                      <td style={{ padding: "9px 12px", color: "var(--text-secondary)" }}><strong>살지 말지</strong> 결정 (시장 전체 하락 시 대피)</td>
+                      <td style={{ padding: "9px 12px", color: "var(--text-secondary)" }}>1위 자산의 6M 수익률 &gt; 0% 인가?</td>
                     </tr>
                   </tbody>
                 </table>
@@ -458,8 +480,8 @@ export function QuantDashboard() {
                   "다음 달 말 동일 과정 반복 — <strong>월 1회 리밸런싱</strong>",
                 ].map((txt, i) => (
                   <div key={i} style={{ display: "flex", gap: 14, marginBottom: 10, alignItems: "flex-start" }}>
-                    <div style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: "#38bdf8", color: "#0f172a", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>{i + 1}</div>
-                    <div style={{ fontSize: 13.5, color: "#cbd5e1", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: txt }} />
+                    <div style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: "#38bdf8", color: "var(--bg-primary)", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>{i + 1}</div>
+                    <div style={{ fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: txt }} />
                   </div>
                 ))}
               </div>
@@ -474,22 +496,22 @@ export function QuantDashboard() {
                   <thead>
                     <tr>
                       {["방식","문제점"].map(h => (
-                        <th key={h} style={{ background: "#0f172a", color: "#64748b", fontSize: 11, fontWeight: 600, letterSpacing: ".05em", padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #334155" }}>{h}</th>
+                        <th key={h} style={{ background: "var(--bg-secondary)", color: "var(--text-tertiary)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em", padding: "8px 12px", textAlign: "left", borderBottom: "1px solid var(--border-primary)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}>상대 모멘텀만</td>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}>전체 시장이 폭락해도 "그나마 덜 빠진 것"을 강제 매수 → 손실</td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}>상대 모멘텀만</td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}>전체 시장이 폭락해도 "그나마 덜 빠진 것"을 강제 매수 → 손실</td>
                     </tr>
                     <tr>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}>절대 모멘텀만</td>
-                      <td style={{ padding: "9px 12px", borderBottom: "1px solid #1e3a5f", color: "#cbd5e1" }}>어떤 자산을 살지 기준이 없음</td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}>절대 모멘텀만</td>
+                      <td style={{ padding: "9px 12px", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)" }}>어떤 자산을 살지 기준이 없음</td>
                     </tr>
                     <tr>
-                      <td style={{ padding: "9px 12px", color: "#cbd5e1" }}><strong style={{ color: "#34d399" }}>둘을 결합</strong></td>
-                      <td style={{ padding: "9px 12px", color: "#cbd5e1" }}>상방은 최강 자산 포착, 하방은 채권으로 대피 → <strong style={{ color: "#34d399" }}>비대칭 수익 구조</strong></td>
+                      <td style={{ padding: "9px 12px", color: "var(--text-secondary)" }}><strong style={{ color: "#34d399" }}>둘을 결합</strong></td>
+                      <td style={{ padding: "9px 12px", color: "var(--text-secondary)" }}>상방은 최강 자산 포착, 하방은 채권으로 대피 → <strong style={{ color: "#34d399" }}>비대칭 수익 구조</strong></td>
                     </tr>
                   </tbody>
                 </table>
@@ -501,10 +523,10 @@ export function QuantDashboard() {
                   <span style={{ display: "block", width: 3, height: 14, background: "#38bdf8", borderRadius: 2 }} />
                   쉬운 비유
                 </h4>
-                <div style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 10, padding: "14px 16px", fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>
+                <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)", borderRadius: 10, padding: "14px 16px", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7 }}>
                   육상 대회에서 선수 5명이 달리고 있습니다.<br /><br />
-                  <strong style={{ color: "#fbbf24" }}>상대 모멘텀</strong> = "5명 중 <strong style={{ color: "#fbbf24" }}>1등 선수를 응원</strong>해라"<br />
-                  <strong style={{ color: "#fbbf24" }}>절대 모멘텀</strong> = "그런데 1등 선수도 <strong style={{ color: "#fbbf24" }}>출발선보다 뒤로 가고 있으면</strong>(역주행), 관중석에 앉아서 기다려라"
+                  <strong style={{ color: "#b45309" }}>상대 모멘텀</strong> = "5명 중 <strong style={{ color: "#b45309" }}>1등 선수를 응원</strong>해라"<br />
+                  <strong style={{ color: "#b45309" }}>절대 모멘텀</strong> = "그런데 1등 선수도 <strong style={{ color: "#b45309" }}>출발선보다 뒤로 가고 있으면</strong>(역주행), 관중석에 앉아서 기다려라"
                 </div>
               </div>
 
@@ -518,7 +540,7 @@ export function QuantDashboard() {
                   <thead>
                     <tr>
                       {["연구","내용"].map(h => (
-                        <th key={h} style={{ background: "#0f172a", color: "#64748b", fontSize: 11, fontWeight: 600, letterSpacing: ".05em", padding: "8px 12px", textAlign: "left", borderBottom: "1px solid #334155" }}>{h}</th>
+                        <th key={h} style={{ background: "var(--bg-secondary)", color: "var(--text-tertiary)", fontSize: 11, fontWeight: 600, letterSpacing: ".05em", padding: "8px 12px", textAlign: "left", borderBottom: "1px solid var(--border-primary)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -529,8 +551,8 @@ export function QuantDashboard() {
                       ["행동재무학", "투자자 과잉반응 + 뒤늦은 추격매수 → 모멘텀 프리미엄이 지속적으로 발생"],
                     ].map(([study, desc], i, arr) => (
                       <tr key={study}>
-                        <td style={{ padding: "9px 12px", borderBottom: i < arr.length - 1 ? "1px solid #1e3a5f" : "none", color: "#cbd5e1" }}>{study}</td>
-                        <td style={{ padding: "9px 12px", borderBottom: i < arr.length - 1 ? "1px solid #1e3a5f" : "none", color: "#cbd5e1" }}>{desc}</td>
+                        <td style={{ padding: "9px 12px", borderBottom: i < arr.length - 1 ? "1px solid var(--border-primary)" : "none", color: "var(--text-secondary)" }}>{study}</td>
+                        <td style={{ padding: "9px 12px", borderBottom: i < arr.length - 1 ? "1px solid var(--border-primary)" : "none", color: "var(--text-secondary)" }}>{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -548,16 +570,16 @@ export function QuantDashboard() {
                     { label: "듀얼모멘텀 누적수익률", val: "+1,254%", valColor: "#34d399", sub: "수수료+슬리피지 0.13% 반영" },
                     { label: "S&P500 단순보유 대비",  val: "+1,136%p", valColor: "#38bdf8", sub: "S&P500 BH +118% 대비 초과수익" },
                     { label: "CAGR (연복리)",          val: "69.9%",   valColor: "#34d399", sub: "S&P500 BH 17.6% 대비 4배" },
-                    { label: "MDD (최대낙폭)",          val: "-17.6%",  valColor: "#fbbf24", sub: "반도체 BH -43.8% 대비 절반 수준" },
+                    { label: "MDD (최대낙폭)",          val: "-17.6%",  valColor: "#b45309", sub: "반도체 BH -43.8% 대비 절반 수준" },
                   ].map(({ label, val, valColor, sub }) => (
-                    <div key={label} style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>{label}</div>
+                    <div key={label} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)", borderRadius: 8, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 4 }}>{label}</div>
                       <div style={{ fontSize: 20, fontWeight: 700, color: valColor }}>{val}</div>
-                      <div style={{ fontSize: 11.5, color: "#475569", marginTop: 2 }}>{sub}</div>
+                      <div style={{ fontSize: 11.5, color: "var(--text-tertiary)", marginTop: 2 }}>{sub}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 12, fontSize: 12, color: "#475569", textAlign: "right" }}>
+                <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-tertiary)", textAlign: "right" }}>
                   ※ 현재 신호: <strong style={{ color: "#fb923c" }}>반도체 ETF (091160.KS)</strong> 보유 — 다음 리밸런싱 2026-06
                 </div>
               </div>
@@ -571,12 +593,12 @@ export function QuantDashboard() {
         <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px", margin: 0 }}>
           퀀트 분석 대시보드{" "}
           <span style={{
-            display: "inline-block", background: "#1e293b", border: "1px solid #334155",
-            borderRadius: 12, padding: "2px 10px", fontSize: 12, color: "#94a3b8",
+            display: "inline-block", background: "var(--bg-secondary)", border: "1px solid var(--border-primary)",
+            borderRadius: 12, padding: "2px 10px", fontSize: 12, color: "var(--text-tertiary)",
             marginLeft: 10, verticalAlign: "middle",
           }}>듀얼 모멘텀 전략</span>
         </h1>
-        <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+        <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 4 }}>
           백테스트 기간: 2022-01 ~ 2026-05 &nbsp;|&nbsp; 분석 ETF: 43종목 &nbsp;|&nbsp; 리밸런싱: 월 1회 &nbsp;|&nbsp; 룩백: 6개월
         </p>
       </div>
@@ -586,7 +608,7 @@ export function QuantDashboard() {
         {STRAT_NAMES.map((name, ci) => {
           const m = MET[name];
           return (
-            <div key={name} style={{ background: "var(--bg-card)", border: "1px solid var(--border-primary)", borderRadius: 10, padding: "14px 16px" }}>
+            <div key={name} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)", borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 12, color: STRAT_COLORS[ci], marginBottom: 6, display: "flex", alignItems: "center" }}>
                 {name}
                 {ci === 0 && (
@@ -606,10 +628,10 @@ export function QuantDashboard() {
               <div style={{ fontSize: 19, fontWeight: 700, color: m.total >= 0 ? "#34d399" : "#f87171" }}>
                 {m.total >= 0 ? "+" : ""}{m.total}%
               </div>
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
                 CAGR {m.cagr >= 0 ? "+" : ""}{m.cagr}% &nbsp;|&nbsp; MDD {m.mdd}%
               </div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>샤프 {m.sharpe}</div>
+              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>샤프 {m.sharpe}</div>
             </div>
           );
         })}
@@ -665,12 +687,12 @@ export function QuantDashboard() {
       <div style={{ ...panelStyle, marginBottom: 16 }}>
         <div style={panelTitleStyle}>
           모멘텀 크래시 감지{" "}
-          <span style={{ fontSize: 11, color: "#475569", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+          <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
             | 기준: 2026-05-06 &nbsp;·&nbsp; 3M/6M 수익률 기반
           </span>
         </div>
         <div style={panelSubStyle}>
-          🟢 추세 유지 (3M&gt;0 &amp; 6M&gt;0) &nbsp;/&nbsp; 🟡 경고 (혼재 또는 약세) &nbsp;/&nbsp; 🔴 크래시 위험 (3M&lt;-5% 또는 3M&amp;6M 동반 하락)
+          상승 유지 (3M&gt;0 &amp; 6M&gt;0) &nbsp;/&nbsp; 경고 (혼재 또는 약세) &nbsp;/&nbsp; 크래시 위험 (3M&lt;-5% 또는 3M&amp;6M 동반 하락)
         </div>
 
         {/* 신호 기준 범례 */}
@@ -678,10 +700,10 @@ export function QuantDashboard() {
           {(["green","yellow","red"] as const).map(sig => {
             const colors: Record<string, { bg: string; border: string; titleColor: string; action: string; actionBg: string }> = {
               green:  { bg: "rgba(52,211,153,.06)",  border: "rgba(52,211,153,.3)",  titleColor: "#34d399", action: "HOLD / ADD",       actionBg: "rgba(52,211,153,.15)"  },
-              yellow: { bg: "rgba(251,191,36,.06)",   border: "rgba(251,191,36,.3)",  titleColor: "#fbbf24", action: "WATCH",            actionBg: "rgba(251,191,36,.15)"  },
+              yellow: { bg: "rgba(251,191,36,.06)",   border: "rgba(251,191,36,.3)",  titleColor: "#b45309", action: "WATCH",            actionBg: "rgba(251,191,36,.15)"  },
               red:    { bg: "rgba(248,113,113,.06)",  border: "rgba(248,113,113,.3)", titleColor: "#f87171", action: "REDUCE / EXIT",    actionBg: "rgba(248,113,113,.15)" },
             };
-            const dotColors: Record<string, string> = { green: "#34d399", yellow: "#fbbf24", red: "#f87171" };
+            const dotColors: Record<string, string> = { green: "#34d399", yellow: "#b45309", red: "#f87171" };
             const rules: Record<string, string[]> = {
               green:  ["✓ 3개월 수익률 > 0%", "✓ 6개월 수익률 > 0%"],
               yellow: ["△ 3M>0 이지만 6M<0 (단기 반등)", "△ 3M<0 이지만 -5% 이내"],
@@ -700,9 +722,9 @@ export function QuantDashboard() {
                   <span style={{ color: c.titleColor }}>{SIGNAL_LABEL[sig]}</span>
                 </div>
                 {rules[sig].map(r => (
-                  <div key={r} style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>{r}</div>
+                  <div key={r} style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.6 }}>{r}</div>
                 ))}
-                <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.6, marginBottom: 4, whiteSpace: "pre-line" }}>{descs[sig]}</div>
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)", lineHeight: 1.6, marginBottom: 4, whiteSpace: "pre-line" }}>{descs[sig]}</div>
                 <span style={{ fontSize: 11, fontWeight: 600, marginTop: 6, padding: "3px 8px", borderRadius: 4, display: "inline-block", background: c.actionBg, color: dotColors[sig] }}>{c.action}</span>
               </div>
             );
@@ -716,13 +738,13 @@ export function QuantDashboard() {
               <div key={sig} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: SIGNAL_COLOR[sig], boxShadow: `0 0 6px ${SIGNAL_COLOR[sig]}80`, flexShrink: 0 }} />
                 <span style={{ color: SIGNAL_COLOR[sig], fontWeight: 800, fontSize: 22, lineHeight: 1 }}>{sigCounts[sig]}</span>
-                <span style={{ color: "#94a3b8", fontSize: 13 }}>{SIGNAL_LABEL[sig]}</span>
+                <span style={{ color: "var(--text-tertiary)", fontSize: 13 }}>{SIGNAL_LABEL[sig]}</span>
               </div>
             ))}
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {(["all","green","yellow","red"] as const).map(f => {
-              const labels: Record<string, string> = { all: "전체", green: "🟢 상승 유지", yellow: "🟡 경고", red: "🔴 위험" };
+              const labels: Record<string, string> = { all: "전체", green: "상승 유지", yellow: "경고", red: "위험" };
               const isActive = crashFilter === f;
               return (
                 <button
@@ -730,9 +752,9 @@ export function QuantDashboard() {
                   onClick={() => setCrashFilter(f)}
                   style={{
                     padding: "5px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer",
-                    border: `1px solid ${isActive ? "#38bdf8" : "#334155"}`,
-                    background: isActive ? "rgba(56,189,248,.1)" : "#0f172a",
-                    color: isActive ? "#38bdf8" : "#94a3b8",
+                    border: `1px solid ${isActive ? "var(--accent-blue)" : "var(--border-primary)"}`,
+                    background: isActive ? "var(--accent-blue-bg)" : "var(--bg-primary)",
+                    color: isActive ? "var(--accent-blue)" : "var(--text-tertiary)",
                   }}
                 >{labels[f]}</button>
               );
@@ -751,22 +773,22 @@ export function QuantDashboard() {
               cursor: "pointer", color: "#38bdf8", fontSize: 13, fontWeight: 700,
             }}
           >
-            <span>📋 신호별 대응 가이드 &amp; 상승유지 기준</span>
+            <span>신호별 대응 가이드 &amp; 상승유지 기준</span>
             <span style={{ fontSize: 16, lineHeight: 1 }}>{crashGuideOpen ? "▲" : "▼"}</span>
           </button>
           <div style={{
             overflow: "hidden", maxHeight: crashGuideOpen ? 1200 : 0,
             transition: "max-height 0.3s ease",
-            background: "rgba(15,23,42,.7)", border: crashGuideOpen ? "1px solid rgba(56,189,248,.2)" : "none",
+            background: "var(--bg-primary)", border: crashGuideOpen ? "1px solid rgba(56,189,248,.2)" : "none",
             borderTop: "none", borderRadius: "0 0 8px 8px",
           }}>
             <div style={{ padding: "20px 18px", display: "flex", flexDirection: "column", gap: 16 }}>
 
               {/* 경고 대응 */}
-              <div style={{ borderLeft: "3px solid #fbbf24", paddingLeft: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fbbf24", marginBottom: 8 }}>🟡 경고 시 대응</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.9 }}>
-                  경고는 <span style={{ color: "#fbbf24", fontWeight: 600 }}>청산 신호가 아닌 신규 베팅 중단 + 점진적 위험 축소</span> 신호입니다.
+              <div style={{ borderLeft: "3px solid #b45309", paddingLeft: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#b45309", marginBottom: 8 }}>경고 시 대응</div>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.9 }}>
+                  경고는 <span style={{ color: "#b45309", fontWeight: 600 }}>청산 신호가 아닌 신규 베팅 중단 + 점진적 위험 축소</span> 신호입니다.
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
                   {[
@@ -776,10 +798,10 @@ export function QuantDashboard() {
                     ["4", "안전자산 대기", "축소분은 MMF·단기채로 이동, 반등 시 재진입 대기"],
                   ].map(([n, title, desc]) => (
                     <div key={n} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", background: "rgba(251,191,36,.15)", borderRadius: 4, padding: "1px 7px", flexShrink: 0, marginTop: 1 }}>{n}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309", background: "rgba(251,191,36,.15)", borderRadius: 4, padding: "1px 7px", flexShrink: 0, marginTop: 1 }}>{n}</span>
                       <div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{title}</span>
-                        <span style={{ fontSize: 12, color: "#64748b" }}> — {desc}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{title}</span>
+                        <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}> — {desc}</span>
                       </div>
                     </div>
                   ))}
@@ -788,8 +810,8 @@ export function QuantDashboard() {
 
               {/* 위험 대응 */}
               <div style={{ borderLeft: "3px solid #f87171", paddingLeft: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#f87171", marginBottom: 8 }}>🔴 위험 시 대응</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.9 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#f87171", marginBottom: 8 }}>위험 시 대응</div>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.9 }}>
                   모멘텀이 실질적으로 붕괴된 상태입니다. <span style={{ color: "#f87171", fontWeight: 600 }}>다음 리밸런싱을 기다리지 말고 즉시 대응</span>하세요.
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
@@ -803,8 +825,8 @@ export function QuantDashboard() {
                     <div key={n} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: "#f87171", background: "rgba(248,113,113,.15)", borderRadius: 4, padding: "1px 7px", flexShrink: 0, marginTop: 1 }}>{n}</span>
                       <div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{title}</span>
-                        <span style={{ fontSize: 12, color: "#64748b" }}> — {desc}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{title}</span>
+                        <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}> — {desc}</span>
                       </div>
                     </div>
                   ))}
@@ -813,22 +835,22 @@ export function QuantDashboard() {
 
               {/* 상승유지 기간 */}
               <div style={{ borderLeft: "3px solid #34d399", paddingLeft: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#34d399", marginBottom: 8 }}>🟢 상승유지 — 언제까지?</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.9, marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#34d399", marginBottom: 8 }}>상승유지 — 언제까지?</div>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.9, marginBottom: 10 }}>
                   <span style={{ color: "#34d399", fontWeight: 600 }}>신호가 바뀔 때까지 보유</span>가 모멘텀 전략의 핵심 규칙입니다.<br />
                   3M &gt; 0% AND 6M &gt; 0%인 한, 매월 리뷰 후 계속 보유합니다.
                 </div>
-                <div style={{ background: "#0f172a", borderRadius: 6, padding: "10px 14px", marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, color: "#475569", marginBottom: 6, fontWeight: 600 }}>리밸런싱 주기별 특성</div>
+                <div style={{ background: "var(--bg-secondary)", borderRadius: 6, padding: "10px 14px", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 6, fontWeight: 600 }}>리밸런싱 주기별 특성</div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", fontSize: 12 }}>
                     {[
                       ["월 1회 (표준)", "#34d399", "거래비용 최소, 과최적화 방지"],
-                      ["격주", "#fbbf24", "빠른 대응이나 신호 노이즈 증가"],
+                      ["격주", "#b45309", "빠른 대응이나 신호 노이즈 증가"],
                       ["매주", "#f87171", "과매매 위험, 비용 구조 악화"],
                     ].map(([period, color, desc]) => (
                       <>
                         <span key={period + "k"} style={{ color: color as string, fontWeight: 600 }}>{period}</span>
-                        <span key={period + "v"} style={{ color: "#64748b" }}>{desc}</span>
+                        <span key={period + "v"} style={{ color: "var(--text-tertiary)" }}>{desc}</span>
                       </>
                     ))}
                   </div>
@@ -837,13 +859,13 @@ export function QuantDashboard() {
 
               {/* 퀀트 관점 */}
               <div style={{ borderLeft: "3px solid #818cf8", paddingLeft: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 8 }}>🔢 퀀트 관점 — 이 신호의 한계</div>
-                <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.9, marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", marginBottom: 8 }}>퀀트 관점 — 이 신호의 한계</div>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.9, marginBottom: 10 }}>
                   3M·6M 수익률은 <span style={{ color: "#818cf8", fontWeight: 600 }}>후행 지표(Lagging)</span>입니다.
                   크래시 초반에는 green → yellow로만 보이다가 너무 늦게 red로 진입할 수 있습니다.
                 </div>
-                <div style={{ background: "#0f172a", borderRadius: 6, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 11, color: "#475569", fontWeight: 600, marginBottom: 8 }}>조기경보 보조 필터 (강화 제안)</div>
+                <div style={{ background: "var(--bg-secondary)", borderRadius: 6, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600, marginBottom: 8 }}>조기경보 보조 필터 (강화 제안)</div>
                   {[
                     ["전고점 대비 낙폭", "−20% 이상이면 red 조기 진입"],
                     ["52주 저가 근접", "현재가 < 52주 저가의 110%"],
@@ -851,8 +873,8 @@ export function QuantDashboard() {
                   ].map(([label, desc]) => (
                     <div key={label} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
                       <span style={{ fontSize: 11, color: "#818cf8", fontWeight: 700, flexShrink: 0 }}>+</span>
-                      <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>{label}</span>
-                      <span style={{ fontSize: 12, color: "#64748b" }}>— {desc}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 600 }}>{label}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>— {desc}</span>
                     </div>
                   ))}
                 </div>
@@ -867,31 +889,31 @@ export function QuantDashboard() {
           {filteredSignals.map(d => {
             const r3c = d.r3m >= 0 ? "#34d399" : "#f87171";
             const r6c = d.r6m >= 0 ? "#34d399" : "#f87171";
-            const borderColors: Record<string, string> = { green: "#34d399", yellow: "#fbbf24", red: "#f87171" };
+            const borderColors: Record<string, string> = { green: "#34d399", yellow: "#b45309", red: "#f87171" };
             const dotC = borderColors[d.signal];
             return (
               <div key={d.ticker} style={{
-                background: "#0f172a", border: "1px solid #334155",
+                background: "var(--bg-primary)", border: "1px solid var(--border-primary)",
                 borderLeft: `4px solid ${dotC}`, borderRadius: 10,
                 padding: "16px 18px",
               }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: dotC, boxShadow: `0 0 6px ${dotC}80`, flexShrink: 0 }} />
-                    <span style={{ fontSize: 15, fontWeight: 800, color: "#f1f5f9", letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={d.name}>{d.name}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={d.name}>{d.name}</span>
                   </div>
-                  <span style={{ fontSize: 10, color: "#64748b", background: "#1e293b", borderRadius: 4, padding: "2px 7px", flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, color: "var(--text-tertiary)", background: "var(--bg-secondary)", borderRadius: 4, padding: "2px 7px", flexShrink: 0 }}>
                     {CAT_SHORT[d.cat] || d.cat}
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>{d.ticker}</div>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 12 }}>{d.ticker}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <div style={{ background: "#1e293b", borderRadius: 6, padding: "8px 10px" }}>
-                    <div style={{ fontSize: 10, color: "#475569", marginBottom: 2 }}>3개월</div>
+                  <div style={{ background: "var(--bg-secondary)", borderRadius: 6, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 2 }}>3개월</div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: r3c }}>{fmt(d.r3m)}</div>
                   </div>
-                  <div style={{ background: "#1e293b", borderRadius: 6, padding: "8px 10px" }}>
-                    <div style={{ fontSize: 10, color: "#475569", marginBottom: 2 }}>6개월</div>
+                  <div style={{ background: "var(--bg-secondary)", borderRadius: 6, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 2 }}>6개월</div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: r6c }}>{fmt(d.r6m)}</div>
                   </div>
                 </div>
@@ -907,9 +929,9 @@ export function QuantDashboard() {
         <div style={panelSubStyle}>전체 {BT_M.length}개월 중 각 자산 보유 개월 수</div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {HFREQ.map(({ asset, months }) => (
-            <div key={asset} style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, padding: "10px 14px", minWidth: 100 }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>{asset}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: ASSET_COLORS[asset] || "#94a3b8" }}>{months}<span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>개월</span></div>
+            <div key={asset} style={{ background: "var(--bg-primary)", border: "1px solid var(--border-primary)", borderRadius: 8, padding: "10px 14px", minWidth: 100 }}>
+              <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 4 }}>{asset}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: ASSET_COLORS[asset] || "var(--text-tertiary)" }}>{months}<span style={{ fontSize: 12, fontWeight: 400, color: "var(--text-tertiary)" }}>개월</span></div>
             </div>
           ))}
         </div>
