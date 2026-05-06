@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../App';
 import { MIcon } from './MIcon';
+import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
+
+type PriceMap = Record<string, { price: number; changeRate: number }>;
 
 type NgfEtf = {
   ticker: string;
@@ -44,6 +47,16 @@ function saveEtfs(list: NgfEtf[]) {
 export function NationalGrowthFund() {
   const { navigateTo } = useAppContext();
   const [etfs, setEtfs] = useState<NgfEtf[]>(loadEtfs);
+  const [prices, setPrices] = useState<PriceMap>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const tickers = etfs.map(e => e.ticker);
+    if (tickers.length === 0) { setLoading(false); return; }
+    fetchCurrentPricesWithChange(tickers)
+      .then(setPrices)
+      .finally(() => setLoading(false));
+  }, [etfs.map(e => e.ticker).join(',')]);
 
   function handleDelete(ticker: string) {
     const next = etfs.filter(e => e.ticker !== ticker);
@@ -74,21 +87,29 @@ export function NationalGrowthFund() {
         </button>
       </div>
 
+      {loading && (
+        <div style={{ color: 'var(--text-tertiary)', marginBottom: '12px', fontSize: '13px' }}>
+          가격 조회 중...
+        </div>
+      )}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
         gap: '16px',
       }}>
-        {etfs.map(etf => (
-          <EtfCard
-            key={etf.ticker}
-            etf={etf}
-            price={null}
-            changeRate={null}
-            onDelete={handleDelete}
-            onClick={handleCardClick}
-          />
-        ))}
+        {etfs.map(etf => {
+          const pd = prices[etf.ticker];
+          return (
+            <EtfCard
+              key={etf.ticker}
+              etf={etf}
+              price={pd?.price ?? null}
+              changeRate={pd?.changeRate ?? null}
+              onDelete={handleDelete}
+              onClick={handleCardClick}
+            />
+          );
+        })}
       </div>
     </div>
   );
