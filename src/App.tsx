@@ -13,6 +13,7 @@ import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
 import { MonthlyStrategy } from "./components/MonthlyStrategy";
 import { CalcChecklist } from "./components/CalcChecklist";
+import { NationalGrowthFund } from "./components/NationalGrowthFund";
 import { MacroSectorViz } from "./components/MacroSectorViz";
 import { DeepResearchViz } from "./components/DeepResearchViz";
 import { FinancialScoring } from "./components/FinancialScoring";
@@ -71,6 +72,7 @@ const MENU_ITEMS = [
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
   { id: "calc-checklist", label: "계산식 검증", materialIcon: "fact_check" },
+  { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance" },
 ];
 
 const FONT_SCALE = 1.15;
@@ -226,6 +228,7 @@ export default function App() {
       case "financial-scoring": return <FinancialScoring />;
       case "quant-dashboard": return <QuantDashboard />;
       case "quant-basics": return <QuantBasics />;
+      case "national-growth-fund": return <NationalGrowthFund />;
     }
   };
 
