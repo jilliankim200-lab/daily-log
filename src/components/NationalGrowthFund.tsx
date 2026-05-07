@@ -50,6 +50,74 @@ const DEFAULT_ETFS: NgfEtf[] = [
 ];
 
 const LS_KEY = 'ngf_etf_list_v5';
+const LS_BUY_CHECKS = 'ngf_buy_checks';
+
+type MaPoint = { ma5: number | null; ma20: number | null };
+type MaData = Record<string, MaPoint>;
+type BuyChecks = Record<string, { c1: boolean; c2: boolean; c3: boolean }>;
+
+function loadBuyChecks(): BuyChecks {
+  try {
+    const raw = localStorage.getItem(LS_BUY_CHECKS);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {};
+}
+
+function saveBuyChecks(checks: BuyChecks) {
+  localStorage.setItem(LS_BUY_CHECKS, JSON.stringify(checks));
+}
+
+function getBuyStage(price: number | null, ma5: number | null, ma20: number | null): '1차' | '2차' | '3차' | null {
+  if (price === null || ma5 === null || ma20 === null) return null;
+  if (price <= ma20) return '3차';
+  if (price <= ma5) return '2차';
+  return '1차';
+}
+
+const STAGE_CONFIG = {
+  '1차': { emoji: '🟡', label: '1차 매수 가능', bg: '#f59e0b22', color: '#f59e0b' },
+  '2차': { emoji: '🟠', label: '2차 매수 신호', bg: '#f9731622', color: '#f97316' },
+  '3차': { emoji: '🔴', label: '3차 매수 신호', bg: '#ef444422', color: '#ef4444' },
+} as const;
+
+function nextRefreshMs(): number {
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const h = kstNow.getUTCHours();
+  const m = kstNow.getUTCMinutes();
+  const s = kstNow.getUTCSeconds();
+  const nowMins = h * 60 + m + s / 60;
+  for (const target of [600, 840]) {
+    if (nowMins < target) return (target - nowMins) * 60 * 1000;
+  }
+  return (1440 - nowMins + 600) * 60 * 1000;
+}
+
+async function fetchAllMaData(tickers: string[]): Promise<MaData> {
+  const settled = await Promise.allSettled(
+    tickers.map(ticker =>
+      fetch(`${WORKER_URL}/stock-chart/${ticker}?days=30`)
+        .then(r => r.json())
+        .then((data: { date: string; price: number }[]) => {
+          if (!Array.isArray(data) || data.length < 5) return { ticker, ma5: null as null, ma20: null as null };
+          const px = data.map(d => d.price);
+          const ma5arr = calcMA(px, 5);
+          const ma20arr = calcMA(px, 20);
+          const last = data.length - 1;
+          return { ticker, ma5: ma5arr[last], ma20: ma20arr[last] };
+        })
+        .catch(() => ({ ticker, ma5: null as null, ma20: null as null }))
+    )
+  );
+  const out: MaData = {};
+  for (const r of settled) {
+    if (r.status === 'fulfilled') {
+      const { ticker, ma5, ma20 } = r.value;
+      out[ticker] = { ma5, ma20 };
+    }
+  }
+  return out;
+}
 
 const NEWS_LINKS = [
   { label: '국민성장펀드 최신 뉴스',   query: '국민성장펀드' },
@@ -73,7 +141,12 @@ function naverNewsUrl(query: string) {
 function loadEtfs(): NgfEtf[] {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const saved: NgfEtf[] = JSON.parse(raw);
+      const defaultTickers = new Set(DEFAULT_ETFS.map(e => e.ticker));
+      const additions = saved.filter(e => !defaultTickers.has(e.ticker));
+      return [...DEFAULT_ETFS, ...additions];
+    }
   } catch {}
   return DEFAULT_ETFS;
 }
@@ -128,6 +201,10 @@ export function NationalGrowthFund() {
   const [days, setDays] = useState(90);
   const [rawData, setRawData] = useState<{ date: string; price: number }[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [maData, setMaData] = useState<MaData>({});
+  const [buyChecks, setBuyChecks] = useState<BuyChecks>(loadBuyChecks);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const saveFlashTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const tickers = etfs.map(e => e.ticker);
@@ -147,6 +224,19 @@ export function NationalGrowthFund() {
       .catch(() => setRawData([]))
       .finally(() => setChartLoading(false));
   }, [selectedTicker, days]);
+
+  useEffect(() => {
+    const tickers = etfs.map(e => e.ticker);
+    if (tickers.length === 0) return;
+    let timerId: ReturnType<typeof setTimeout>;
+    function doFetch() { fetchAllMaData(tickers).then(setMaData); }
+    function scheduleNext() {
+      timerId = setTimeout(() => { doFetch(); scheduleNext(); }, nextRefreshMs());
+    }
+    doFetch();
+    scheduleNext();
+    return () => clearTimeout(timerId);
+  }, [etfs.map(e => e.ticker).join(',')]);
 
   const chartData: ChartPoint[] = useMemo(() => {
     if (rawData.length === 0) return [];
@@ -169,12 +259,28 @@ export function NationalGrowthFund() {
   const xInterval = chartData.length > 60 ? Math.floor(chartData.length / 8) : Math.floor(chartData.length / 6);
   const sectorColor = SECTOR_COLORS[selectedEtf?.sector ?? ''] ?? 'var(--accent-blue)';
 
-  function handleDelete(ticker: string) {
-    const next = etfs.filter(e => e.ticker !== ticker);
-    setEtfs(next);
-    saveEtfs(next);
-    if (ticker === selectedTicker && next.length > 0) setSelectedTicker(next[0].ticker);
+  function handleCheckToggle(ticker: string, key: 'c1' | 'c2' | 'c3') {
+    setBuyChecks(prev => {
+      const curr = prev[ticker] ?? { c1: false, c2: false, c3: false };
+      const next = { ...prev, [ticker]: { ...curr, [key]: !curr[key] } };
+      saveBuyChecks(next);
+      return next;
+    });
+    setSavedFlash(true);
+    if (saveFlashTimer.current) clearTimeout(saveFlashTimer.current);
+    saveFlashTimer.current = setTimeout(() => setSavedFlash(false), 1500);
   }
+
+  const alarm3 = etfs.filter(e => {
+    const pd = prices[e.ticker];
+    const md = maData[e.ticker];
+    return getBuyStage(pd?.price ?? null, md?.ma5 ?? null, md?.ma20 ?? null) === '3차';
+  });
+  const alarm2 = etfs.filter(e => {
+    const pd = prices[e.ticker];
+    const md = maData[e.ticker];
+    return getBuyStage(pd?.price ?? null, md?.ma5 ?? null, md?.ma20 ?? null) === '2차';
+  });
 
   const [showAiRec, setShowAiRec] = useState(false);
   const p = isMobile ? '16px 12px' : '24px';
@@ -186,8 +292,16 @@ export function NationalGrowthFund() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-            국민성장펀드 ETF 트래커
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
+              국민성장펀드 ETF 트래커
+            </span>
+            {savedFlash && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-profit)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <MIcon name="check_circle" size={14} />
+                체크 저장됨
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
             KDB 산업은행 5년 150조원 정책펀드 수혜 중소형 ETF
@@ -304,6 +418,39 @@ export function NationalGrowthFund() {
         )}
       </div>
 
+      {/* 매수 알람 요약 배너 */}
+      {(alarm3.length > 0 || alarm2.length > 0) && (
+        <div style={{
+          marginBottom: 16,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-primary)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px 16px',
+          display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 2 }}>
+            <MIcon name="notifications_active" size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+            매수 신호 알람
+          </div>
+          {alarm3.map(e => (
+            <div key={e.ticker} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>🔴</span>
+              <span style={{ fontWeight: 700, color: '#ef4444' }}>3차 신호</span>
+              <span style={{ color: 'var(--text-secondary)' }}>{e.name}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>현재가 ≤ MA20</span>
+            </div>
+          ))}
+          {alarm2.map(e => (
+            <div key={e.ticker} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>🟠</span>
+              <span style={{ fontWeight: 700, color: '#f97316' }}>2차 신호</span>
+              <span style={{ color: 'var(--text-secondary)' }}>{e.name}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>현재가 ≤ MA5</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ETF 카드 */}
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
@@ -361,8 +508,11 @@ export function NationalGrowthFund() {
                 changeRate={pd?.changeRate ?? null}
                 isSelected={etf.ticker === selectedTicker}
                 onSelect={setSelectedTicker}
-                onDelete={handleDelete}
                 highlighted={inFilter}
+                ma5={maData[etf.ticker]?.ma5 ?? null}
+                ma20={maData[etf.ticker]?.ma20 ?? null}
+                buyCheck={buyChecks[etf.ticker] ?? { c1: false, c2: false, c3: false }}
+                onCheckToggle={handleCheckToggle}
               />
             );
           })}
@@ -494,14 +644,7 @@ const ETF_INFO: Record<string, EtfInfo> = {
   },
 };
 
-// ─── 분할 매수 신호 ──────────────────────────────────────────────────────────
-function getBuySignal(rate: number | null): { label: string; color: string } {
-  if (rate === null) return { label: '데이터 대기중', color: 'var(--text-tertiary)' };
-  if (rate >= 3)  return { label: `급등 +${rate.toFixed(1)}% — 1차 소량만 진입`, color: 'var(--color-loss)' };
-  if (rate > 0)   return { label: `상승 +${rate.toFixed(1)}% — 1차 소량 진입 고려`, color: 'var(--color-profit)' };
-  if (rate <= -3) return { label: `급락 ${rate.toFixed(1)}% — 1·2차 적극 매수`, color: 'var(--accent-blue)' };
-  return { label: `보합 ${rate.toFixed(1)}% — 소량 진입 후 대기`, color: 'var(--text-secondary)' };
-}
+function fmtWon(n: number) { return Math.round(n).toLocaleString('ko-KR') + '원'; }
 
 // ─── EtfCard ──────────────────────────────────────────────────────────────
 type EtfCardProps = {
@@ -510,91 +653,158 @@ type EtfCardProps = {
   changeRate: number | null;
   isSelected: boolean;
   onSelect: (ticker: string) => void;
-  onDelete: (ticker: string) => void;
   highlighted: boolean | null;
+  ma5: number | null;
+  ma20: number | null;
+  buyCheck: { c1: boolean; c2: boolean; c3: boolean };
+  onCheckToggle: (ticker: string, key: 'c1' | 'c2' | 'c3') => void;
 };
 
 const CARD_HEIGHT = 268;
 
-function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete, highlighted }: EtfCardProps) {
-  const [flipped, setFlipped] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
+function EtfCard({ etf, price, changeRate, isSelected, onSelect, highlighted, ma5, ma20, buyCheck, onCheckToggle }: EtfCardProps) {
+  const [showInfo, setShowInfo] = useState(false);
   const isUp = changeRate !== null && changeRate > 0;
   const isDown = changeRate !== null && changeRate < 0;
   const sectorColor = SECTOR_COLORS[etf.sector] ?? '#888';
   const info = ETF_INFO[etf.ticker];
-  const signal = getBuySignal(changeRate);
+  const stage = getBuyStage(price, ma5, ma20);
   const dimmed = highlighted === false;
-
-  const faceBase: React.CSSProperties = {
-    position: 'absolute', inset: 0,
-    borderRadius: 'var(--radius-lg)',
-    padding: '16px',
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
-    overflow: 'hidden',
+  const stageRanges = {
+    c1: ma5 !== null ? `${fmtWon(ma5)} ~` : '',
+    c2: ma5 !== null && ma20 !== null ? `${fmtWon(ma20)} ~ ${fmtWon(ma5)}` : '',
+    c3: ma20 !== null ? `~ ${fmtWon(ma20)}` : '',
   };
 
   return (
     <div
-      style={{ perspective: '800px', height: CARD_HEIGHT, cursor: 'pointer' }}
-      onMouseEnter={() => setFlipped(true)}
-      onMouseLeave={() => setFlipped(false)}
+      style={{
+        height: CARD_HEIGHT, cursor: 'pointer', position: 'relative',
+        background: isSelected ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+        border: `1px solid ${highlighted === true ? sectorColor + 'cc' : isSelected ? sectorColor + '88' : 'var(--border-primary)'}`,
+        boxShadow: highlighted === true ? `0 0 0 3px ${sectorColor}44, 0 4px 16px ${sectorColor}22` : isSelected ? `0 0 0 2px ${sectorColor}33` : 'none',
+        borderRadius: 'var(--radius-lg)', padding: '16px', overflow: 'hidden',
+        opacity: dimmed ? 0.35 : 1, transition: 'box-shadow 0.3s, border-color 0.3s',
+        boxSizing: 'border-box',
+      }}
       onClick={() => onSelect(etf.ticker)}
     >
-      {showGuide && (
-        <TradeGuideModal
-          etf={etf} price={price} changeRate={changeRate}
-          sectorColor={sectorColor} signal={signal}
-          onClose={() => setShowGuide(false)}
-        />
-      )}
-      <div style={{
-        position: 'relative', width: '100%', height: '100%',
-        transformStyle: 'preserve-3d',
-        transition: 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        opacity: dimmed ? 0.35 : 1,
-      }}>
-
-        {/* 앞면 */}
-        <div style={{
-          ...faceBase,
-          background: isSelected ? 'var(--bg-secondary)' : 'var(--bg-primary)',
-          border: `1px solid ${highlighted === true ? sectorColor + 'cc' : isSelected ? sectorColor + '88' : 'var(--border-primary)'}`,
-          boxShadow: highlighted === true ? `0 0 0 3px ${sectorColor}44, 0 4px 16px ${sectorColor}22` : isSelected ? `0 0 0 2px ${sectorColor}33` : 'none',
-          transition: 'box-shadow 0.3s, border-color 0.3s',
-        }}>
-          <button
-            onClick={e => { e.stopPropagation(); onDelete(etf.ticker); }}
-            style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, display: 'flex', alignItems: 'center' }}
-          >
-            <MIcon name="close" size={16} />
-          </button>
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '2px 10px', borderRadius: 12, fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+      {showInfo ? (
+        /* 구성종목 뷰 */
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10, paddingRight: 22, flexWrap: 'nowrap', minWidth: 0 }}>
+            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '2px 8px', borderRadius: 10, fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {etf.sector} · {etf.label}
             </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              {info && <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap' }}>총보수 {info.fee}</span>}
+              <button
+                onClick={e => { e.stopPropagation(); setShowInfo(false); }}
+                style={{ display: 'flex', alignItems: 'center', padding: 3, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', flexShrink: 0 }}
+              >
+                <MIcon name="arrow_back" size={15} />
+              </button>
+            </div>
           </div>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{etf.name}</div>
+
+          {info ? (
+            <>
+              <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 7, fontWeight: 600 }}>
+                {info.index} · TOP 5
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {info.top5.map((h, i) => (
+                  <div key={h.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 12 }}>{i + 1}</span>
+                    <div style={{ flex: 1, position: 'relative', height: 14, background: 'var(--border-primary)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: h.ratio, background: sectorColor + '55', borderRadius: 3 }} />
+                      <span style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', fontSize: 10, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        {h.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: sectorColor, width: 36, textAlign: 'right' }}>{h.ratio}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 6 }}>
+              <MIcon name="info_outline" size={20} style={{ color: 'var(--text-tertiary)' }} />
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                구성종목 미확인<br/>데이터 업데이트 예정
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* 기본 뷰 */
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, paddingRight: 22, flexWrap: 'nowrap' }}>
+            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '2px 10px', borderRadius: 12, fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {etf.sector} · {etf.label}
+            </span>
+            <button
+              onClick={e => { e.stopPropagation(); setShowInfo(true); }}
+              style={{
+                padding: '2px 7px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+                background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)',
+                color: 'var(--text-tertiary)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+              }}
+            >
+              구성종목
+            </button>
+          </div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{etf.name}</div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 8 }}>{etf.ticker}</div>
 
-          {/* 분할 매수 신호 */}
-          <div style={{ paddingTop: 8, borderTop: `1px solid ${sectorColor}33`, marginBottom: 10 }}>
-            <div style={{ fontSize: 11, color: signal.color, fontWeight: 700, marginBottom: 4 }}>
-              {signal.label}
-            </div>
+          <div style={{ paddingTop: 8, borderTop: `1px solid ${sectorColor}33`, marginBottom: 8 }}>
+            {stage ? (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '3px 8px', borderRadius: 8, marginBottom: 7,
+                background: STAGE_CONFIG[stage].bg, border: `1px solid ${STAGE_CONFIG[stage].color}44`,
+              }}>
+                <span style={{ fontSize: 12 }}>{STAGE_CONFIG[stage].emoji}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: STAGE_CONFIG[stage].color }}>
+                  {STAGE_CONFIG[stage].label}
+                </span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 7 }}>MA 로딩 중...</div>
+            )}
             <div style={{ display: 'flex', gap: 4 }}>
-              {[
-                { n: '1차 20%', desc: '지금' },
-                { n: '2차 30%', desc: 'MA5 반등' },
-                { n: '3차 50%', desc: 'MA20 근처' },
-              ].map(s => (
-                <div key={s.n} style={{ flex: 1, textAlign: 'center', padding: '3px 0', background: sectorColor + '18', borderRadius: 4 }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: sectorColor }}>{s.n}</div>
-                  <div style={{ fontSize: '9px', color: 'var(--text-tertiary)' }}>{s.desc}</div>
-                </div>
-              ))}
+              {([
+                { key: 'c1' as const, label: '1차 20%' },
+                { key: 'c2' as const, label: '2차 30%' },
+                { key: 'c3' as const, label: '3차 50%' },
+              ]).map(({ key, label }) => {
+                const done = buyCheck[key];
+                const range = stageRanges[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={e => { e.stopPropagation(); onCheckToggle(etf.ticker, key); }}
+                    style={{
+                      flex: 1, padding: '5px 3px',
+                      background: done ? sectorColor + '33' : 'var(--bg-secondary)',
+                      border: `1px solid ${done ? sectorColor + '88' : 'var(--border-primary)'}`,
+                      borderRadius: 6, cursor: 'pointer', transition: 'all 0.15s',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    }}
+                  >
+                    {done
+                      ? <MIcon name="check_circle" size={12} style={{ color: sectorColor }} />
+                      : <MIcon name="radio_button_unchecked" size={12} style={{ color: 'var(--text-tertiary)' }} />
+                    }
+                    <span style={{ fontSize: 9, fontWeight: 700, color: done ? sectorColor : 'var(--text-tertiary)' }}>{label}</span>
+                    {range && (
+                      <span style={{ fontSize: 10, color: done ? sectorColor + 'cc' : 'var(--text-secondary)', lineHeight: 1.3, textAlign: 'center' }}>
+                        {range}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -606,170 +816,9 @@ function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete, highl
               {changeRate !== null ? (isUp ? '▲ +' : isDown ? '▼ ' : '') + changeRate.toFixed(2) + '%' : '—'}
             </span>
           </div>
-        </div>
-
-        {/* 뒷면 */}
-        <div style={{
-          ...faceBase,
-          background: sectorColor + '11',
-          border: `1px solid ${sectorColor}44`,
-          transform: 'rotateY(180deg)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '2px 8px', borderRadius: 10, fontSize: 'var(--text-xs)', fontWeight: 700 }}>
-              {etf.sector} · {etf.label}
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {info && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600 }}>총보수 {info.fee}</span>}
-              <button
-                onClick={e => { e.stopPropagation(); setShowGuide(true); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 8, background: sectorColor + '22', border: `1px solid ${sectorColor}44`, cursor: 'pointer', color: sectorColor, fontSize: '10px', fontWeight: 700 }}
-              >
-                <MIcon name="school" size={11} />
-                매매가이드
-              </button>
-            </div>
-          </div>
-
-          {info ? (
-            <>
-              <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>
-                {info.index} · TOP 5
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {info.top5.map((h, i) => (
-                  <div key={h.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', width: 12 }}>{i + 1}</span>
-                    <div style={{ flex: 1, position: 'relative', height: 13, background: 'var(--border-primary)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: h.ratio, background: sectorColor + '55', borderRadius: 3 }} />
-                      <span style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                        {h.name}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: sectorColor, width: 36, textAlign: 'right' }}>{h.ratio}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50%', gap: 6 }}>
-              <MIcon name="info_outline" size={20} style={{ color: 'var(--text-tertiary)' }} />
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-                구성종목 미확인<br/>실제 데이터 제공 시 업데이트
-              </span>
-            </div>
-          )}
-
-          {/* 분할 매수 신호 */}
-          <div style={{ marginTop: 8, paddingTop: 7, borderTop: `1px solid ${sectorColor}33` }}>
-            <div style={{ fontSize: '10px', color: signal.color, fontWeight: 700, marginBottom: 4 }}>
-              {signal.label}
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {[
-                { n: '1차 20%', desc: '지금' },
-                { n: '2차 30%', desc: 'MA5 반등' },
-                { n: '3차 50%', desc: 'MA20 근처' },
-              ].map(s => (
-                <div key={s.n} style={{
-                  flex: 1, textAlign: 'center', padding: '3px 0',
-                  background: sectorColor + '18', borderRadius: 4,
-                }}>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: sectorColor }}>{s.n}</div>
-                  <div style={{ fontSize: '9px', color: 'var(--text-tertiary)' }}>{s.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
-  );
-}
-
-// ─── TradeGuideModal ──────────────────────────────────────────────────────
-type TradeGuideProps = {
-  etf: NgfEtf; price: number | null; changeRate: number | null;
-  sectorColor: string; signal: { label: string; color: string };
-  onClose: () => void;
-};
-
-const GUIDE_POINTS = [
-  {
-    title: 'MA5 / MA20 이격',
-    short: '현재가가 MA20 위로 많이 올라있을수록 고점 리스크. MA20 근처 또는 이탈→회복 시 1차 매수.',
-  },
-  {
-    title: '현재가 vs MA5 크로스',
-    short: '현재가가 MA5 아래로 내려갔다가 다시 위로 올라올 때 → 단기 반등 신호. 2차 매수 타이밍.',
-  },
-  {
-    title: '지지 구간 확인',
-    short: '과거 횡보 구간이 지지선. 지지선까지 빠지면 비중 추가. 위 차트에서 MA20 하단 확인.',
-  },
-];
-
-function TradeGuideModal({ etf, price, changeRate, sectorColor, signal, onClose }: TradeGuideProps) {
-  const isUp = changeRate !== null && changeRate > 0;
-  const isDown = changeRate !== null && changeRate < 0;
-
-  return createPortal(
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', padding: '28px', width: 480, maxWidth: '92vw', boxShadow: '0 16px 48px rgba(0,0,0,0.35)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '3px 12px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>{etf.label}</span>
-            <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{etf.name.replace(/^(SOL|TIGER|ACE|PLUS|KODEX|KoAct|TIME)\s/, '')}</span>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 4, display: 'flex' }}>
-            <MIcon name="close" size={22} />
-          </button>
-        </div>
-
-        {/* 오늘 신호 */}
-        <div style={{ background: sectorColor + '16', borderRadius: 10, padding: '10px 16px', marginBottom: 20 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: signal.color }}>{signal.label}</span>
-        </div>
-
-        {/* 체크포인트 */}
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 10 }}>분할 매수 체크포인트</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          {GUIDE_POINTS.map((p, i) => (
-            <div key={p.title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <span style={{ background: sectorColor, color: '#fff', borderRadius: '50%', minWidth: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginTop: 1 }}>
-                {i + 1}
-              </span>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{p.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>{p.short}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 분할 전략 */}
-        <div style={{ display: 'flex', gap: 10 }}>
-          {[
-            { n: '1차 20%', desc: '지금' },
-            { n: '2차 30%', desc: 'MA5 반등' },
-            { n: '3차 50%', desc: 'MA20 근처' },
-          ].map(s => (
-            <div key={s.n} style={{ flex: 1, textAlign: 'center', padding: '10px 4px', background: sectorColor + '14', borderRadius: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: sectorColor }}>{s.n}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 4 }}>{s.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>,
-    document.body
   );
 }
 
