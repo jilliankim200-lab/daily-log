@@ -186,7 +186,7 @@ function RebalanceSimulator({ portfolio, crashItems, crashLoading }: {
                 <div key={`sell-${r.name}-${i}`} style={rowStyle(r.diff)}>
                   <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</span>
                   <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 700 }}>
-                    {Math.abs(r.diff).toLocaleString()}원
+                    {Math.round(Math.abs(r.diff)).toLocaleString()}원
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>
                       ({Math.round(r.currentWeight * 100)}% → {Math.round(r.targetWeight * 100)}%)
                     </span>
@@ -205,7 +205,7 @@ function RebalanceSimulator({ portfolio, crashItems, crashLoading }: {
                 <div key={`buy-${r.name}-${i}`} style={rowStyle(r.diff)}>
                   <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</span>
                   <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 700 }}>
-                    +{r.diff.toLocaleString()}원
+                    +{Math.round(r.diff).toLocaleString()}원
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>
                       ({Math.round(r.currentWeight * 100)}% → {Math.round(r.targetWeight * 100)}%)
                     </span>
