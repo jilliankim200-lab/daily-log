@@ -565,7 +565,7 @@ export function Dividend() {
           </div>
 
           {/* 목표 설정 */}
-          <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
+          {!isMobile && <div className="toss-card" style={{ padding: 20, marginBottom: 24 }}>
             {(() => {
               const gap = targetMonthly - totalMonthlyEstimate;
               return (
@@ -716,7 +716,7 @@ export function Dividend() {
                 </div>
               );
             })()}
-          </div>
+          </div>}
 
           {/* 분산 현황 팝업 */}
           {showDistribution && (() => {
@@ -877,108 +877,181 @@ export function Dividend() {
               </div>
             )}
 
-            <div style={{ overflowX: "auto" }}>
-              <table className="toss-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-primary)" }}>
-                    {["종목명", "계좌", "보유수량", "주당배당(월)", "월배당금", "배당주기", "다음 배당락", ""].map((h, i) => (
-                      <th key={i} style={{ padding: "10px 12px", textAlign: i <= 1 ? "left" : "right", color: "var(--text-tertiary)", fontWeight: "var(--font-medium)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mergedStocks.map((stock) => {
-                    const rawAmount = divAmount(stock, exchangeRate);
-                    const monthlyAmount = stock.frequency === "weekly" ? rawAmount * 4.33 : stock.frequency === "monthly" ? rawAmount : stock.frequency === "quarterly" ? rawAmount / 3 : rawAmount / 12;
-                    const nextEx = getNextExDividendDate(stock.exDividendDay, stock.frequency);
-                    const dLeft = daysUntil(nextEx);
-                    const isEditing = editingTicker === stock.ticker;
-                    return (
-                      <tr key={stock.key} style={{ borderBottom: "1px solid var(--border-primary)" }}>
-                        <td style={{ padding: "10px 12px" }}>
-                          <div style={{ fontWeight: "var(--font-medium)", color: "var(--text-primary)" }}>{stock.name}</div>
-                          <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>{stock.ticker}</div>
-                        </td>
-                        <td style={{ padding: "10px 12px", fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
-                          {(() => {
-                            const accs = tickerAccountMap.get(stock.ticker) || [];
-                            const owners = [...new Set(accs.map(a => a.owner))];
-                            if (accs.length === 1) {
-                              return <>
-                                <div>{accs[0].owner}</div>
-                                <div style={{ color: 'var(--text-quaternary)' }}>{accs[0].accLabel}</div>
-                              </>;
-                            }
-                            return <>
-                              <div>{owners.join('·')}</div>
-                              <div style={{ color: 'var(--text-quaternary)' }}>{accs.length}개 계좌</div>
-                            </>;
-                          })()}
-                        </td>
-                        <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-secondary)" }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            {fmt(stock.quantity)}
-                            <span
-                              onMouseEnter={(e) => {
-                                const r = e.currentTarget.getBoundingClientRect();
-                                setTooltip({ ticker: stock.ticker, x: r.right, y: r.top });
-                              }}
-                              onMouseLeave={() => setTooltip(null)}
-                              style={{ display: 'inline-flex', alignItems: 'center', cursor: 'default' }}
-                            >
-                              <MIcon name="info" size={13} style={{ color: 'var(--text-quaternary)', verticalAlign: 'middle' }} />
+            {isMobile ? (
+              /* 모바일: 카드 리스트 */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {mergedStocks.map((stock) => {
+                  const rawAmount = divAmount(stock, exchangeRate);
+                  const monthlyAmount = stock.frequency === "weekly" ? rawAmount * 4.33 : stock.frequency === "monthly" ? rawAmount : stock.frequency === "quarterly" ? rawAmount / 3 : rawAmount / 12;
+                  const nextEx = getNextExDividendDate(stock.exDividendDay, stock.frequency);
+                  const dLeft = daysUntil(nextEx);
+                  const isEditing = editingTicker === stock.ticker;
+                  const accs = tickerAccountMap.get(stock.ticker) || [];
+                  return (
+                    <div key={stock.key} style={{ padding: '12px', borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border-secondary)' }}>
+                      {/* 상단: 종목명 + 월배당금 + 편집 */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{stock.name}</span>
+                            <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 8,
+                              background: stock.frequency === "monthly" ? "rgba(49,130,246,0.1)" : "rgba(0,184,148,0.1)",
+                              color: stock.frequency === "monthly" ? "var(--accent-blue)" : "#00b894", flexShrink: 0 }}>
+                              {stock.frequency === "weekly" ? "주배당" : stock.frequency === "monthly" ? "월배당" : stock.frequency === "quarterly" ? "분기배당" : "연배당"}
                             </span>
                           </div>
-                        </td>
-                        <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right" }}>
-                          {isEditing ? (
-                            <input className="toss-input" type="number" value={editForm.dividendPerShare ?? stock.dividendPerShare}
-                              onChange={e => setEditForm({ ...editForm, dividendPerShare: Number(e.target.value) })}
-                              style={{ width: 80, textAlign: "right", fontSize: "var(--text-sm)" }} />
-                          ) : stock.isUSD ? hide(`$${stock.dividendPerShare}`) : hide(`${fmt(stock.dividendPerShare)}원`)}
-                        </td>
-                        <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--accent-blue)", fontWeight: "var(--font-semibold)" }}>
-                          {monthlyAmount > 0 ? hide(`${fmt(monthlyAmount)}원`) : "—"}
-                        </td>
-                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                          <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: "var(--text-xs)", fontWeight: "var(--font-medium)",
-                            background: stock.frequency === "monthly" ? "rgba(49,130,246,0.1)" : "rgba(0,184,148,0.1)",
-                            color: stock.frequency === "monthly" ? "var(--accent-blue)" : "#00b894" }}>
-                            {stock.frequency === "weekly" ? "주" : stock.frequency === "monthly" ? "월" : stock.frequency === "quarterly" ? "분기" : "연"}
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', marginTop: 2 }}>
+                            {stock.ticker}{accs.length === 1 ? ` · ${accs[0].owner} ${accs[0].accLabel}` : accs.length > 1 ? ` · ${accs.length}개 계좌` : ''}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                          <span style={{ fontWeight: 700, color: 'var(--accent-blue)', fontSize: 'var(--text-base)', whiteSpace: 'nowrap' }}>
+                            {monthlyAmount > 0 ? hide(`${fmt(monthlyAmount)}원`) : "—"}
                           </span>
-                        </td>
-                        <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
-                          <div>
-                            <span style={{ color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{formatDate(nextEx)}</span>
-                            <span style={{ marginLeft: 6, fontSize: "var(--text-xs)", color: dLeft <= 3 ? "var(--color-loss)" : dLeft <= 7 ? "#fdcb6e" : "var(--text-quaternary)" }}>
-                              {dLeft === 0 ? "오늘" : `${dLeft}일 후`}
-                            </span>
-                          </div>
-                        </td>
-                        <td style={{ padding: "10px 8px", textAlign: "right", whiteSpace: "nowrap" }}>
                           {isEditing ? (
-                            <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                            <>
                               <button onClick={() => handleSaveEdit(stock.ticker)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-profit)", padding: 4 }}><MIcon name="check" size={16} /></button>
                               <button onClick={() => setEditingTicker(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><MIcon name="close" size={16} /></button>
-                            </div>
+                            </>
                           ) : (
                             <button onClick={() => { setEditingTicker(stock.ticker); setEditForm({ dividendPerShare: stock.dividendPerShare }); }}
                               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}>
                               <MIcon name="edit" size={14} />
                             </button>
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {effectiveStocks.length === 0 && (
-                    <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
-                      계좌 보유 종목 중 배당율이 등록된 종목이 없습니다.<br/>ETF 순위 탭에서 "+ 담기"로 추가하거나 위 "배당율 추가" 버튼을 사용하세요.
-                    </td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                      {/* 편집 인풋 */}
+                      {isEditing && (
+                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>주당배당(월)</span>
+                          <input className="toss-input" type="number" value={editForm.dividendPerShare ?? stock.dividendPerShare}
+                            onChange={e => setEditForm({ ...editForm, dividendPerShare: Number(e.target.value) })}
+                            style={{ width: 100, textAlign: "right", fontSize: "var(--text-sm)" }} />
+                        </div>
+                      )}
+                      {/* 하단 세부 */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 8, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                        <span>보유 <strong style={{ color: 'var(--text-secondary)' }}>{fmt(stock.quantity)}주</strong></span>
+                        <span>주당 <strong style={{ color: 'var(--text-secondary)' }}>{stock.isUSD ? `$${stock.dividendPerShare}` : `${fmt(stock.dividendPerShare)}원`}</strong></span>
+                        <span style={{ color: dLeft <= 3 ? "var(--color-loss)" : dLeft <= 7 ? "#fdcb6e" : "var(--text-quaternary)" }}>
+                          배당락 {formatDate(nextEx)} ({dLeft === 0 ? "오늘" : `D-${dLeft}`})
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {effectiveStocks.length === 0 && (
+                  <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
+                    계좌 보유 종목 중 배당율이 등록된 종목이 없습니다.<br/>ETF 순위 탭에서 "+ 담기"로 추가하거나 위 "배당율 추가" 버튼을 사용하세요.
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* 데스크탑: 테이블 */
+              <div style={{ overflowX: "auto" }}>
+                <table className="toss-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--border-primary)" }}>
+                      {["종목명", "계좌", "보유수량", "주당배당(월)", "월배당금", "배당주기", "다음 배당락", ""].map((h, i) => (
+                        <th key={i} style={{ padding: "10px 12px", textAlign: i <= 1 ? "left" : "right", color: "var(--text-tertiary)", fontWeight: "var(--font-medium)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mergedStocks.map((stock) => {
+                      const rawAmount = divAmount(stock, exchangeRate);
+                      const monthlyAmount = stock.frequency === "weekly" ? rawAmount * 4.33 : stock.frequency === "monthly" ? rawAmount : stock.frequency === "quarterly" ? rawAmount / 3 : rawAmount / 12;
+                      const nextEx = getNextExDividendDate(stock.exDividendDay, stock.frequency);
+                      const dLeft = daysUntil(nextEx);
+                      const isEditing = editingTicker === stock.ticker;
+                      return (
+                        <tr key={stock.key} style={{ borderBottom: "1px solid var(--border-primary)" }}>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ fontWeight: "var(--font-medium)", color: "var(--text-primary)" }}>{stock.name}</div>
+                            <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>{stock.ticker}</div>
+                          </td>
+                          <td style={{ padding: "10px 12px", fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
+                            {(() => {
+                              const accs = tickerAccountMap.get(stock.ticker) || [];
+                              const owners = [...new Set(accs.map(a => a.owner))];
+                              if (accs.length === 1) {
+                                return <>
+                                  <div>{accs[0].owner}</div>
+                                  <div style={{ color: 'var(--text-quaternary)' }}>{accs[0].accLabel}</div>
+                                </>;
+                              }
+                              return <>
+                                <div>{owners.join('·')}</div>
+                                <div style={{ color: 'var(--text-quaternary)' }}>{accs.length}개 계좌</div>
+                              </>;
+                            })()}
+                          </td>
+                          <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-secondary)" }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              {fmt(stock.quantity)}
+                              <span
+                                onMouseEnter={(e) => {
+                                  const r = e.currentTarget.getBoundingClientRect();
+                                  setTooltip({ ticker: stock.ticker, x: r.right, y: r.top });
+                                }}
+                                onMouseLeave={() => setTooltip(null)}
+                                style={{ display: 'inline-flex', alignItems: 'center', cursor: 'default' }}
+                              >
+                                <MIcon name="info" size={13} style={{ color: 'var(--text-quaternary)', verticalAlign: 'middle' }} />
+                              </span>
+                            </div>
+                          </td>
+                          <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right" }}>
+                            {isEditing ? (
+                              <input className="toss-input" type="number" value={editForm.dividendPerShare ?? stock.dividendPerShare}
+                                onChange={e => setEditForm({ ...editForm, dividendPerShare: Number(e.target.value) })}
+                                style={{ width: 80, textAlign: "right", fontSize: "var(--text-sm)" }} />
+                            ) : stock.isUSD ? hide(`$${stock.dividendPerShare}`) : hide(`${fmt(stock.dividendPerShare)}원`)}
+                          </td>
+                          <td className="toss-number" style={{ padding: "10px 12px", textAlign: "right", color: "var(--accent-blue)", fontWeight: "var(--font-semibold)" }}>
+                            {monthlyAmount > 0 ? hide(`${fmt(monthlyAmount)}원`) : "—"}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: "var(--text-xs)", fontWeight: "var(--font-medium)",
+                              background: stock.frequency === "monthly" ? "rgba(49,130,246,0.1)" : "rgba(0,184,148,0.1)",
+                              color: stock.frequency === "monthly" ? "var(--accent-blue)" : "#00b894" }}>
+                              {stock.frequency === "weekly" ? "주" : stock.frequency === "monthly" ? "월" : stock.frequency === "quarterly" ? "분기" : "연"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
+                            <div>
+                              <span style={{ color: "var(--text-primary)", fontWeight: "var(--font-medium)" }}>{formatDate(nextEx)}</span>
+                              <span style={{ marginLeft: 6, fontSize: "var(--text-xs)", color: dLeft <= 3 ? "var(--color-loss)" : dLeft <= 7 ? "#fdcb6e" : "var(--text-quaternary)" }}>
+                                {dLeft === 0 ? "오늘" : `${dLeft}일 후`}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: "10px 8px", textAlign: "right", whiteSpace: "nowrap" }}>
+                            {isEditing ? (
+                              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                                <button onClick={() => handleSaveEdit(stock.ticker)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-profit)", padding: 4 }}><MIcon name="check" size={16} /></button>
+                                <button onClick={() => setEditingTicker(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}><MIcon name="close" size={16} /></button>
+                              </div>
+                            ) : (
+                              <button onClick={() => { setEditingTicker(stock.ticker); setEditForm({ dividendPerShare: stock.dividendPerShare }); }}
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}>
+                                <MIcon name="edit" size={14} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {effectiveStocks.length === 0 && (
+                      <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
+                        계좌 보유 종목 중 배당율이 등록된 종목이 없습니다.<br/>ETF 순위 탭에서 "+ 담기"로 추가하거나 위 "배당율 추가" 버튼을 사용하세요.
+                      </td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* 계좌에 없는 수동 등록 종목 */}

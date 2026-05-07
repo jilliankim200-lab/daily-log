@@ -793,11 +793,12 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                       : s.partialRatio < 0.34 ? '1/3 매도'
                       : '1/4 매도'}
                   </span>
-                  {s.cls && (
+                  {s.cls && !isMobile && (
                     <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600,
                       background: `color-mix(in srgb, ${ASSET_COLORS[s.cls]} var(--badge-mix), transparent)`, color: ASSET_COLORS[s.cls],
                       borderRadius: 4, padding: '1px 5px' }}>{s.cls}</span>
                   )}
+                  {!isMobile && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
                     background: `color-mix(in srgb, ${timing.color} var(--badge-mix), transparent)`,
                     borderRadius: 5, padding: '2px 7px', whiteSpace: 'nowrap' }}>
@@ -814,6 +815,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                       );
                     })()}
                   </span>
+                  )}
                 </div>
                 {execMode && (
                   <button onClick={() => onToggleSell?.(rk)}
@@ -833,15 +835,34 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                   lineHeight: 1.35, wordBreak: 'keep-all' }}>
                 {s.h.name}
               </div>
+              {/* 모바일: 종목명 하단 timing 뱃지 */}
+              {isMobile && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+                  background: `color-mix(in srgb, ${timing.color} var(--badge-mix), transparent)`,
+                  borderRadius: 5, padding: '2px 7px' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: timing.color }}>{timing.label}</span>
+                  {timing.range && timing.range[0] > 0 && (() => {
+                    const rMin = Math.min(timing.range[0], timing.range[1]);
+                    const rMax = Math.max(timing.range[0], timing.range[1]);
+                    const fmt = (n: number) => Math.round(n).toLocaleString() + '원';
+                    const atPeak = Math.abs(rMax - rMin) / rMax < 0.001;
+                    return (
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: timing.color }}>
+                        {atPeak ? `${fmt(rMax)} (60일 고점)` : `${fmt(rMin)}~${fmt(rMax)}`}
+                      </span>
+                    );
+                  })()}
+                </span>
+              )}
               {/* 구분선 */}
               <div style={{ height: 1, background: 'var(--border-secondary)' }} />
               {/* 분할매도 금액 (partialRatio 있을 때만) */}
               {s.partialRatio != null && s.partialRatio < 1 && (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                  매도 예정 <span style={{ fontWeight: 700, color: 'var(--color-loss)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 1 : 0, flexWrap: 'wrap' }}>
+                  <span>매도 예정 <span style={{ fontWeight: 700, color: 'var(--color-loss)' }}>
                     {Math.round(s.val * s.partialRatio).toLocaleString()}원
-                  </span>
-                  <span style={{ marginLeft: 4, color: 'var(--text-quaternary)' }}>
+                  </span></span>
+                  <span style={{ marginLeft: isMobile ? 0 : 4, color: 'var(--text-quaternary)' }}>
                     (보유 {Math.round(s.val).toLocaleString()}원의 {s.partialRatio === 0.5 ? '50%' : s.partialRatio < 0.34 ? '33%' : '25%'})
                   </span>
                 </div>
@@ -2022,7 +2043,7 @@ export function OptimalGuide() {
       </div>
 
       {/* 매도 기준 설정 패널 */}
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: isMobile ? '10px 12px' : '12px 16px', marginBottom: isMobile ? 14 : 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      {!isMobile && <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: isMobile ? '10px 12px' : '12px 16px', marginBottom: isMobile ? 14 : 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <MIcon name="tune" size={15} style={{ color: 'var(--text-tertiary)' }} />
           <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>매도 기준</span>
@@ -2075,10 +2096,10 @@ export function OptimalGuide() {
             </button>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* 필터 설명 팝업 */}
-      {showFilterModal && (
+      {!isMobile && showFilterModal && (
         <div onClick={() => setShowFilterModal(false)} style={{
           position: 'fixed', inset: 0, zIndex: 1000,
           background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2173,7 +2194,7 @@ export function OptimalGuide() {
       )}
 
       {/* 요약 카드 */}
-      {(() => {
+      {!isMobile && (() => {
         // 매도 종목 목록 (계좌별)
         const sellItems = accountPlans.flatMap(p =>
           p.sells.map(s => ({ accLabel: accLabel(p.acc), name: s.h.name, val: s.val, ret: s.ret }))
@@ -2305,10 +2326,10 @@ export function OptimalGuide() {
         );
       })()}
 
-      {showComparison && <ComparisonPanel accounts={accounts} prices={prices} plans={accountPlans} targets={targets} />}
+      {!isMobile && showComparison && <ComparisonPanel accounts={accounts} prices={prices} plans={accountPlans} targets={targets} />}
 
       {/* 목표 비중 카드 */}
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
+      {!isMobile && <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-secondary)' }}>
             <MIcon name="tune" size={15} style={{ color: 'var(--text-tertiary)' }} />
@@ -2387,7 +2408,7 @@ export function OptimalGuide() {
             })}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* 계좌별 플랜 */}
       <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
