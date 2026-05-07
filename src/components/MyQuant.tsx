@@ -75,9 +75,7 @@ function calcRebalance(portfolio: PortfolioItem[], signal: Signal, top: CrashIte
 
   // 현재 보유 자산 처리
   for (const item of portfolio) {
-    const targetEntry = targets.find(t =>
-      t.name === item.name || item.name.includes(t.name.split(' ')[0])
-    );
+    const targetEntry = targets.find(t => t.name === item.name);
     const targetWeight = targetEntry?.weight ?? 0;
     const targetAmount = total * targetWeight;
     const diff = targetAmount - item.amount;
@@ -93,9 +91,7 @@ function calcRebalance(portfolio: PortfolioItem[], signal: Signal, top: CrashIte
 
   // 목표에만 있고 현재 미보유인 자산 추가
   for (const t of targets) {
-    const already = rows.find(r =>
-      r.name === t.name || r.name.includes(t.name.split(' ')[0])
-    );
+    const already = rows.find(r => r.name === t.name);
     if (!already) {
       rows.push({
         name: t.name,
@@ -137,7 +133,7 @@ function RebalanceSimulator({ portfolio, crashItems, crashLoading }: {
   const rows = calcRebalance(portfolio, signal, top);
   const sells = rows.filter(r => r.diff < 0);
   const buys = rows.filter(r => r.diff > 0);
-  const totalTrade = rows.reduce((s, r) => s + Math.abs(r.diff), 0) / 2;
+  const totalTrade = Math.round(rows.reduce((s, r) => s + Math.abs(r.diff), 0) / 2);
 
   if (portfolio.length === 0 || total === 0) {
     return (
@@ -186,13 +182,13 @@ function RebalanceSimulator({ portfolio, crashItems, crashLoading }: {
               <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', marginBottom: 6, letterSpacing: '0.04em' }}>
                 매도
               </div>
-              {sells.map(r => (
-                <div key={r.name} style={rowStyle(r.diff)}>
+              {sells.map((r, i) => (
+                <div key={`sell-${r.name}-${i}`} style={rowStyle(r.diff)}>
                   <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</span>
                   <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 700 }}>
                     {Math.abs(r.diff).toLocaleString()}원
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>
-                      ({(r.currentWeight * 100).toFixed(0)}% → {(r.targetWeight * 100).toFixed(0)}%)
+                      ({Math.round(r.currentWeight * 100)}% → {Math.round(r.targetWeight * 100)}%)
                     </span>
                   </span>
                 </div>
@@ -205,13 +201,13 @@ function RebalanceSimulator({ portfolio, crashItems, crashLoading }: {
               <div style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', marginBottom: 6, letterSpacing: '0.04em' }}>
                 매수
               </div>
-              {buys.map(r => (
-                <div key={r.name} style={rowStyle(r.diff)}>
+              {buys.map((r, i) => (
+                <div key={`buy-${r.name}-${i}`} style={rowStyle(r.diff)}>
                   <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</span>
                   <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 700 }}>
                     +{r.diff.toLocaleString()}원
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>
-                      ({(r.currentWeight * 100).toFixed(0)}% → {(r.targetWeight * 100).toFixed(0)}%)
+                      ({Math.round(r.currentWeight * 100)}% → {Math.round(r.targetWeight * 100)}%)
                     </span>
                   </span>
                 </div>
