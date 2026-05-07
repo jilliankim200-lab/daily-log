@@ -251,7 +251,7 @@ export function MonthlyStrategy() {
         </button>
       </div>
 
-      {activeTab === 'quant' && <QuantTab isMobile={isMobile} pad={pad} />}
+      {activeTab === 'quant' && <QuantTab isMobile={isMobile} pad={pad} crashItems={crashItems} crashUpdatedAt={crashUpdatedAt} crashLoading={crashLoading} />}
       {activeTab !== 'quant' && <>
 
       {/* 요점 */}
@@ -529,7 +529,10 @@ function Tag({ color, children }: { color: string; children: React.ReactNode }) 
   );
 }
 
-function QuantTab({ isMobile, pad }: { isMobile: boolean; pad: number }) {
+function QuantTab({ isMobile, pad, crashItems, crashUpdatedAt, crashLoading }: {
+  isMobile: boolean; pad: number;
+  crashItems: CrashItem[]; crashUpdatedAt: string | null; crashLoading: boolean;
+}) {
   const [allocMode, setAllocMode] = useState<'top1' | 'proportional'>('top1');
 
   const ASSETS = [

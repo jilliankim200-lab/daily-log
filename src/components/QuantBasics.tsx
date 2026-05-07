@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { kvGet } from "../api";
+import { useAppContext } from "../App";
 
 const S: Record<string, React.CSSProperties> = {
-  wrap:    { display: "flex", gap: 0, minHeight: "100%", position: "relative" },
-  toc:     { width: 180, flexShrink: 0, position: "sticky", top: 0, height: "calc(100vh - 60px)",
-             overflowY: "auto", padding: "28px 12px", borderRight: "1px solid var(--border-primary)" },
-  tocTitle:{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)", letterSpacing: "0.08em",
-             textTransform: "uppercase" as const, marginBottom: 10 },
-  tocSep:  { height: 1, background: "var(--border-primary)", margin: "8px 0" },
-  content: { flex: 1, padding: "36px 44px 60px", maxWidth: 860, overflowY: "auto" },
-  secLabel:{ fontSize: 10, fontWeight: 700, color: "#3b82f6", letterSpacing: "0.1em",
+  secLabel:{ fontSize: 'var(--text-xs)', fontWeight: 700, color: "#3b82f6", letterSpacing: "0.1em",
              textTransform: "uppercase" as const, marginBottom: 6 },
-  secTitle:{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 4 },
-  secSub:  { fontSize: 13, color: "var(--text-tertiary)", marginBottom: 20 },
+  secTitle:{ fontSize: 'var(--text-xl)', fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.3, marginBottom: 4 },
+  secSub:  { fontSize: 'var(--text-sm)', color: "var(--text-tertiary)", marginBottom: 20 },
   divider: { height: 1, background: "var(--border-primary)", marginBottom: 20 },
   card:    { background: "var(--bg-secondary)", border: "1px solid var(--border-primary)",
              borderRadius: 10, padding: "18px 20px", marginBottom: 12 },
@@ -21,7 +15,7 @@ const S: Record<string, React.CSSProperties> = {
              padding: "14px 18px", marginBottom: 16 },
   quote:   { background: "var(--bg-secondary)", borderLeft: "4px solid #8b5cf6",
              borderRadius: "0 8px 8px 0", padding: "14px 18px",
-             fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.8, margin: "16px 0" },
+             fontSize: 'var(--text-sm)', color: "var(--text-secondary)", lineHeight: 1.8, margin: "16px 0" },
 };
 
 function Th({ children }: { children: React.ReactNode }) {
@@ -706,6 +700,7 @@ function PortfolioOptimizer({ signal }: { signal: MomentumSignal }) {
 }
 
 export function QuantBasics() {
+  const { isMobile } = useAppContext();
   const [active, setActive] = useState("def");
   const contentRef = useRef<HTMLDivElement>(null);
   const [signal, setSignal] = useState<MomentumSignal>(FALLBACK);
@@ -728,7 +723,7 @@ export function QuantBasics() {
     const sections = el.querySelectorAll("[data-sec]");
     const obs = new IntersectionObserver(entries => {
       entries.forEach(e => { if (e.isIntersecting) setActive((e.target as HTMLElement).dataset.sec!); });
-    }, { root: el, threshold: 0.3 });
+    }, { threshold: 0.3 });
     sections.forEach(s => obs.observe(s));
     return () => obs.disconnect();
   }, []);
@@ -738,44 +733,42 @@ export function QuantBasics() {
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const tocLink = (href: string, label: string) => (
-    <button key={href} onClick={() => scrollTo(href)} style={{
-      display: "block", width: "100%", textAlign: "left", fontSize: 12,
-      color: active === href ? "#3b82f6" : "var(--text-tertiary)",
-      background: active === href ? "rgba(59,130,246,.08)" : "transparent",
-      border: "none", cursor: "pointer", padding: "5px 8px", borderRadius: 6,
-      marginBottom: 2, fontWeight: active === href ? 600 : 400, transition: "all .15s",
-    }}>{label}</button>
-  );
-
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 60px)", overflow: "hidden" }}>
-      {/* TOC */}
-      <nav style={S.toc}>
-        <div style={S.tocTitle}>목차</div>
-        {NAV.map((n, i) =>
-          "header" in n
-            ? <div key={i} style={{ fontSize: 9, fontWeight: 800, color: "var(--text-tertiary)",
-                letterSpacing: "0.1em", textTransform: "uppercase" as const,
-                padding: i === 0 ? "2px 8px 4px" : "10px 8px 4px" }}>
-                {(n as { header: string }).header}
-              </div>
-            : "sep" in n
-              ? <div key={i} style={S.tocSep} />
-              : "external" in n
-                ? <a key={i} href={n.href!} style={{
-                    display: "block", fontSize: 12, padding: "5px 8px", borderRadius: 6,
-                    marginBottom: 2, color: "#38bdf8", textDecoration: "none", fontWeight: 600,
-                    background: "rgba(56,189,248,.07)", border: "1px solid rgba(56,189,248,.15)",
-                    transition: "all .15s",
-                  }}>{n.label!}</a>
-                : tocLink(n.href!, n.label!)
-        )}
-      </nav>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: isMobile ? '16px 12px 60px' : '24px 24px 60px' }}>
+      {/* 수평 TOC nav */}
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 24, scrollbarWidth: 'none' as const }}>
+        {[
+          { href: "action",     label: "리밸런싱 액션" },
+          { href: "port-opt",   label: "포트폴리오 최적화" },
+          { href: "etf-pick",   label: "ETF 선택 기준" },
+          { href: "traps",      label: "주의사항" },
+          { href: "def",        label: "퀀트 투자란" },
+          { href: "why",        label: "왜 작동하는가" },
+          { href: "process",    label: "투자 프로세스" },
+          { href: "factors",    label: "5대 팩터" },
+          { href: "strategies", label: "전략 & 신호" },
+          { href: "backtest",   label: "백테스팅" },
+          { href: "summary",    label: "핵심 요약" },
+        ].map(({ href, label }) => (
+          <button key={href} onClick={() => scrollTo(href)} style={{
+            flexShrink: 0, fontSize: 'var(--text-xs)', fontWeight: active === href ? 700 : 500,
+            padding: '5px 12px', borderRadius: 20,
+            border: `1px solid ${active === href ? '#3b82f6' : 'var(--border-primary)'}`,
+            background: active === href ? 'rgba(59,130,246,.1)' : 'var(--bg-secondary)',
+            color: active === href ? '#3b82f6' : 'var(--text-secondary)',
+            cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap' as const,
+          }}>{label}</button>
+        ))}
+        <a href="/quant_chat.html" style={{
+          flexShrink: 0, fontSize: 'var(--text-xs)', fontWeight: 600,
+          padding: '5px 12px', borderRadius: 20, textDecoration: 'none',
+          border: '1px solid rgba(56,189,248,.3)', background: 'rgba(56,189,248,.07)',
+          color: '#38bdf8', whiteSpace: 'nowrap' as const,
+        }}>💬 Q&amp;A</a>
+      </div>
 
       {/* Content */}
-      <div ref={contentRef} style={{ flex: 1, overflowY: "auto", padding: "36px 44px 60px" }}>
-        <div style={{ maxWidth: 820 }}>
+      <div ref={contentRef}>
 
           {/* ── 6. 리밸런싱 액션 플랜 ── */}
           <section data-sec="action" style={{ marginBottom: 52, scrollMarginTop: 24 }}>
@@ -1507,10 +1500,8 @@ export function QuantBasics() {
             </div>
           </section>
 
-        </div>
-
         {/* Q&A 아카이브 배너 */}
-        <div style={{ margin: "0 44px 40px", background: "rgba(56,189,248,.06)",
+        <div style={{ marginTop: 8, marginBottom: 40, background: "rgba(56,189,248,.06)",
           border: "1px solid rgba(56,189,248,.2)", borderRadius: 12, padding: "20px 24px",
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" as const }}>
           <div>

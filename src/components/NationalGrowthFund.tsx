@@ -103,11 +103,26 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
+type PortfolioType = 'aggressive' | 'balanced' | 'safe';
+
+const PORTFOLIO_SECTORS: Record<PortfolioType, string[]> = {
+  aggressive: ['A', 'D', 'B'],
+  balanced:   ['A', 'D', 'B', 'F'],
+  safe:       ['A', 'G', 'H'],
+};
+
+const PORTFOLIO_LABELS: Record<PortfolioType, string> = {
+  aggressive: '공격형',
+  balanced:   '균형형',
+  safe:       '안전형',
+};
+
 export function NationalGrowthFund() {
   const { isMobile } = useAppContext();
   const [etfs, setEtfs] = useState<NgfEtf[]>(loadEtfs);
   const [prices, setPrices] = useState<PriceMap>({});
   const [showAddModal, setShowAddModal] = useState(false);
+  const [portfolioFilter, setPortfolioFilter] = useState<PortfolioType | null>(null);
 
   const [selectedTicker, setSelectedTicker] = useState(() => loadEtfs()[0]?.ticker ?? '');
   const [days, setDays] = useState(90);
@@ -178,33 +193,19 @@ export function NationalGrowthFund() {
             KDB 산업은행 5년 150조원 정책펀드 수혜 중소형 ETF
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button
-            onClick={() => setShowAiRec(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '8px 14px', borderRadius: 'var(--radius-md)',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              color: '#fff', border: 'none', cursor: 'pointer',
-              fontSize: 'var(--text-sm)', fontWeight: 600,
-            }}
-          >
-            <MIcon name="auto_awesome" size={16} />
-            AI 추천
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '8px 14px', borderRadius: 'var(--radius-md)',
-              background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)',
-              border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600,
-            }}
-          >
-            <MIcon name="add" size={18} />
-            ETF 추가
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '8px 14px', borderRadius: 'var(--radius-md)',
+            background: 'var(--accent-blue)', color: 'var(--accent-blue-fg)',
+            border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          <MIcon name="add" size={18} />
+          ETF 추가
+        </button>
       </div>
 
       {/* 차트 */}
@@ -305,8 +306,44 @@ export function NationalGrowthFund() {
 
       {/* ETF 카드 */}
       <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 12 }}>
-          분야별 ETF — 카드 클릭 시 차트 표시
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            분야별 ETF — 카드 클릭 시 차트 표시
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              onClick={() => setShowAiRec(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '5px 14px', borderRadius: 20, cursor: 'pointer',
+                fontSize: 13, fontWeight: 700,
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: '#fff', border: '2px solid transparent',
+              }}
+            >
+              <MIcon name="auto_awesome" size={14} />
+              AI 추천
+            </button>
+            <div style={{ width: 1, height: 20, background: 'var(--border-primary)' }} />
+            {PORTFOLIOS.map(pf => {
+              const isActive = portfolioFilter === pf.key;
+              return (
+                <button
+                  key={pf.key}
+                  onClick={() => setPortfolioFilter(isActive ? null : pf.key as PortfolioType)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                    border: `2px solid ${pf.color}`,
+                    background: isActive ? pf.color : 'transparent',
+                    color: isActive ? '#fff' : pf.color,
+                    transition: 'all 0.18s',
+                  }}
+                >
+                  {pf.type}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div style={{
           display: 'grid',
@@ -315,6 +352,7 @@ export function NationalGrowthFund() {
         }}>
           {etfs.map(etf => {
             const pd = prices[etf.ticker];
+            const inFilter = portfolioFilter ? PORTFOLIO_SECTORS[portfolioFilter].includes(etf.sector) : null;
             return (
               <EtfCard
                 key={etf.ticker}
@@ -324,6 +362,7 @@ export function NationalGrowthFund() {
                 isSelected={etf.ticker === selectedTicker}
                 onSelect={setSelectedTicker}
                 onDelete={handleDelete}
+                highlighted={inFilter}
               />
             );
           })}
@@ -472,11 +511,12 @@ type EtfCardProps = {
   isSelected: boolean;
   onSelect: (ticker: string) => void;
   onDelete: (ticker: string) => void;
+  highlighted: boolean | null;
 };
 
-const CARD_HEIGHT = 244;
+const CARD_HEIGHT = 268;
 
-function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete }: EtfCardProps) {
+function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete, highlighted }: EtfCardProps) {
   const [flipped, setFlipped] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const isUp = changeRate !== null && changeRate > 0;
@@ -484,6 +524,7 @@ function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete }: Etf
   const sectorColor = SECTOR_COLORS[etf.sector] ?? '#888';
   const info = ETF_INFO[etf.ticker];
   const signal = getBuySignal(changeRate);
+  const dimmed = highlighted === false;
 
   const faceBase: React.CSSProperties = {
     position: 'absolute', inset: 0,
@@ -513,14 +554,16 @@ function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete }: Etf
         transformStyle: 'preserve-3d',
         transition: 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)',
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        opacity: dimmed ? 0.35 : 1,
       }}>
 
         {/* 앞면 */}
         <div style={{
           ...faceBase,
           background: isSelected ? 'var(--bg-secondary)' : 'var(--bg-primary)',
-          border: `1px solid ${isSelected ? sectorColor + '88' : 'var(--border-primary)'}`,
-          boxShadow: isSelected ? `0 0 0 2px ${sectorColor}33` : 'none',
+          border: `1px solid ${highlighted === true ? sectorColor + 'cc' : isSelected ? sectorColor + '88' : 'var(--border-primary)'}`,
+          boxShadow: highlighted === true ? `0 0 0 3px ${sectorColor}44, 0 4px 16px ${sectorColor}22` : isSelected ? `0 0 0 2px ${sectorColor}33` : 'none',
+          transition: 'box-shadow 0.3s, border-color 0.3s',
         }}>
           <button
             onClick={e => { e.stopPropagation(); onDelete(etf.ticker); }}
@@ -534,7 +577,27 @@ function EtfCard({ etf, price, changeRate, isSelected, onSelect, onDelete }: Etf
             </span>
           </div>
           <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{etf.name}</div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 12 }}>{etf.ticker}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 8 }}>{etf.ticker}</div>
+
+          {/* 분할 매수 신호 */}
+          <div style={{ paddingTop: 8, borderTop: `1px solid ${sectorColor}33`, marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: signal.color, fontWeight: 700, marginBottom: 4 }}>
+              {signal.label}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[
+                { n: '1차 20%', desc: '지금' },
+                { n: '2차 30%', desc: 'MA5 반등' },
+                { n: '3차 50%', desc: 'MA20 근처' },
+              ].map(s => (
+                <div key={s.n} style={{ flex: 1, textAlign: 'center', padding: '3px 0', background: sectorColor + '18', borderRadius: 4 }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: sectorColor }}>{s.n}</div>
+                  <div style={{ fontSize: '9px', color: 'var(--text-tertiary)' }}>{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <span style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)' }}>
               {price !== null ? price.toLocaleString('ko-KR') + '원' : '—'}
@@ -656,51 +719,51 @@ function TradeGuideModal({ etf, price, changeRate, sectorColor, signal, onClose 
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', padding: '18px', width: 300, maxWidth: '88vw', boxShadow: '0 16px 48px rgba(0,0,0,0.35)' }}
+        style={{ background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', padding: '28px', width: 480, maxWidth: '92vw', boxShadow: '0 16px 48px rgba(0,0,0,0.35)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '2px 8px', borderRadius: 10, fontSize: '10px', fontWeight: 700 }}>{etf.label}</span>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>{etf.name.replace(/^(SOL|TIGER|ACE|PLUS|KODEX|KoAct|TIME)\s/, '')}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ background: sectorColor + '22', color: sectorColor, padding: '3px 12px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>{etf.label}</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{etf.name.replace(/^(SOL|TIGER|ACE|PLUS|KODEX|KoAct|TIME)\s/, '')}</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, display: 'flex' }}>
-            <MIcon name="close" size={18} />
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 4, display: 'flex' }}>
+            <MIcon name="close" size={22} />
           </button>
         </div>
 
         {/* 오늘 신호 */}
-        <div style={{ background: sectorColor + '16', borderRadius: 8, padding: '7px 11px', marginBottom: 13 }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: signal.color }}>{signal.label}</span>
+        <div style={{ background: sectorColor + '16', borderRadius: 10, padding: '10px 16px', marginBottom: 20 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: signal.color }}>{signal.label}</span>
         </div>
 
         {/* 체크포인트 */}
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 7, letterSpacing: '0.04em' }}>분할 매수 체크포인트</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 13 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 10 }}>분할 매수 체크포인트</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
           {GUIDE_POINTS.map((p, i) => (
-            <div key={p.title} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-              <span style={{ background: sectorColor, color: '#fff', borderRadius: '50%', minWidth: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, marginTop: 1 }}>
+            <div key={p.title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <span style={{ background: sectorColor, color: '#fff', borderRadius: '50%', minWidth: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginTop: 1 }}>
                 {i + 1}
               </span>
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{p.title}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{p.short}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{p.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>{p.short}</div>
               </div>
             </div>
           ))}
         </div>
 
         {/* 분할 전략 */}
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 10 }}>
           {[
             { n: '1차 20%', desc: '지금' },
             { n: '2차 30%', desc: 'MA5 반등' },
             { n: '3차 50%', desc: 'MA20 근처' },
           ].map(s => (
-            <div key={s.n} style={{ flex: 1, textAlign: 'center', padding: '6px 2px', background: sectorColor + '14', borderRadius: 7 }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: sectorColor }}>{s.n}</div>
-              <div style={{ fontSize: '9px', color: 'var(--text-tertiary)', marginTop: 2 }}>{s.desc}</div>
+            <div key={s.n} style={{ flex: 1, textAlign: 'center', padding: '10px 4px', background: sectorColor + '14', borderRadius: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: sectorColor }}>{s.n}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 4 }}>{s.desc}</div>
             </div>
           ))}
         </div>
@@ -722,9 +785,9 @@ const SECTOR_RANKS = [
 ];
 
 const PORTFOLIOS = [
-  { type: '공격형', color: '#ef4444', etfs: 'A + D + B', desc: 'AI·방산·바이오 3각' },
-  { type: '균형형', color: '#f59e0b', etfs: 'A + D + B + F', desc: '로봇 추가, 4섹터 분산' },
-  { type: '안전형', color: '#10b981', etfs: 'A + 코스닥액티브 1개', desc: '테마 1개 + 광범위 커버' },
+  { key: 'aggressive', type: '공격형', color: '#ef4444', etfs: 'A + D + B', desc: 'AI·방산·바이오 3각' },
+  { key: 'balanced',   type: '균형형', color: '#f59e0b', etfs: 'A + D + B + F', desc: '로봇 추가, 4섹터 분산' },
+  { key: 'safe',       type: '안전형', color: '#10b981', etfs: 'A + 코스닥액티브 1개', desc: '테마 1개 + 광범위 커버' },
 ];
 
 function AiRecommendModal({ onClose }: { onClose: () => void }) {
@@ -734,56 +797,42 @@ function AiRecommendModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', padding: '22px', width: 360, maxWidth: '92vw', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}
+        style={{ background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', padding: '32px', width: 640, maxWidth: '94vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 8, padding: '4px 6px', display: 'flex' }}>
-              <MIcon name="auto_awesome" size={16} style={{ color: '#fff' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 12, padding: '8px 10px', display: 'flex' }}>
+              <MIcon name="auto_awesome" size={24} style={{ color: '#fff' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--text-primary)' }}>AI 포트폴리오 추천</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>8개 중 핵심만 선택하는 법</div>
+              <div style={{ fontWeight: 700, fontSize: 22, color: 'var(--text-primary)' }}>AI 포트폴리오 추천</div>
+              <div style={{ fontSize: 15, color: 'var(--text-tertiary)', marginTop: 3 }}>8개 중 핵심만 선택하는 법</div>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex' }}>
-            <MIcon name="close" size={20} />
+            <MIcon name="close" size={24} />
           </button>
         </div>
 
         {/* 섹터 평가 */}
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.04em' }}>섹터별 추천 강도</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12 }}>섹터별 추천 강도</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 24 }}>
           {SECTOR_RANKS.map(r => (
-            <div key={r.etf} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '7px 10px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
-              <span style={{ fontSize: '11px', minWidth: 28, color: r.stars.startsWith('★★★') ? '#f59e0b' : r.stars.startsWith('★★') ? '#94a3b8' : 'var(--text-tertiary)', flexShrink: 0 }}>{r.stars}</span>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.etf}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginLeft: 6 }}>{r.reason}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 포트폴리오 */}
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.04em' }}>추천 구성</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-          {PORTFOLIOS.map(pf => (
-            <div key={pf.type} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: pf.color + '12', borderRadius: 8 }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: pf.color, minWidth: 36 }}>{pf.type}</span>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{pf.etfs}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>{pf.desc}</div>
+            <div key={r.etf} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '11px 16px', background: 'var(--bg-secondary)', borderRadius: 10 }}>
+              <span style={{ fontSize: 16, minWidth: 38, color: r.stars.startsWith('★★★') ? '#f59e0b' : r.stars.startsWith('★★') ? '#94a3b8' : 'var(--text-tertiary)', flexShrink: 0 }}>{r.stars}</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{r.etf}</span>
+                <span style={{ fontSize: 15, color: 'var(--text-tertiary)' }}>{r.reason}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* disclaimer */}
-        <div style={{ padding: '8px 10px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
-          <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+        <div style={{ padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 10 }}>
+          <div style={{ fontSize: 14, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
             ⚠️ 이 내용은 AI 분석 의견이며 투자 권유가 아닙니다. 최종 판단은 본인 책임입니다.
           </div>
         </div>
