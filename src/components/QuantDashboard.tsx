@@ -134,9 +134,14 @@ const CAT_SHORT: Record<string, string> = {
 const SIGNAL_LABEL: Record<string, string> = { green: "상승 유지", yellow: "경고", red: "크래시 위험" };
 const SIGNAL_COLOR: Record<string, string> = { green: "#34d399", yellow: "#b45309", red: "#f87171" };
 
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || "https://asset-dashboard-api.jilliankim200.workers.dev";
+
+type CrashItem = { ticker: string; name: string; cat: string; r1m: number | null; r3m: number | null; r6m: number | null; r12m: number | null; value?: number };
+
 // ─── Signal helpers ───────────────────────────────────────────────────────────
-function getMomentumSignal(d: { r3m: number; r6m: number }): "green" | "yellow" | "red" {
-  const { r3m, r6m } = d;
+function getMomentumSignal(d: { r3m: number | null; r6m: number | null }): "green" | "yellow" | "red" {
+  const r3m = d.r3m ?? 0;
+  const r6m = d.r6m ?? 0;
   if (r3m < -5) return "red";
   if (r3m < 0 && r6m < -10) return "red";
   if (r3m > 0 && r6m > 0) return "green";
@@ -150,6 +155,9 @@ export function QuantDashboard() {
   const [dmModalOpen, setDmModalOpen] = useState(false);
   const [crashFilter, setCrashFilter] = useState<"all" | "green" | "yellow" | "red">("all");
   const [crashGuideOpen, setCrashGuideOpen] = useState(false);
+  const [momData, setMomData] = useState<CrashItem[]>(MOM);
+  const [crashUpdatedAt, setCrashUpdatedAt] = useState<string | null>(null);
+  const [crashLoading, setCrashLoading] = useState(true);
 
   // Chart refs
   const refNav   = useRef<HTMLDivElement>(null);
@@ -158,6 +166,20 @@ export function QuantDashboard() {
   const refAnn   = useRef<HTMLDivElement>(null);
   const refHold  = useRef<HTMLDivElement>(null);
   const refDonut = useRef<HTMLDivElement>(null);
+
+  // Fetch real-time crash signals from Worker KV
+  useEffect(() => {
+    fetch(`${WORKER_URL}/kv/crash_signals`)
+      .then(r => r.json())
+      .then((res: { data: CrashItem[]; updatedAt: string } | null) => {
+        if (res?.data?.length) {
+          setMomData(res.data);
+          setCrashUpdatedAt(res.updatedAt);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCrashLoading(false));
+  }, []);
 
   // Track dark mode changes
   useEffect(() => {
@@ -351,12 +373,12 @@ export function QuantDashboard() {
   }, [plotlyReady, isDark]);
 
   // ─── Crash detection data ─────────────────────────────────────────────────
-  const signalData = MOM.map(d => ({ ...d, signal: getMomentumSignal(d) }));
+  const signalData = momData.map(d => ({ ...d, signal: getMomentumSignal(d) }));
   const sigCounts = { green: 0, yellow: 0, red: 0 };
   signalData.forEach(d => { sigCounts[d.signal]++; });
   const filteredSignals = crashFilter === "all" ? signalData : signalData.filter(d => d.signal === crashFilter);
 
-  const fmt = (v: number) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
+  const fmt = (v: number | null) => v === null ? "N/A" : (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
 
   // ─── Panel style ──────────────────────────────────────────────────────────
   const panelStyle: React.CSSProperties = {
@@ -688,7 +710,7 @@ export function QuantDashboard() {
         <div style={panelTitleStyle}>
           모멘텀 크래시 감지{" "}
           <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-            | 기준: 2026-05-06 &nbsp;·&nbsp; 3M/6M 수익률 기반
+            | 기준: {crashLoading ? "로딩 중…" : (crashUpdatedAt ?? "캐시")} &nbsp;·&nbsp; 3M/6M 수익률 기반
           </span>
         </div>
         <div style={panelSubStyle}>

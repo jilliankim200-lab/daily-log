@@ -1209,7 +1209,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                     </div>
                   );
                 })}
-                {acc.cash && acc.cash > 0 && <Row badge="유지" badgeColor="var(--color-profit)" name="현금" amount={acc.cash} />}
+                {acc.cash && acc.cash > 0 && <Row badge={buysCol ? "매수 재원" : "유지"} badgeColor="var(--color-profit)" name="현금" amount={acc.cash} />}
               </div>
               {buysCol}
             </div>

@@ -6,6 +6,18 @@ import { fetchStockSignals, type StockSignal } from '../utils/fetchStockSignals'
 import { getSellDecision } from '../utils/sellEngine';
 import { loadSellConfig } from '../utils/sellConfig';
 
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
+
+type CrashItem = { ticker: string; name: string; cat: string; r3m: number | null; r6m: number | null };
+function crashSignal(d: CrashItem): 'green' | 'yellow' | 'red' {
+  const r3 = d.r3m ?? 0; const r6 = d.r6m ?? 0;
+  if (r3 < -5) return 'red';
+  if (r3 < 0 && r6 < -10) return 'red';
+  if (r3 > 0 && r6 > 0) return 'green';
+  return 'yellow';
+}
+const CRASH_COLOR = { green: '#34d399', yellow: '#b45309', red: '#f87171' };
+
 type AssetClass = '주식' | '채권' | '커버드콜' | '금' | '기타';
 type RiskLevel = '매우높음' | '높음' | '보통' | '낮음';
 
@@ -93,6 +105,9 @@ export function MonthlyStrategy() {
 
   const [activeTab, setActiveTab] = useState<'monthly' | 'quant'>('monthly');
   const [signals, setSignals] = useState<Record<string, StockSignal>>({});
+  const [crashItems, setCrashItems] = useState<CrashItem[]>([]);
+  const [crashUpdatedAt, setCrashUpdatedAt] = useState<string | null>(null);
+  const [crashLoading, setCrashLoading] = useState(true);
 
   useEffect(() => {
     const tickers = accounts
@@ -101,6 +116,16 @@ export function MonthlyStrategy() {
     if (tickers.length === 0) return;
     fetchStockSignals(tickers).then(setSignals);
   }, [accounts]);
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/kv/crash_signals`)
+      .then(r => r.json())
+      .then((res: { data: CrashItem[]; updatedAt: string } | null) => {
+        if (res?.data?.length) { setCrashItems(res.data); setCrashUpdatedAt(res.updatedAt); }
+      })
+      .catch(() => {})
+      .finally(() => setCrashLoading(false));
+  }, []);
 
   const candidates = useMemo<SellCandidate[]>(() => {
     const list: SellCandidate[] = [];
@@ -199,47 +224,56 @@ export function MonthlyStrategy() {
     주식: 'var(--asset-stock)', 채권: 'var(--asset-bond)', 커버드콜: 'var(--asset-covered)', 금: 'var(--asset-gold)', 기타: 'var(--asset-other)',
   };
 
-  const cardStyle: React.CSSProperties = {
-    background: 'var(--bg-secondary)', borderRadius: 12,
-    border: '1px solid var(--border-secondary)', padding: isMobile ? 16 : 20, marginBottom: 16,
-  };
-
-  const tabStyle = (active: boolean, color: string): React.CSSProperties => ({
-    padding: '7px 20px', borderRadius: 8, fontSize: 'var(--text-sm)', fontWeight: 700,
-    cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border-secondary)'}`,
-    background: active ? `${color}18` : 'transparent',
-    color: active ? color : 'var(--text-tertiary)', transition: 'all .15s',
-  });
+  const pad = isMobile ? 16 : 20;
 
   return (
     <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto' }}>
 
-      {/* 탭 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <button style={tabStyle(activeTab === 'monthly', 'var(--color-loss)')}
-          onClick={() => setActiveTab('monthly')}>📅 5월 전략</button>
-        <button style={tabStyle(activeTab === 'quant', '#22c55e')}
-          onClick={() => setActiveTab('quant')}>📈 퀀트투자</button>
+      {/* 페이지 헤더 */}
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
+          2026년 5월
+        </h1>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
+          Sell in May 전략 분석 · 듀얼 모멘텀 신호
+        </p>
       </div>
 
-      {activeTab === 'quant' && <QuantTab isMobile={isMobile} cardStyle={cardStyle} />}
+      {/* 탭 */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24, borderBottom: '1px solid var(--border-primary)', paddingBottom: 12 }}>
+        <button className={`toss-tab ${activeTab === 'monthly' ? 'toss-tab-active' : ''}`}
+          onClick={() => setActiveTab('monthly')} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <MIcon name="calendar_today" size={14} />5월 전략
+        </button>
+        <button className={`toss-tab ${activeTab === 'quant' ? 'toss-tab-active' : ''}`}
+          onClick={() => setActiveTab('quant')} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <MIcon name="show_chart" size={14} />퀀트투자
+        </button>
+      </div>
+
+      {activeTab === 'quant' && <QuantTab isMobile={isMobile} pad={pad} />}
       {activeTab !== 'quant' && <>
 
-      {/* 헤더 */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>2026년 5월 전략</h1>
-          <span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(255,71,87,0.12)', color: 'var(--color-loss)', fontSize: 'var(--text-sm)', fontWeight: 700 }}>Sell in May</span>
-        </div>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.6, margin: 0 }}>
+      {/* 요점 */}
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', padding: '16px 20px', marginBottom: 20, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+        <p style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, fontSize: 'var(--text-base)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          2026년 5월 전략
+          <span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(255,71,87,0.12)', color: 'var(--color-loss)', fontSize: 'var(--text-xs)', fontWeight: 700 }}>Sell in May</span>
+        </p>
+        <p style={{ margin: 0 }}>
           5월~10월은 역사적으로 주식 수익률이 낮은 시기. 고위험 종목을 선별 매도하고 안전자산 비중을 높이는 전략을 분석했습니다.<br />
           <span style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}>※ 현금화 = 계좌 내 매도 후 단기채·MMF 이동 (계좌 외부 인출 아님)</span>
         </p>
       </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
       {/* 현재 자산군 비중 요약 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 14px 0', paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>현재 자산군 비중</div>
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="donut_large" size={18} style={{ color: 'var(--accent-blue)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>현재 자산군 비중</h2>
+        </div>
         <div style={{ display: 'flex', gap: 0, height: 12, borderRadius: 6, overflow: 'hidden', marginBottom: 10 }}>
           {(['주식', '커버드콜', '채권', '금', '기타'] as AssetClass[]).map(cls => (
             <div key={cls} style={{ width: `${allocation.pct[cls]}%`, background: ALLOC_COLORS[cls], transition: 'width 0.3s' }} />
@@ -261,9 +295,10 @@ export function MonthlyStrategy() {
       </div>
 
       {/* 전략 요약 박스 */}
-      <div style={{ ...cardStyle, background: 'rgba(255,71,87,0.05)', border: '1px solid rgba(255,71,87,0.2)' }}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-loss)', margin: '0 0 14px 0', paddingBottom: 8, borderBottom: '2px solid var(--color-loss)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MIcon name="insights" size={16} /> 5월 전략 요약
+      <div className="toss-card" style={{ padding: pad, background: 'rgba(255,71,87,0.05)', border: '1px solid rgba(255,71,87,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="insights" size={18} style={{ color: 'var(--color-loss)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-loss)', margin: 0 }}>5월 전략 요약</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 10 }}>
           {[
@@ -285,7 +320,7 @@ export function MonthlyStrategy() {
         if (group.items.length === 0) return null;
         const groupTotal = group.items.reduce((s, c) => s + c.val, 0);
         return (
-          <div key={group.label} style={cardStyle}>
+          <div key={group.label} className="toss-card" style={{ padding: pad }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MIcon name={group.icon} size={16} style={{ color: group.color }} />
@@ -298,7 +333,7 @@ export function MonthlyStrategy() {
 
             {group.items.map((c, i) => (
               <div key={`${c.accId}-${c.holding.id}`} style={{
-                padding: '12px 0', borderTop: i > 0 ? '1px solid var(--border-secondary)' : undefined,
+                padding: '12px 0', borderTop: i > 0 ? '1px solid var(--border-primary)' : undefined,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -331,10 +366,10 @@ export function MonthlyStrategy() {
       })}
 
       {/* 매도 후 이동 전략 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 14px 0', paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MIcon name="swap_horiz" size={16} style={{ color: 'var(--color-profit)' }} />
-          매도 후 이동 전략
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="swap_horiz" size={18} style={{ color: 'var(--color-profit)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>매도 후 이동 전략</h2>
         </div>
         {[
           { title: '단기채 ETF 증액', desc: 'KODEX 단기채권, TIGER 단기채권액티브 — 안전하면서 월배당', icon: 'shield', color: 'var(--asset-bond)' },
@@ -342,7 +377,7 @@ export function MonthlyStrategy() {
           { title: '커버드콜 ETF 확대', desc: 'RISE 미국테크100, KODEX 200타겟위클리 — 하락장 방어 + 배당 수취', icon: 'attach_money', color: 'var(--asset-covered)' },
           { title: '10월 이후 재진입', desc: '나스닥·S&P500 ETF를 10월 이후 다시 확대 — 계절성 전략 완성', icon: 'event_repeat', color: 'var(--accent-blue)' },
         ].map((item, i) => (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderTop: i > 0 ? '1px solid var(--border-secondary)' : undefined }}>
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderTop: i > 0 ? '1px solid var(--border-primary)' : undefined }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: `${item.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <MIcon name={item.icon} size={16} style={{ color: item.color }} />
             </div>
@@ -355,28 +390,28 @@ export function MonthlyStrategy() {
       </div>
 
       {/* 종목 심층 분석 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0', paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MIcon name="search" size={16} style={{ color: 'var(--accent-blue)' }} />
-          종목 심층 분석
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <MIcon name="manage_search" size={18} style={{ color: 'var(--accent-blue)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>종목 심층 분석</h2>
         </div>
         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 16 }}>5월 전략 관점에서 보유 종목을 개별 분석합니다.</div>
 
         {/* KODEX 200타겟위클리커버드콜 */}
-        <div style={{ borderRadius: 10, border: '1px solid var(--border-secondary)', overflow: 'hidden' }}>
+        <div style={{ borderRadius: 10, border: '1px solid var(--border-primary)', overflow: 'hidden' }}>
           {/* 종목 헤더 */}
           <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)', marginBottom: 2 }}>KODEX 200타겟위클리커버드콜</div>
               <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>498400 · 코스피200 기반 주간 커버드콜</div>
             </div>
-            <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(0,184,148,0.12)', color: 'var(--color-profit)', fontSize: 'var(--text-sm)', fontWeight: 700 }}>
-              ✓ 5월 유지 추천
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: 'rgba(0,184,148,0.12)', color: 'var(--color-profit)', fontSize: 'var(--text-sm)', fontWeight: 700 }}>
+              <MIcon name="check_circle" size={14} />5월 유지 추천
             </span>
           </div>
 
           {/* 보유 현황 */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-secondary)' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-primary)' }}>
             <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>보유 현황</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[
@@ -398,7 +433,7 @@ export function MonthlyStrategy() {
                   </div>
                 );
               })}
-              <div style={{ borderTop: '1px solid var(--border-secondary)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', fontWeight: 700 }}>
+              <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', fontWeight: 700 }}>
                 <span style={{ color: 'var(--text-secondary)' }}>합계</span>
                 <span style={{ color: 'var(--text-primary)' }}>1,699주 · 약 {fmtM(1699 * 13500)}</span>
               </div>
@@ -431,7 +466,7 @@ export function MonthlyStrategy() {
                   desc: '코스피200이 10% 이상 급락하면 커버드콜 프리미엄으로 방어가 어려움. 지윤 ISA·펀슈 평단(16,000원대)은 현재가에 따라 손실 가능성 확인 필요.',
                 },
               ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-secondary)' : undefined }}>
+                <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-primary)' : undefined }}>
                   <MIcon name={item.icon} size={15} style={{ color: item.color, flexShrink: 0, marginTop: 1 }} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)', marginBottom: 2 }}>{item.title}</div>
@@ -444,8 +479,10 @@ export function MonthlyStrategy() {
         </div>
       </div>
 
+      </div>{/* end gap-column */}
+
       {/* 면책 */}
-      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-quaternary)', textAlign: 'center', lineHeight: 1.6, padding: '8px 0' }}>
+      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: 1.6, padding: '16px 0 8px' }}>
         이 분석은 평단가 기준 데이터이며 현재 수익률과 다를 수 있습니다.<br />
         투자 결정은 본인 판단 하에 이루어지며, 이 페이지는 참고용입니다.
       </div>
@@ -459,8 +496,8 @@ export function MonthlyStrategy() {
 function CheckItem({ done, children }: { done?: boolean; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0',
-      borderBottom: '1px solid var(--border-secondary)' }}>
-      <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${done ? '#22c55e' : 'var(--border-secondary)'}`,
+      borderBottom: '1px solid var(--border-primary)' }}>
+      <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${done ? '#22c55e' : 'var(--border-primary)'}`,
         background: done ? '#22c55e18' : 'transparent', flexShrink: 0, display: 'flex',
         alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
         {done && <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 800 }}>✓</span>}
@@ -473,7 +510,7 @@ function CheckItem({ done, children }: { done?: boolean; children: React.ReactNo
 function Row({ label, val, valColor, sub }: { label: string; val: string; valColor?: string; sub?: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '9px 0', borderBottom: '1px solid var(--border-secondary)' }}>
+      padding: '9px 0', borderBottom: '1px solid var(--border-primary)' }}>
       <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{label}</span>
       <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: valColor ?? 'var(--text-primary)' }}>{val}</div>
@@ -492,42 +529,59 @@ function Tag({ color, children }: { color: string; children: React.ReactNode }) 
   );
 }
 
-function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React.CSSProperties }) {
+function QuantTab({ isMobile, pad }: { isMobile: boolean; pad: number }) {
+  const [allocMode, setAllocMode] = useState<'top1' | 'proportional'>('top1');
+
+  const ASSETS = [
+    { rank: 1, name: '반도체',    ticker: '091160', r6m: 137.0 },
+    { rank: 2, name: '코스피200', ticker: '069500', r6m: 94.1  },
+    { rank: 3, name: '코스닥150', ticker: '229200', r6m: 36.6  },
+    { rank: 4, name: '나스닥100', ticker: '133690', r6m: 13.1  },
+    { rank: 5, name: 'S&P500',   ticker: '360750', r6m: 10.4  },
+    { rank: 6, name: '금',        ticker: '411060', r6m: 9.1   },
+    { rank: 7, name: '미국장기채',ticker: '305080', r6m: 0.6   },
+  ];
+  const totalR = ASSETS.reduce((s, a) => s + a.r6m, 0);
+
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* 이달 신호 요약 */}
-      <div style={{ ...cardStyle, background: 'rgba(34,197,94,.05)', border: '1px solid rgba(34,197,94,.2)' }}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: '#22c55e',
-          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #22c55e' }}>
-          📡 2026년 5월 듀얼 모멘텀 신호
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <MIcon name="sensors" size={18} style={{ color: '#22c55e' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>2026년 5월 듀얼 모멘텀 신호</h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: isMobile ? 12 : 0 }}>
           {[
-            { label: '1위 자산', val: '반도체 (091160)', color: '#22c55e' },
-            { label: '6M 수익률', val: '+137.0%', color: '#f97316' },
-            { label: '시장 국면', val: '강세장', color: '#22c55e' },
-            { label: '리밸런싱', val: '5월 말', color: 'var(--text-primary)' },
-          ].map(s => (
-            <div key={s.label} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 3 }}>{s.label}</div>
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: s.color }}>{s.val}</div>
+            { label: '1위 자산', val: '반도체', sub: '091160', color: '#22c55e' },
+            { label: '6M 수익률', val: '+137.0%', sub: '7개 자산 중 1위', color: '#f97316' },
+            { label: '시장 국면', val: '강세장', sub: '절대 모멘텀 양(+)', color: '#22c55e' },
+            { label: '다음 리밸런싱', val: '5월 말', sub: '월말 수익률 재산출', color: 'var(--text-primary)' },
+          ].map((s, i) => (
+            <div key={s.label} style={{
+              padding: isMobile ? '0' : '0 16px',
+              borderLeft: (!isMobile && i > 0) ? '1px solid var(--border-primary)' : undefined,
+            }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: s.color, marginBottom: 2 }}>{s.val}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{s.sub}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* 전략 vs Sell in May */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
-          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
-          ⚡ 퀀트 전략 vs Sell in May — 이달의 판단
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="bolt" size={18} style={{ color: 'var(--accent-blue)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>퀀트 전략 vs Sell in May — 이달의 판단</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div style={{ background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)',
             borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
-              📅 5월 전략 탭 관점
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#ef4444', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <MIcon name="calendar_today" size={14} />5월 전략 탭 관점
             </div>
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
               Sell in May 계절성 — 5~10월 주식 수익률 저조<br />
@@ -536,8 +590,8 @@ function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React
           </div>
           <div style={{ background: 'rgba(34,197,94,.05)', border: '1px solid rgba(34,197,94,.2)',
             borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#22c55e', marginBottom: 8 }}>
-              📈 퀀트 모멘텀 관점
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#22c55e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <MIcon name="show_chart" size={14} />퀀트 모멘텀 관점
             </div>
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
               6M +137% — 7개 자산 중 압도적 1위<br />
@@ -545,8 +599,8 @@ function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React
             </div>
           </div>
         </div>
-        <div style={{ background: 'rgba(59,130,246,.07)', border: '1px solid rgba(59,130,246,.2)',
-          borderLeft: '3px solid #3b82f6', borderRadius: '0 8px 8px 0', padding: '10px 14px',
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+          borderRadius: 8, padding: '12px 14px',
           fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           <strong style={{ color: '#3b82f6' }}>이달 결론:</strong> 두 전략이 충돌합니다.
           퀀트 모멘텀 전략은 신호 기반 규칙 매매이므로 <strong style={{ color: 'var(--text-primary)' }}>크래시 신호가 뜨기 전까지 유지</strong>가 원칙.
@@ -555,10 +609,10 @@ function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React
       </div>
 
       {/* 이달 액션 플랜 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
-          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #22c55e' }}>
-          🎯 5월 퀀트 액션 플랜
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="my_location" size={18} style={{ color: '#22c55e' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>5월 퀀트 액션 플랜</h2>
         </div>
 
         {[
@@ -589,7 +643,7 @@ function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React
         ].map((item, i, arr) => (
           <div key={item.num} style={{ display: 'flex', gap: 12, alignItems: 'flex-start',
             paddingBottom: i < arr.length - 1 ? 14 : 0,
-            borderBottom: i < arr.length - 1 ? '1px solid var(--border-secondary)' : 'none',
+            borderBottom: i < arr.length - 1 ? '1px solid var(--border-primary)' : 'none',
             marginBottom: i < arr.length - 1 ? 14 : 0 }}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: `${item.color}22`,
               color: item.color, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center',
@@ -606,68 +660,105 @@ function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React
       </div>
 
       {/* 7대 자산 현황 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
-          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
-          📊 7대 자산 6M 수익률 순위 (2026-05-06 기준)
-        </div>
-        {[
-          { rank: 1, name: '반도체',    ticker: '091160', r6m: 137.0, action: '✓ 보유 유지',     ac: '#22c55e' },
-          { rank: 2, name: '코스피200', ticker: '069500', r6m: 94.1,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
-          { rank: 3, name: '코스닥150', ticker: '229200', r6m: 36.6,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
-          { rank: 4, name: '나스닥100', ticker: '133690', r6m: 13.1,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
-          { rank: 5, name: 'S&P500',   ticker: '360750', r6m: 10.4,  action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
-          { rank: 6, name: '금',        ticker: '411060', r6m: 9.1,   action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
-          { rank: 7, name: '미국장기채',ticker: '305080', r6m: 0.6,   action: '✕ 보유 금지 → 매도', ac: '#ef4444' },
-        ].map((row, i) => (
-          <div key={row.ticker} style={{ display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 0', borderBottom: i < 6 ? '1px solid var(--border-secondary)' : 'none' }}>
-            <div style={{ width: 22, fontSize: 12, fontWeight: 700, flexShrink: 0,
-              color: row.rank === 1 ? '#22c55e' : 'var(--text-tertiary)' }}>{row.rank}위</div>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700,
-                color: row.rank === 1 ? '#22c55e' : 'var(--text-primary)' }}>{row.name}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-quaternary)', marginLeft: 6 }}>{row.ticker}</span>
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: '#22c55e', width: 64, textAlign: 'right' }}>
-              +{row.r6m}%
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: row.ac, width: isMobile ? 90 : 130, textAlign: 'right' }}>
-              {row.action}
-            </div>
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MIcon name="bar_chart" size={18} style={{ color: 'var(--accent-blue)' }} />
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>7대 자산 6M 수익률 순위</h2>
           </div>
-        ))}
-        <div style={{ marginTop: 12, background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.15)',
-          borderRadius: 8, padding: '8px 12px', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', lineHeight: 1.7 }}>
-          <strong style={{ color: '#ef4444' }}>✕ 보유 금지</strong> = 현재 보유 중이면{' '}
-          <strong style={{ color: '#ef4444' }}>전량 매도</strong> →{' '}
-          <strong style={{ color: 'var(--text-primary)' }}>반도체(091160)</strong>으로 통합
+          {/* 토글 */}
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-secondary)', borderRadius: 20, padding: 3 }}>
+            {(['top1', 'proportional'] as const).map(mode => (
+              <button key={mode} onClick={() => setAllocMode(mode)} style={{
+                padding: '4px 12px', borderRadius: 16, fontSize: 'var(--text-xs)', fontWeight: 600,
+                cursor: 'pointer', border: 'none', transition: 'all .15s',
+                background: allocMode === mode ? 'var(--accent-blue)' : 'transparent',
+                color: allocMode === mode ? '#fff' : 'var(--text-tertiary)',
+              }}>
+                {mode === 'top1' ? '집중 투자' : '비례 배분'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 모드 설명 */}
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 12, padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
+          {allocMode === 'top1'
+            ? '집중 투자: 6M 수익률 1위 자산에 100% 투자. 나머지는 단기채 보관. 회전율 낮고 수익 집중.'
+            : '비례 배분: 6M 수익률 비례로 전 자산 분산 투자. 리스크 분산, 수익률은 Top-1보다 낮음.'}
+        </div>
+
+        {ASSETS.map((row, i) => {
+          const propPct = Math.round(row.r6m / totalR * 1000) / 10;
+          const isTop1 = allocMode === 'top1';
+          const targetPct = isTop1 ? (row.rank === 1 ? 100 : 0) : propPct;
+          const isHold = isTop1 ? row.rank === 1 : true;
+          const color = isHold ? '#22c55e' : '#ef4444';
+          const barWidth = isTop1 ? (row.rank === 1 ? 100 : 0) : (propPct / (137.0 / totalR * 100) * 100);
+
+          return (
+            <div key={row.ticker} style={{ padding: '10px 0', borderBottom: i < 6 ? '1px solid var(--border-primary)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                <div style={{ width: 22, fontSize: 12, fontWeight: 700, flexShrink: 0,
+                  color: row.rank === 1 ? '#22c55e' : 'var(--text-tertiary)' }}>{row.rank}위</div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700,
+                    color: (isHold) ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{row.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-quaternary)', marginLeft: 6 }}>{row.ticker}</span>
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', width: 56, textAlign: 'right' }}>
+                  +{row.r6m}%
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color, width: isMobile ? 52 : 68, textAlign: 'right' }}>
+                  {targetPct}%
+                </div>
+              </div>
+              {/* 비중 바 */}
+              <div style={{ height: 4, background: 'var(--bg-secondary)', borderRadius: 2, marginLeft: 32, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 2,
+                  width: `${Math.min(barWidth, 100)}%`,
+                  background: isHold ? '#22c55e' : 'var(--border-primary)',
+                  transition: 'width .4s ease',
+                }} />
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8,
+          fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', lineHeight: 1.7 }}>
+          {allocMode === 'top1'
+            ? <><strong style={{ color: '#ef4444' }}>0% 자산</strong>은 단기채권(153130)으로 보관 · 매월 말 수익률 재산출 후 1위 교체 시 리밸런싱</>
+            : <>비례 배분은 매월 말 수익률 재산출 후 비중 조정 · 모든 자산 양(+) 모멘텀 확인 필요</>}
         </div>
       </div>
 
       {/* 리스크 경고 */}
-      <div style={{ ...cardStyle, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.25)' }}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: '#f59e0b',
-          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #f59e0b' }}>
-          ⚠️ 이달 핵심 리스크
+      <div className="toss-card" style={{ padding: pad, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.25)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="warning" size={18} style={{ color: '#f59e0b' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: '#f59e0b', margin: 0 }}>이달 핵심 리스크</h2>
         </div>
         {[
           {
-            icon: '🔥', color: '#ef4444', title: '극단 모멘텀 크래시 위험',
+            icon: 'local_fire_department', color: '#ef4444', title: '극단 모멘텀 크래시 위험',
             desc: '반도체 6M +137%는 상위 1~2% 수준의 극단값. Barroso & Santa-Clara (2015) 연구에 따르면 이 구간에서 급격한 모멘텀 반전(크래시) 확률이 통계적으로 유의미하게 높아집니다.',
           },
           {
-            icon: '📡', color: '#f59e0b', title: '크래시 탐지 지연 (하루 1회 갱신)',
+            icon: 'sensors', color: '#f59e0b', title: '크래시 탐지 지연 (하루 1회 갱신)',
             desc: '현재 Worker 크론이 하루 1회(UTC 03:00) 돌아 전날 데이터 기준으로 신호를 갱신합니다. 장중 급락은 당일 캐치 불가. 수동 갱신 버튼(퀀트 기초 → 액션 플랜)으로 보완 가능.',
           },
           {
-            icon: '⚡', color: '#3b82f6', title: '절대 모멘텀 음전 시 즉시 전환',
+            icon: 'bolt', color: '#3b82f6', title: '절대 모멘텀 음전 시 즉시 전환',
             desc: '반도체 6M 수익률이 0% 이하로 떨어지면 1위라도 단기채권(153130)으로 전환. 듀얼 모멘텀의 절대 모멘텀 필터가 이 조건.',
           },
         ].map((item, i) => (
           <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0',
-            borderTop: i > 0 ? '1px solid var(--border-secondary)' : 'none' }}>
-            <div style={{ fontSize: 20, flexShrink: 0, lineHeight: 1.4 }}>{item.icon}</div>
+            borderTop: i > 0 ? '1px solid var(--border-primary)' : 'none' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${item.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <MIcon name={item.icon} size={16} style={{ color: item.color }} />
+            </div>
             <div>
               <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: item.color, marginBottom: 4 }}>{item.title}</div>
               <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{item.desc}</div>
@@ -677,25 +768,88 @@ function QuantTab({ isMobile, cardStyle }: { isMobile: boolean; cardStyle: React
       </div>
 
       {/* 5월 체크리스트 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
-          marginBottom: 4, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
-          ✅ 5월 퀀트 체크리스트
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <MIcon name="checklist" size={18} style={{ color: '#22c55e' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>5월 퀀트 체크리스트</h2>
         </div>
         <div style={{ marginTop: 10 }}>
           <CheckItem><strong style={{ color: 'var(--text-primary)' }}>반도체(091160)</strong> 보유 확인 — 비중 100%</CheckItem>
           <CheckItem><strong style={{ color: '#ef4444' }}>반도체 외 위험자산</strong> 전량 매도 → 단기채권(153130) 통합</CheckItem>
-          <CheckItem>퀀트 대시보드 <strong style={{ color: 'var(--text-primary)' }}>크래시 탐지</strong> 주 2회 이상 점검 (🔴 시 즉시 대응)</CheckItem>
-          <CheckItem><strong style={{ color: 'var(--text-primary)' }}>수동 신호 갱신</strong> — 퀀트 기초 → 🔄 신호 갱신 버튼 주기적 클릭</CheckItem>
+          <CheckItem>퀀트 대시보드 <strong style={{ color: 'var(--text-primary)' }}>크래시 탐지</strong> 주 2회 이상 점검 (<span style={{ color: '#ef4444' }}>●</span> 적색 시 즉시 대응)</CheckItem>
+          <CheckItem><strong style={{ color: 'var(--text-primary)' }}>수동 신호 갱신</strong> — 퀀트 기초 → 신호 갱신 버튼 주기적 클릭</CheckItem>
           <CheckItem><strong style={{ color: 'var(--text-primary)' }}>5월 말</strong> 7대 자산 6M 수익률 재계산 → 1위 자산 교체 여부 확인</CheckItem>
         </div>
       </div>
 
+      {/* 모멘텀 크래시 감지 */}
+      {(() => {
+        const withSig = crashItems.map(d => ({ ...d, sig: crashSignal(d) }));
+        const counts = { green: 0, yellow: 0, red: 0 };
+        withSig.forEach(d => { counts[d.sig]++; });
+        const fmtR = (v: number | null) => v === null ? 'N/A' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+        const redYellow = withSig.filter(d => d.sig === 'red' || d.sig === 'yellow')
+          .sort((a, b) => (a.r3m ?? 0) - (b.r3m ?? 0)).slice(0, 8);
+        return (
+          <div className="toss-card" style={{ padding: pad }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <MIcon name="crisis_alert" size={18} style={{ color: 'var(--color-error)' }} />
+                <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>모멘텀 크래시 감지</h2>
+              </div>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                {crashLoading ? '로딩 중…' : (crashUpdatedAt ? `기준: ${crashUpdatedAt}` : '캐시')}
+              </span>
+            </div>
+            {/* 신호 요약 */}
+            <div style={{ display: 'flex', gap: isMobile ? 16 : 28, marginBottom: 14 }}>
+              {(['green', 'yellow', 'red'] as const).map(sig => {
+                const labels = { green: '상승 유지', yellow: '경고', red: '위험' };
+                return (
+                  <div key={sig} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: CRASH_COLOR[sig], boxShadow: `0 0 5px ${CRASH_COLOR[sig]}80` }} />
+                    <span style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: CRASH_COLOR[sig], lineHeight: 1 }}>{counts[sig]}</span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{labels[sig]}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {/* 경고·위험 종목 목록 */}
+            {crashLoading ? (
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', padding: '8px 0' }}>신호 불러오는 중…</div>
+            ) : redYellow.length === 0 ? (
+              <div style={{ fontSize: 'var(--text-sm)', color: '#34d399', padding: '8px 0' }}>전 종목 상승 유지 — 이상 신호 없음</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 2 }}>경고·위험 종목 (3M 수익률 낮은 순)</div>
+                {redYellow.map(d => (
+                  <div key={d.ticker} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 10px', borderRadius: 8,
+                    background: d.sig === 'red' ? 'rgba(248,113,113,.06)' : 'rgba(251,191,36,.06)',
+                    border: `1px solid ${d.sig === 'red' ? 'rgba(248,113,113,.25)' : 'rgba(251,191,36,.25)'}`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: CRASH_COLOR[d.sig], flexShrink: 0 }} />
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexShrink: 0, fontSize: 'var(--text-xs)' }}>
+                      <span style={{ color: (d.r3m ?? 0) >= 0 ? '#34d399' : '#f87171' }}>3M {fmtR(d.r3m)}</span>
+                      <span style={{ color: (d.r6m ?? 0) >= 0 ? '#34d399' : '#f87171' }}>6M {fmtR(d.r6m)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* 성과 참고 */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)',
-          marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--accent-blue)' }}>
-          📈 전략 성과 참고 (역사적 백테스트)
+      <div className="toss-card" style={{ padding: pad }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <MIcon name="show_chart" size={18} style={{ color: 'var(--accent-blue)' }} />
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>전략 성과 참고 (역사적 백테스트)</h2>
         </div>
         <Row label="CAGR (연복리 수익률)" val="~22%" valColor="#22c55e" sub="집중 투자 Top-1 기준" />
         <Row label="MDD (최대 낙폭)" val="-30~45%" valColor="#ef4444" sub="분산 없음 — 리스크 최대" />
