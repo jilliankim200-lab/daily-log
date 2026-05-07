@@ -19,6 +19,7 @@ import { DeepResearchViz } from "./components/DeepResearchViz";
 import { FinancialScoring } from "./components/FinancialScoring";
 import { QuantDashboard } from "./components/QuantDashboard";
 import { QuantBasics } from "./components/QuantBasics";
+// import { MyQuant } from "./components/MyQuant";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -60,7 +61,7 @@ export const useAppContext = () => useContext(AppContext);
 const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드", materialIcon: "dashboard" },
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
-  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars" },
+  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-06" },
   { id: "dividend", label: "배당", materialIcon: "paid" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
   { id: "chart", label: "차트", materialIcon: "candlestick_chart" },
@@ -71,12 +72,17 @@ const MENU_ITEMS = [
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
-  { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance" },
-  { id: "calc-checklist", label: "계산식 검증", materialIcon: "fact_check" },
+  { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
 ];
 
+function isRecentlyUpdated(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000;
+}
+
 const FONT_SCALE = 1.15;
-const INDICATOR_IDS = ['macro-sector', 'deep-research', 'financial-scoring', 'quant-dashboard', 'quant-basics'] as const;
+const INDICATOR_IDS = ['macro-sector', 'deep-research', 'financial-scoring', 'quant-dashboard', 'quant-basics', 'my-quant'] as const;
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -228,6 +234,7 @@ export default function App() {
       case "financial-scoring": return <FinancialScoring />;
       case "quant-dashboard": return <QuantDashboard />;
       case "quant-basics": return <QuantBasics />;
+      // case "my-quant": return <MyQuant />;
       case "national-growth-fund": return <NationalGrowthFund />;
     }
   };
@@ -312,7 +319,12 @@ export default function App() {
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'; }}
                 >
                   <MIcon name={item.materialIcon} size={20} style={{ opacity: active ? 1 : 0.6 }} />
-                  <span>{item.label}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {item.label}
+                    {isRecentlyUpdated((item as any).updatedAt) && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#6366f1', borderRadius: 4, padding: '1px 5px', letterSpacing: '0.02em', lineHeight: 1.4 }}>NEW</span>
+                    )}
+                  </span>
                 </button>
               );
             })}
@@ -343,7 +355,7 @@ export default function App() {
               {/* 하위 메뉴 — 접힘 애니메이션 */}
               <div style={{
                 overflow: 'hidden',
-                maxHeight: isIndicatorOpen ? 360 : 0,
+                maxHeight: isIndicatorOpen ? 420 : 0,
                 transition: 'max-height 0.25s ease',
               }}>
                 {([
@@ -352,6 +364,8 @@ export default function App() {
                   { id: 'financial-scoring',icon: 'query_stats',    label: '재무 스코어링' },
                   { id: 'quant-dashboard',  icon: 'insights',       label: '퀀트 대시보드' },
                   { id: 'quant-basics',     icon: 'school',         label: '퀀트투자 기본' },
+                  { id: 'my-quant',         icon: 'account_balance_wallet', label: '내 퀀트' },
+                  { id: 'calc-checklist',   icon: 'fact_check',     label: '계산식 검증' },
                 ] as const).map(({ id, icon, label }) => {
                   const active = currentPage === id;
                   return (
