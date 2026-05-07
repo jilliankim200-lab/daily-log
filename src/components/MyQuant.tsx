@@ -57,6 +57,121 @@ function savePortfolio(items: PortfolioItem[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
+function PortfolioTable({ portfolio, setPortfolio, onSave, saved }: {
+  portfolio: PortfolioItem[];
+  setPortfolio: (p: PortfolioItem[]) => void;
+  onSave: () => void;
+  saved: boolean;
+}) {
+  const total = portfolio.reduce((s, i) => s + (i.amount || 0), 0);
+
+  const updateItem = (id: string, field: keyof PortfolioItem, value: string | number) => {
+    setPortfolio(portfolio.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const addRow = () => {
+    setPortfolio([...portfolio, { id: genId(), name: '', amount: 0 }]);
+  };
+
+  const removeRow = (id: string) => {
+    setPortfolio(portfolio.filter(p => p.id !== id));
+  };
+
+  const inputStyle = {
+    background: 'var(--bg-primary)', border: '1px solid var(--border-primary)',
+    borderRadius: 6, padding: '6px 10px', fontSize: 14,
+    color: 'var(--text-primary)', outline: 'none', width: '100%', boxSizing: 'border-box' as const,
+  };
+
+  return (
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, padding: 24, border: '1px solid var(--border-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <MIcon name="account_balance_wallet" size={20} style={{ color: 'var(--accent-blue)' }} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          내 포트폴리오
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 80px 36px', gap: 8, marginBottom: 8, padding: '0 4px' }}>
+        {['ETF명', '금액 (원)', '비중', ''].map(h => (
+          <span key={h} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.04em' }}>{h}</span>
+        ))}
+      </div>
+
+      {portfolio.map(item => {
+        const weight = total > 0 ? ((item.amount / total) * 100).toFixed(1) : '0.0';
+        return (
+          <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr 160px 80px 36px', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+            <input
+              style={inputStyle}
+              placeholder="예: KODEX 반도체"
+              value={item.name}
+              onChange={e => updateItem(item.id, 'name', e.target.value)}
+            />
+            <input
+              style={{ ...inputStyle, textAlign: 'right' }}
+              type="number"
+              min={0}
+              value={item.amount || ''}
+              placeholder="0"
+              onChange={e => updateItem(item.id, 'amount', Number(e.target.value))}
+            />
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'right' }}>{weight}%</span>
+            <button
+              onClick={() => removeRow(item.id)}
+              style={{
+                width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer',
+                background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <MIcon name="close" size={16} />
+            </button>
+          </div>
+        );
+      })}
+
+      {portfolio.length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 160px 80px 36px', gap: 8,
+          borderTop: '1px solid var(--border-primary)', paddingTop: 8, marginTop: 4,
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>합계</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right' }}>
+            {total.toLocaleString()}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right' }}>100%</span>
+          <span />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <button
+          onClick={addRow}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+            borderRadius: 8, border: '1px solid var(--border-primary)', cursor: 'pointer',
+            background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600,
+          }}
+        >
+          <MIcon name="add" size={16} /> ETF 추가
+        </button>
+        <button
+          onClick={onSave}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+            borderRadius: 8, border: 'none', cursor: 'pointer',
+            background: saved ? '#22c55e' : 'var(--accent-blue)', color: '#fff', fontSize: 13, fontWeight: 600,
+          }}
+        >
+          <MIcon name={saved ? 'check' : 'save'} size={16} />
+          {saved ? '저장됨' : '저장'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SignalCard({ crashItems, crashLoading, crashUpdatedAt, onRetry }: {
   crashItems: CrashItem[]; crashLoading: boolean; crashUpdatedAt: string | null;
   onRetry: () => void;
@@ -156,12 +271,21 @@ export function MyQuant() {
 
   useEffect(() => { fetchCrash(); }, []);
 
+  const handleSave = () => {
+    const valid = portfolio.filter(p => p.name.trim() && p.amount > 0);
+    savePortfolio(valid);
+    setPortfolio(valid);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
   const pad = isMobile ? 16 : 32;
 
   return (
     <div style={{ padding: pad, maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
       <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>내 퀀트</h2>
       <SignalCard crashItems={crashItems} crashLoading={crashLoading} crashUpdatedAt={crashUpdatedAt} onRetry={fetchCrash} />
+      <PortfolioTable portfolio={portfolio} setPortfolio={setPortfolio} onSave={handleSave} saved={saved} />
     </div>
   );
 }
