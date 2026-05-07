@@ -19,7 +19,7 @@ import { DeepResearchViz } from "./components/DeepResearchViz";
 import { FinancialScoring } from "./components/FinancialScoring";
 import { QuantDashboard } from "./components/QuantDashboard";
 import { QuantBasics } from "./components/QuantBasics";
-// import { MyQuant } from "./components/MyQuant";
+import { MyQuant } from "./components/MyQuant";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -234,7 +234,7 @@ export default function App() {
       case "financial-scoring": return <FinancialScoring />;
       case "quant-dashboard": return <QuantDashboard />;
       case "quant-basics": return <QuantBasics />;
-      // case "my-quant": return <MyQuant />;
+      case "my-quant": return <MyQuant />;
       case "national-growth-fund": return <NationalGrowthFund />;
     }
   };
