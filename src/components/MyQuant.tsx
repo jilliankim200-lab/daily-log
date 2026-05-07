@@ -65,9 +65,11 @@ function PortfolioTable({ portfolio, setPortfolio, onSave, saved }: {
 }) {
   const total = portfolio.reduce((s, i) => s + (i.amount || 0), 0);
 
-  const updateItem = (id: string, field: keyof PortfolioItem, value: string | number) => {
-    setPortfolio(portfolio.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
+  const updateName = (id: string, name: string) =>
+    setPortfolio(portfolio.map(p => p.id === id ? { ...p, name } : p));
+
+  const updateAmount = (id: string, amount: number) =>
+    setPortfolio(portfolio.map(p => p.id === id ? { ...p, amount } : p));
 
   const addRow = () => {
     setPortfolio([...portfolio, { id: genId(), name: '', amount: 0 }]);
@@ -98,38 +100,47 @@ function PortfolioTable({ portfolio, setPortfolio, onSave, saved }: {
         ))}
       </div>
 
-      {portfolio.map(item => {
-        const weight = total > 0 ? ((item.amount / total) * 100).toFixed(1) : '0.0';
-        return (
-          <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr 160px 80px 36px', gap: 8, marginBottom: 6, alignItems: 'center' }}>
-            <input
-              style={inputStyle}
-              placeholder="예: KODEX 반도체"
-              value={item.name}
-              onChange={e => updateItem(item.id, 'name', e.target.value)}
-            />
-            <input
-              style={{ ...inputStyle, textAlign: 'right' }}
-              type="number"
-              min={0}
-              value={item.amount || ''}
-              placeholder="0"
-              onChange={e => updateItem(item.id, 'amount', Number(e.target.value))}
-            />
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'right' }}>{weight}%</span>
-            <button
-              onClick={() => removeRow(item.id)}
-              style={{
-                width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <MIcon name="close" size={16} />
-            </button>
-          </div>
-        );
-      })}
+      {portfolio.length === 0 ? (
+        <div style={{
+          textAlign: 'center', color: 'var(--text-tertiary)',
+          padding: '20px 0', fontSize: 13
+        }}>
+          ETF를 추가하고 저장하면 리밸런싱 계산에 반영됩니다.
+        </div>
+      ) : (
+        portfolio.map(item => {
+          const weight = total > 0 ? ((item.amount / total) * 100).toFixed(1) : '0.0';
+          return (
+            <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr 160px 80px 36px', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+              <input
+                style={inputStyle}
+                placeholder="예: KODEX 반도체"
+                value={item.name}
+                onChange={e => updateName(item.id, e.target.value)}
+              />
+              <input
+                style={{ ...inputStyle, textAlign: 'right' }}
+                type="number"
+                min={0}
+                value={item.amount || ''}
+                placeholder="0"
+                onChange={e => updateAmount(item.id, Number(e.target.value))}
+              />
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'right' }}>{weight}%</span>
+              <button
+                onClick={() => removeRow(item.id)}
+                style={{
+                  width: 32, height: 32, borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <MIcon name="close" size={16} />
+              </button>
+            </div>
+          );
+        })
+      )}
 
       {portfolio.length > 0 && (
         <div style={{
@@ -273,10 +284,14 @@ export function MyQuant() {
 
   const handleSave = () => {
     const valid = portfolio.filter(p => p.name.trim() && p.amount > 0);
-    savePortfolio(valid);
-    setPortfolio(valid);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      savePortfolio(valid);
+      setPortfolio(valid);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // localStorage 저장 실패 시 UI 상태는 유지
+    }
   };
 
   const pad = isMobile ? 16 : 32;
