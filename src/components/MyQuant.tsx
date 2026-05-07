@@ -43,6 +43,74 @@ const SIGNAL_CONFIG: Record<Signal, { color: string; label: string; icon: string
   CASH: { color: '#ef4444', label: '현금', icon: 'shield',        desc: '3M 모멘텀 음수 — 단기채권 또는 현금 대피' },
 };
 
+interface RebalanceRow {
+  name: string;
+  currentAmount: number;
+  currentWeight: number;
+  targetWeight: number;
+  targetAmount: number;
+  diff: number;
+}
+
+function calcTargetWeights(signal: Signal, topAsset: CrashItem | null): { name: string; weight: number }[] {
+  if (signal === 'CASH' || !topAsset) {
+    return [{ name: '현금 (단기채권)', weight: 1 }];
+  }
+  if (signal === 'BUY') {
+    return [{ name: topAsset.name, weight: 1 }];
+  }
+  // HOLD: 1위 자산 60% + 현금 40%
+  return [
+    { name: topAsset.name, weight: 0.6 },
+    { name: '현금 (단기채권)', weight: 0.4 },
+  ];
+}
+
+function calcRebalance(portfolio: PortfolioItem[], signal: Signal, top: CrashItem | null): RebalanceRow[] {
+  const total = portfolio.reduce((s, i) => s + i.amount, 0);
+  if (total === 0) return [];
+
+  const targets = calcTargetWeights(signal, top);
+  const rows: RebalanceRow[] = [];
+
+  // 현재 보유 자산 처리
+  for (const item of portfolio) {
+    const targetEntry = targets.find(t =>
+      t.name === item.name || item.name.includes(t.name.split(' ')[0])
+    );
+    const targetWeight = targetEntry?.weight ?? 0;
+    const targetAmount = total * targetWeight;
+    const diff = targetAmount - item.amount;
+    rows.push({
+      name: item.name,
+      currentAmount: item.amount,
+      currentWeight: item.amount / total,
+      targetWeight,
+      targetAmount,
+      diff,
+    });
+  }
+
+  // 목표에만 있고 현재 미보유인 자산 추가
+  for (const t of targets) {
+    const already = rows.find(r =>
+      r.name === t.name || r.name.includes(t.name.split(' ')[0])
+    );
+    if (!already) {
+      rows.push({
+        name: t.name,
+        currentAmount: 0,
+        currentWeight: 0,
+        targetWeight: t.weight,
+        targetAmount: total * t.weight,
+        diff: total * t.weight,
+      });
+    }
+  }
+
+  return rows.filter(r => Math.abs(r.diff) > 100);
+}
+
 function genId() { return Math.random().toString(36).slice(2, 9); }
 
 function loadPortfolio(): PortfolioItem[] {
@@ -55,6 +123,121 @@ function loadPortfolio(): PortfolioItem[] {
 
 function savePortfolio(items: PortfolioItem[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
+}
+
+function RebalanceSimulator({ portfolio, crashItems, crashLoading }: {
+  portfolio: PortfolioItem[];
+  crashItems: CrashItem[];
+  crashLoading: boolean;
+}) {
+  const total = portfolio.reduce((s, i) => s + i.amount, 0);
+  const top = getTopAsset(crashItems);
+  const signal = calcSignal(top);
+  const cfg = SIGNAL_CONFIG[signal];
+  const rows = calcRebalance(portfolio, signal, top);
+  const sells = rows.filter(r => r.diff < 0);
+  const buys = rows.filter(r => r.diff > 0);
+  const totalTrade = rows.reduce((s, r) => s + Math.abs(r.diff), 0) / 2;
+
+  if (portfolio.length === 0 || total === 0) {
+    return (
+      <div style={{
+        background: 'var(--bg-secondary)', borderRadius: 16, padding: 24,
+        border: '1px solid var(--border-primary)', textAlign: 'center',
+      }}>
+        <MIcon name="calculate" size={32} style={{ color: 'var(--text-tertiary)', display: 'block', margin: '0 auto 8px' }} />
+        <div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>
+          포트폴리오를 입력하고 저장하면 리밸런싱 시뮬레이션이 표시됩니다.
+        </div>
+      </div>
+    );
+  }
+
+  const rowStyle = (diff: number) => ({
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '8px 12px', borderRadius: 8, marginBottom: 4,
+    background: diff < 0 ? '#ef444414' : '#22c55e14',
+  });
+
+  return (
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, padding: 24, border: '1px solid var(--border-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <MIcon name="calculate" size={20} style={{ color: 'var(--accent-blue)' }} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          리밸런싱 시뮬레이터
+        </span>
+      </div>
+
+      {crashLoading ? (
+        <div style={{ color: 'var(--text-tertiary)', fontSize: 14 }}>신호 로딩 중…</div>
+      ) : (
+        <>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 12px', borderRadius: 20, background: cfg.color + '22',
+            color: cfg.color, fontSize: 13, fontWeight: 700, marginBottom: 16,
+          }}>
+            <MIcon name={cfg.icon} size={14} />
+            목표: {top?.name ?? '현금'} {signal === 'HOLD' ? '60% + 현금 40%' : '100%'}
+          </div>
+
+          {sells.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', marginBottom: 6, letterSpacing: '0.04em' }}>
+                매도
+              </div>
+              {sells.map(r => (
+                <div key={r.name} style={rowStyle(r.diff)}>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</span>
+                  <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 700 }}>
+                    {Math.abs(r.diff).toLocaleString()}원
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>
+                      ({(r.currentWeight * 100).toFixed(0)}% → {(r.targetWeight * 100).toFixed(0)}%)
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {buys.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', marginBottom: 6, letterSpacing: '0.04em' }}>
+                매수
+              </div>
+              {buys.map(r => (
+                <div key={r.name} style={rowStyle(r.diff)}>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</span>
+                  <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 700 }}>
+                    +{r.diff.toLocaleString()}원
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 6 }}>
+                      ({(r.currentWeight * 100).toFixed(0)}% → {(r.targetWeight * 100).toFixed(0)}%)
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sells.length === 0 && buys.length === 0 && (
+            <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 16 }}>
+              현재 포트폴리오가 목표 비중과 일치합니다.
+            </div>
+          )}
+
+          <div style={{
+            borderTop: '1px solid var(--border-primary)', paddingTop: 12,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>총 거래 금액 (편도)</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
+              {totalTrade.toLocaleString()}원
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function PortfolioTable({ portfolio, setPortfolio, onSave, saved }: {
@@ -301,6 +484,7 @@ export function MyQuant() {
       <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>내 퀀트</h2>
       <SignalCard crashItems={crashItems} crashLoading={crashLoading} crashUpdatedAt={crashUpdatedAt} onRetry={fetchCrash} />
       <PortfolioTable portfolio={portfolio} setPortfolio={setPortfolio} onSave={handleSave} saved={saved} />
+      <RebalanceSimulator portfolio={portfolio} crashItems={crashItems} crashLoading={crashLoading} />
     </div>
   );
 }
