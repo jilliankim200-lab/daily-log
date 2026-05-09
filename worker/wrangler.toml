@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
 [triggers]
-crons = ["0 3 * * *"]  # 매일 UTC 03:00 스냅샷 (ETF 랭킹은 GitHub Actions에서 매주 월요일 실행)
+crons = ["0 17 * * *"]  # 매일 UTC 17:00 = KST 02:00 스냅샷
 
 [[kv_namespaces]]
 binding = "KV"

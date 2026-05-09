@@ -451,6 +451,82 @@ export function NationalGrowthFund() {
         </div>
       )}
 
+      {/* 분할 매수 가이드 */}
+      <div style={{
+        marginBottom: 20,
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px 20px',
+      }}>
+        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MIcon name="menu_book" size={14} />
+          분할 매수 신호 기준 (이동평균 기반)
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10 }}>
+          {([
+            {
+              stage: '1차',
+              emoji: '🟡',
+              color: '#f59e0b',
+              bg: '#f59e0b18',
+              border: '#f59e0b44',
+              condition: '현재가 > MA5',
+              desc: '이동평균선 위 — 진입 준비 단계',
+              ratio: '계획금액의 20% 매수',
+            },
+            {
+              stage: '2차',
+              emoji: '🟠',
+              color: '#f97316',
+              bg: '#f9731618',
+              border: '#f9731644',
+              condition: 'MA20 < 현재가 ≤ MA5',
+              desc: 'MA5 아래 진입 — 추가 매수 단계',
+              ratio: '계획금액의 30% 매수',
+            },
+            {
+              stage: '3차',
+              emoji: '🔴',
+              color: '#ef4444',
+              bg: '#ef444418',
+              border: '#ef444444',
+              condition: '현재가 ≤ MA20',
+              desc: 'MA20 아래 — 적극 매수 단계',
+              ratio: '계획금액의 50% 매수',
+            },
+          ] as const).map(item => (
+            <div key={item.stage} style={{
+              background: item.bg,
+              border: `1px solid ${item.border}`,
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 14px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{ fontSize: 14 }}>{item.emoji}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: item.color }}>{item.stage} 매수 신호</span>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 3, fontFamily: 'monospace' }}>
+                {item.condition}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5, lineHeight: 1.4 }}>
+                {item.desc}
+              </div>
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: item.color,
+                background: item.bg, border: `1px solid ${item.border}`,
+                borderRadius: 4, padding: '3px 7px', display: 'inline-block',
+              }}>
+                {item.ratio}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+          MA5 = 5일 이동평균 · MA20 = 20일 이동평균. 각 ETF 카드의 체크박스로 매수 완료 여부를 기록하세요.
+        </div>
+      </div>
+
       {/* ETF 카드 */}
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>

@@ -19,7 +19,7 @@ function isCautious(label: string): boolean {
 function runSection(id: string): TR[] {
   switch (id) {
     case 'engine': return [
-      { input: { currentReturn: -0.05, currentPrice: 28000, ma20: 27000, ma60: 26000 }, ea: 'hold',      eu: 'none',     name: '① Veto — 주가 > MA20' },
+      { input: { currentReturn: -0.05, currentPrice: 28000, ma20: 27000, ma60: 26000 }, ea: 'hold',      eu: 'none',     name: '① 매도 보류 — 주가 > MA20' },
       { input: { currentReturn:  0.05, currentPrice: 25000, ma20: 26000, ma60: 27000 }, ea: 'sell_all',  eu: 'high',     name: '② 추세붕괴 — MA20 < MA60' },
       { input: { currentReturn: -0.15, currentPrice: 24000, ma20: 26000, ma60: 25000 }, ea: 'sell_all',  eu: 'critical', name: '③ 손절 — return ≤ stopLoss' },
       { input: { currentReturn:  0.25, currentPrice: 24000, ma20: 26000, ma60: 25000 }, ea: 'sell_half', eu: 'medium',   name: '④ 수익실현 — return ≥ targetReturn + price < MA20' },
@@ -173,7 +173,7 @@ const SECTION_META: { id: string; title: string; badge: string; iconColor: strin
   {
     id: 'engine', title: 'sellEngine · getSellDecision()', badge: '4조건 AND', iconColor: 'var(--color-loss)',
     formula: [
-      '① Veto: currentPrice > MA20  →  hold',
+      '① 매도 보류: currentPrice > MA20  →  hold',
       '② 추세붕괴: MA20 < MA60  →  sell_all (urgency: high)',
       '③ 손절: currentReturn ≤ stopLoss(-10%)  →  sell_all (urgency: critical)',
       '④ 수익실현: currentReturn ≥ targetReturn(+20%) + price < MA20  →  sell_half',

@@ -61,7 +61,7 @@ const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드", materialIcon: "dashboard" },
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
   { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-06" },
-  { id: "dividend", label: "배당", materialIcon: "paid" },
+  { id: "dividend", label: "배당", materialIcon: "paid", updatedAt: "2026-05-09" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
   { id: "chart", label: "차트", materialIcon: "candlestick_chart" },
   { id: "holdings", label: "보유종목", materialIcon: "list" },

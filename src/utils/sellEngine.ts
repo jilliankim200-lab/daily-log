@@ -22,7 +22,7 @@ export function getSellDecision(
 ): SellDecision {
   const { currentReturn, currentPrice, ma20, ma60 } = input;
 
-  // Veto: 상승추세 — 주가가 MA20 위이면 무조건 홀딩
+  // 매도 보류: 상승추세 — 주가가 MA20 위이면 무조건 홀딩
   if (currentPrice > ma20) {
     return { action: 'hold', reason: '상승추세 (주가 > MA20)', urgency: 'none' };
   }
