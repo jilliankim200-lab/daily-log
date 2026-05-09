@@ -574,7 +574,7 @@ async function saveMomentumHistory(env: Env): Promise<void> {
 }
 
 // ── 일일 스냅샷 저장 + 매도 알림 ──
-async function runDailySnapshot(env: Env) {
+async function runDailySnapshot(env: Env, dateOverride?: string) {
   const kv = env.KV;
   const accounts: any[] = JSON.parse(await kv.get('accounts') || '[]');
   if (!accounts.length) return 'no accounts';
@@ -597,7 +597,8 @@ async function runDailySnapshot(env: Env) {
   }
 
   const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const today = kstNow.toISOString().slice(0, 10);
+  // dateOverride: cron에서 "전날 날짜"를 명시적으로 전달 (새벽 2시 실행 = 전일 장 마감 데이터)
+  const today = dateOverride ?? kstNow.toISOString().slice(0, 10);
 
   // 타이밍 신호 계산 (3개씩 배치)
   const currentSignals: SignalSnapshot = {};
@@ -895,11 +896,15 @@ export default {
     return json({ error: 'not found' }, 404);
   },
 
-  // ── Cron 트리거 (매일 UTC 03:00 → 일일 스냅샷) ──
+  // ── Cron 트리거 (매일 UTC 17:00 = KST 02:00 → 전일 장 마감 데이터를 전날 날짜로 저장) ──
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil((async () => {
+      // KST 02:00 실행 = 전일 종가 기준 → "어제(KST)" 날짜로 저장해야 올바른 일자별 기록이 됨
+      const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const yesterday = new Date(kstNow.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
       const [snapshotResult, signalResult, crashResult] = await Promise.all([
-        runDailySnapshot(env).catch((e: unknown) => `snapshot error: ${String(e)}`),
+        runDailySnapshot(env, yesterday).catch((e: unknown) => `snapshot error: ${String(e)}`),
         updateMomentumSignal(env).catch((e: unknown) => `signal error: ${String(e)}`),
         updateCrashSignals(env).catch((e: unknown) => `crash error: ${String(e)}`),
       ]);
