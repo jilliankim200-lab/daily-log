@@ -317,6 +317,29 @@ function AccountCard({
   const [editingCash, setEditingCash] = useState(false);
   const [cashInput, setCashInput] = useState((account.cash || 0).toString());
   const [showCalc, setShowCalc] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIdx(idx);
+  };
+  const handleDrop = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const next = [...account.holdings];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(idx, 0, moved);
+    onUpdate({ ...account, holdings: next });
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   const cash = account.cash || 0;
   const totalPurchase = account.holdings.reduce((s, h) => s + holdingCost(h), 0);
@@ -508,16 +531,29 @@ function AccountCard({
 
           {account.holdings.length > 0 && isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px' }}>
-              {account.holdings.map(h => {
+              {account.holdings.map((h, holdingIdx) => {
                 const cp = prices[h.ticker];
                 const evalAmt = cp ? cp * h.quantity : (h.isFund ? (h.amount || 0) : h.avgPrice * h.quantity);
                 const pnl = cp && !h.isFund ? evalAmt - h.avgPrice * h.quantity : 0;
                 const pnlRate = cp && !h.isFund && h.avgPrice > 0 ? ((cp - h.avgPrice) / h.avgPrice) * 100 : null;
                 return (
-                  <div key={h.id} style={{
-                    borderBottom: '1px solid var(--border-primary)', padding: '10px 4px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                  }}>
+                  <div
+                    key={h.id}
+                    draggable
+                    onDragStart={e => handleDragStart(e, holdingIdx)}
+                    onDragOver={e => handleDragOver(e, holdingIdx)}
+                    onDrop={e => handleDrop(e, holdingIdx)}
+                    onDragEnd={handleDragEnd}
+                    style={{
+                      borderBottom: '1px solid var(--border-primary)', padding: '10px 4px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                      opacity: dragIdx === holdingIdx ? 0.4 : 1,
+                      background: dragOverIdx === holdingIdx && dragIdx !== holdingIdx ? 'var(--accent-blue-bg)' : undefined,
+                      borderTop: dragOverIdx === holdingIdx && dragIdx !== null && dragIdx > holdingIdx ? '2px solid var(--accent-blue)' : undefined,
+                      cursor: 'grab',
+                      transition: 'background 0.1s',
+                    }}>
+                    <MIcon name="drag_indicator" size={14} style={{ color: 'var(--text-quaternary)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -578,7 +614,7 @@ function AccountCard({
                 </tr>
               </thead>
               <tbody>
-                {account.holdings.map(h => {
+                {account.holdings.map((h, holdingIdx) => {
                   if (editingHoldingId === h.id) {
                     return h.isFund ? (
                       <tr key={h.id}>
@@ -595,11 +631,29 @@ function AccountCard({
                     );
                   }
 
+                  const isDragging = dragIdx === holdingIdx;
+                  const isDragOver = dragOverIdx === holdingIdx && dragIdx !== null && dragIdx !== holdingIdx;
+                  const rowStyle: React.CSSProperties = {
+                    opacity: isDragging ? 0.4 : 1,
+                    background: isDragOver ? 'var(--accent-blue-bg)' : undefined,
+                    outline: isDragOver ? '1px solid var(--accent-blue)' : undefined,
+                    cursor: 'grab',
+                    transition: 'background 0.1s',
+                  };
+
                   if (h.isFund) {
                     return (
-                      <tr key={h.id}>
+                      <tr key={h.id}
+                        draggable
+                        onDragStart={e => handleDragStart(e, holdingIdx)}
+                        onDragOver={e => handleDragOver(e, holdingIdx)}
+                        onDrop={e => handleDrop(e, holdingIdx)}
+                        onDragEnd={handleDragEnd}
+                        style={rowStyle}
+                      >
                         <td style={{ fontWeight: 'var(--font-medium)' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <MIcon name="drag_indicator" size={14} style={{ color: 'var(--text-quaternary)', flexShrink: 0 }} />
                             {h.name}
                             <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>펀드</span>
                           </span>
@@ -639,8 +693,20 @@ function AccountCard({
                     const pnl = cp ? evalAmt - h.avgPrice * h.quantity : 0;
                     const pnlRate = cp && h.avgPrice > 0 ? ((cp - h.avgPrice) / h.avgPrice) * 100 : 0;
                     return (
-                    <tr key={h.id}>
-                      <td style={{ fontWeight: 'var(--font-medium)' }}>{h.name}</td>
+                    <tr key={h.id}
+                      draggable
+                      onDragStart={e => handleDragStart(e, holdingIdx)}
+                      onDragOver={e => handleDragOver(e, holdingIdx)}
+                      onDrop={e => handleDrop(e, holdingIdx)}
+                      onDragEnd={handleDragEnd}
+                      style={rowStyle}
+                    >
+                      <td style={{ fontWeight: 'var(--font-medium)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <MIcon name="drag_indicator" size={14} style={{ color: 'var(--text-quaternary)', flexShrink: 0 }} />
+                          {h.name}
+                        </div>
+                      </td>
                       {/* 수익률 — 2번째 열 */}
                       <td className="toss-number" style={{
                         textAlign: 'right', fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-xs)',
