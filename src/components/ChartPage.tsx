@@ -552,7 +552,7 @@ export function ChartPage() {
     const high60 = prices.length > 0 ? Math.max(...prices) : 0;
     const low60  = prices.length > 0 ? Math.min(...prices) : 0;
     const range60 = high60 > low60 ? (lastPrice - low60) / (high60 - low60) : null;
-    return { mainLabel, mainColor, aboveMa20, ma20AboveMa60, range60 };
+    return { mainLabel, mainColor, aboveMa20, ma20AboveMa60, range60, high60, low60 };
   }, [currentMa20, currentMa60, lastPrice, rawData]);
 
   return (
@@ -709,7 +709,7 @@ export function ChartPage() {
           )}
           {!loading && !error && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height={isMobile ? 260 : 360}>
-              <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: isMobile ? 10 : 58, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-secondary)" opacity={0.5} />
                 <XAxis
                   dataKey="date"
@@ -732,9 +732,59 @@ export function ChartPage() {
                   formatter={(value) => <span style={{ color: 'var(--text-secondary)' }}>{value}</span>}
                 />
 
-                {/* 현재가 기준선 */}
+                {/* 60일 고점 기준선 */}
+                {!isMobile && statusSignals?.high60 > 0 && (
+                  <ReferenceLine y={statusSignals.high60} stroke="var(--color-loss)" strokeDasharray="2 5" opacity={0.3}
+                    label={{
+                      content: (props: any) => {
+                        const { viewBox } = props;
+                        if (!viewBox) return null;
+                        return (
+                          <text x={viewBox.x + viewBox.width + 4} y={viewBox.y} dominantBaseline="middle"
+                            style={{ fill: 'var(--color-loss)', fontSize: '9px', opacity: 0.65 }}>
+                            60일↑
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+                )}
+
+                {/* 60일 저점 기준선 */}
+                {!isMobile && statusSignals?.low60 > 0 && (
+                  <ReferenceLine y={statusSignals.low60} stroke="var(--accent-blue)" strokeDasharray="2 5" opacity={0.3}
+                    label={{
+                      content: (props: any) => {
+                        const { viewBox } = props;
+                        if (!viewBox) return null;
+                        return (
+                          <text x={viewBox.x + viewBox.width + 4} y={viewBox.y} dominantBaseline="middle"
+                            style={{ fill: 'var(--accent-blue)', fontSize: '9px', opacity: 0.65 }}>
+                            60일↓
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+                )}
+
+                {/* 현재가 기준선 + 60일 위치 % */}
                 {lastPrice > 0 && (
-                  <ReferenceLine y={lastPrice} stroke="var(--text-tertiary)" strokeDasharray="4 4" opacity={0.4} />
+                  <ReferenceLine y={lastPrice} stroke="var(--text-tertiary)" strokeDasharray="4 4" opacity={0.45}
+                    label={!isMobile ? {
+                      content: (props: any) => {
+                        const { viewBox } = props;
+                        if (!viewBox) return null;
+                        const pct = statusSignals?.range60 != null ? ` ${Math.round(statusSignals.range60 * 100)}%` : '';
+                        return (
+                          <text x={viewBox.x + viewBox.width + 4} y={viewBox.y} dominantBaseline="middle"
+                            style={{ fill: 'var(--text-secondary)', fontSize: '10px', fontWeight: 700 }}>
+                            {pct}
+                          </text>
+                        );
+                      }
+                    } : undefined}
+                  />
                 )}
 
                 {/* 종가 */}
@@ -755,6 +805,27 @@ export function ChartPage() {
                     opacity={0.85}
                   />
                 ))}
+
+                {/* MA 우측 레이블 */}
+                {!isMobile && MA_OPTIONS.map(ma => {
+                  const mlast = [...chartData].reverse().find(d => d[ma.key as keyof ChartPoint] != null);
+                  const mval = mlast ? mlast[ma.key as keyof ChartPoint] as number : null;
+                  return showMA[ma.key] && mval ? (
+                    <ReferenceLine key={`rl-${ma.key}`} y={mval} stroke="transparent"
+                      label={{
+                        content: (props: any) => {
+                          const { viewBox } = props;
+                          if (!viewBox) return null;
+                          return (
+                            <text x={viewBox.x + viewBox.width + 4} y={viewBox.y} dominantBaseline="middle"
+                              style={{ fill: ma.color, fontSize: '10px' }}>
+                              {mval >= 10000 ? `${(mval/10000).toFixed(1)}만` : mval.toLocaleString('ko-KR')}
+                            </text>
+                          );
+                        }
+                      }} />
+                  ) : null;
+                })}
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -847,50 +918,114 @@ export function ChartPage() {
 
             {/* AI 의견 버튼 */}
             {AI_OPINIONS[statusSignals.mainLabel] && (
-              <button
-                onClick={() => setShowAiOpinion(true)}
-                style={{
-                  padding: isMobile ? '3px 10px' : '6px 10px',
-                  borderRadius: 8, cursor: 'pointer', border: 'none',
-                  background: `color-mix(in srgb, ${statusSignals.mainColor} 15%, var(--bg-tertiary))`,
-                  color: statusSignals.mainColor,
-                  fontSize: 'var(--text-xs)', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
-                  width: isMobile ? 'auto' : '100%',
-                }}
-              >
-                <span style={{ fontSize: 11 }}>✦</span> AI 의견
-              </button>
+              <>
+                <button
+                  onClick={() => setShowAiOpinion(true)}
+                  style={{
+                    padding: isMobile ? '3px 10px' : '6px 10px',
+                    borderRadius: 8, cursor: 'pointer', border: 'none',
+                    background: `color-mix(in srgb, ${statusSignals.mainColor} 15%, var(--bg-tertiary))`,
+                    color: statusSignals.mainColor,
+                    fontSize: 'var(--text-xs)', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
+                    width: isMobile ? 'auto' : '100%',
+                  }}
+                >
+                  <span style={{ fontSize: 11 }}>✦</span> AI 의견
+                </button>
+                {!isMobile && (
+                  <div style={{
+                    fontSize: 10, color: 'var(--text-tertiary)', lineHeight: 1.55,
+                    paddingTop: 6, borderTop: '1px solid var(--border-secondary)',
+                  }}>
+                    {AI_OPINIONS[statusSignals.mainLabel].conclusion}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
       </div>
 
-      {/* MA 현재값 요약 */}
+      {/* MA 요약 + 내 보유 현황 (데스크톱: 나란히, 모바일: 세로) */}
       {!loading && chartData.length > 0 && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-          {MA_OPTIONS.map(ma => {
-            const last = [...chartData].reverse().find(d => d[ma.key as keyof ChartPoint] != null);
-            const val = last ? last[ma.key as keyof ChartPoint] as number : null;
-            const diff = val && lastPrice ? ((lastPrice - val) / val * 100) : null;
-            return (
-              <div key={ma.key} style={{
-                background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 14px',
-                opacity: showMA[ma.key] ? 1 : 0.4,
-                border: `1px solid ${showMA[ma.key] ? `color-mix(in srgb, ${ma.color} 30%, transparent)` : 'transparent'}`,
-              }}>
-                <div style={{ fontSize: 'var(--text-xs)', color: ma.color, fontWeight: 700, marginBottom: 2 }}>{ma.label} ({ma.period}일)</div>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {val ? val.toLocaleString('ko-KR') + '원' : '—'}
-                </div>
-                {diff != null && (
-                  <div style={{ fontSize: 'var(--text-xs)', color: diff >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', marginTop: 2 }}>
-                    현재가 {diff >= 0 ? '+' : ''}{diff.toFixed(1)}%
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 20, marginTop: 14, alignItems: 'flex-start' }}>
+
+          {/* MA 현재값 카드들 */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
+            {MA_OPTIONS.map(ma => {
+              const last = [...chartData].reverse().find(d => d[ma.key as keyof ChartPoint] != null);
+              const val = last ? last[ma.key as keyof ChartPoint] as number : null;
+              const diff = val && lastPrice ? ((lastPrice - val) / val * 100) : null;
+              return (
+                <div key={ma.key} style={{
+                  background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 14px',
+                  opacity: showMA[ma.key] ? 1 : 0.4,
+                  border: `1px solid ${showMA[ma.key] ? `color-mix(in srgb, ${ma.color} 30%, transparent)` : 'transparent'}`,
+                }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: ma.color, fontWeight: 700, marginBottom: 2 }}>{ma.label} ({ma.period}일)</div>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {val ? val.toLocaleString('ko-KR') + '원' : '—'}
                   </div>
-                )}
+                  {diff != null && (
+                    <div style={{ fontSize: 'var(--text-xs)', color: diff >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', marginTop: 2 }}>
+                      현재가 {diff >= 0 ? '+' : ''}{diff.toFixed(1)}%
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 내 보유 현황 */}
+          {selectedTicker && (() => {
+            const myHoldings = accounts.flatMap(acc =>
+              acc.holdings
+                .filter(h => h.ticker === selectedTicker && !h.isFund)
+                .map(h => ({ acc, h }))
+            );
+            if (myHoldings.length === 0) return null;
+            return (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <MIcon name="account_balance_wallet" size={15} style={{ color: 'var(--text-tertiary)' }} />
+                  내 보유 현황
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {myHoldings.map(({ acc, h }, i) => {
+                    const evalAmt = lastPrice > 0 ? lastPrice * h.quantity : h.avgPrice * h.quantity;
+                    const cost = h.avgPrice * h.quantity;
+                    const pnl = lastPrice > 0 ? evalAmt - cost : 0;
+                    const pnlRate = h.avgPrice > 0 && lastPrice > 0 ? ((lastPrice - h.avgPrice) / h.avgPrice * 100) : 0;
+                    const profitColor = pnl >= 0 ? 'var(--color-profit)' : 'var(--color-loss)';
+                    return (
+                      <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 14px', border: '1px solid var(--border-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        {/* 계좌 */}
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', minWidth: 0 }}>
+                          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{acc.ownerName}</span>
+                          {' · '}{acc.alias || acc.institution}
+                          <span style={{ marginLeft: 5, padding: '1px 5px', borderRadius: 4, background: 'var(--bg-tertiary)' }}>{acc.accountType}</span>
+                        </div>
+                        {/* 평균단가 + 수익률 */}
+                        <div style={{ display: 'flex', gap: 14, flexShrink: 0, alignItems: 'baseline' }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>평균단가</div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{fmtPrice(h.avgPrice)}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>수익률</div>
+                            <div style={{ fontWeight: 700, color: profitColor, fontSize: 'var(--text-sm)' }}>
+                              {pnlRate >= 0 ? '+' : ''}{pnlRate.toFixed(2)}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
-          })}
+          })()}
         </div>
       )}
     </div>

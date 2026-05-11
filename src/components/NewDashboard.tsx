@@ -137,18 +137,20 @@ export function NewDashboard() {
           });
           const assetItems = [
             { label: '총 자산', value: totalAsset, isTotal: true },
-            { label: `${new Date().getMonth()+1}월 증감`, value: monthlyChange },
-            {
-              label: (() => {
-                if (!latestSnap) return '증감';
-                const days = ['일','월','화','수','목','금','토'];
-                const d = new Date(latestSnap.date + 'T00:00:00+09:00');
-                const label = `${d.getMonth()+1}/${d.getDate()} ${days[d.getDay()]}`;
-                return latestSnap.date === today ? `${label} 증감` : `${label} 저장 이후`;
-              })(),
-              value: dailyChange,
-            },
-            { label: `${new Date().getFullYear()}년 증감`, value: yearlyChange },
+            ...(!isHappyMode ? [
+              { label: `${new Date().getMonth()+1}월 증감`, value: monthlyChange },
+              {
+                label: (() => {
+                  if (!latestSnap) return '증감';
+                  const days = ['일','월','화','수','목','금','토'];
+                  const d = new Date(latestSnap.date + 'T00:00:00+09:00');
+                  const label = `${d.getMonth()+1}/${d.getDate()} ${days[d.getDay()]}`;
+                  return latestSnap.date === today ? `${label} 증감` : `${label} 저장 이후`;
+                })(),
+                value: dailyChange,
+              },
+              { label: `${new Date().getFullYear()}년 증감`, value: yearlyChange },
+            ] : []),
           ].map(item => {
             const isPositive = item.value > 0;
             const isNegative = item.value < 0;
@@ -312,7 +314,7 @@ export function NewDashboard() {
                         <tr>
                           <th>날짜</th>
                           <th style={{ textAlign: 'right' }}>총 자산</th>
-                          <th style={{ textAlign: 'right' }}>자산 증감</th>
+                          {!isHappyMode && <th style={{ textAlign: 'right' }}>자산 증감</th>}
                           <th style={{ textAlign: 'right' }}>증감률</th>
                         </tr>
                       </thead>
@@ -325,13 +327,15 @@ export function NewDashboard() {
                             <tr key={snap.date}>
                               <td style={{ fontWeight: 'var(--font-medium)' }}>{snap.date}</td>
                               <td className="toss-number" style={{ textAlign: 'right' }}>{hide(`${fmt(snap.totalAsset)}원`)}</td>
-                              <td className="toss-number" style={{ textAlign: 'right', fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : change < 0 ? 'var(--color-loss)' : 'var(--text-primary)' }}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  {change > 0 && <MIcon name="arrow_outward" size={12} />}
-                                  {change < 0 && <MIcon name="south_east" size={12} />}
-                                  {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
-                                </span>
-                              </td>
+                              {!isHappyMode && (
+                                <td className="toss-number" style={{ textAlign: 'right', fontWeight: 'var(--font-semibold)', color: change > 0 ? 'var(--color-profit)' : change < 0 ? 'var(--color-loss)' : 'var(--text-primary)' }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                    {change > 0 && <MIcon name="arrow_outward" size={12} />}
+                                    {change < 0 && <MIcon name="south_east" size={12} />}
+                                    {hide(`${change > 0 ? '+' : ''}${fmt(change)}원`)}
+                                  </span>
+                                </td>
+                              )}
                               <td style={{ textAlign: 'right' }}>
                                 <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', background: rate > 0 ? 'var(--color-profit-bg)' : rate < 0 ? 'var(--color-loss-bg)' : 'var(--bg-secondary)', color: rate > 0 ? 'var(--color-profit)' : rate < 0 ? 'var(--color-loss)' : 'var(--text-secondary)' }}>
                                   {isAmountHidden ? '••••' : `${rate > 0 ? '+' : ''}${rate.toFixed(2)}%`}
