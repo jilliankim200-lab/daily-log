@@ -159,11 +159,13 @@ const AI_OPINIONS: Record<string, {
 
 // AI 의견 팝업 모달
 function AiOpinionModal({
-  status, stockName, onClose,
+  status, stockName, onClose, aiText, aiLoading,
 }: {
   status: { mainLabel: string; mainColor: string; range60: number | null };
   stockName: string;
   onClose: () => void;
+  aiText?: string;
+  aiLoading?: boolean;
 }) {
   const opinion = AI_OPINIONS[status.mainLabel];
   if (!opinion) return null;
@@ -244,12 +246,16 @@ function AiOpinionModal({
             </div>
           </div>
 
-          {/* 결론 */}
+          {/* 결론 — AI 분석 텍스트 우선, 없으면 정적 결론 */}
           <div style={{ borderRadius: 10, padding: '10px 14px',
             background: `color-mix(in srgb, ${opinion.color} 10%, var(--bg-secondary))`,
             border: `1px solid color-mix(in srgb, ${opinion.color} 25%, transparent)` }}>
-            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: opinion.color, marginBottom: 5 }}>결론</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{opinion.conclusion}</div>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: opinion.color, marginBottom: 5 }}>
+              {aiText ? '✦ AI 분석' : '결론'}
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              {aiLoading ? '분석 중...' : aiText || opinion.conclusion}
+            </div>
           </div>
         </div>
       </div>
@@ -395,6 +401,9 @@ export function ChartPage() {
   const [error, setError] = useState('');
   const [showGuide, setShowGuide] = useState(false);
   const [showAiOpinion, setShowAiOpinion] = useState(false);
+  const [aiOpinionText, setAiOpinionText] = useState<string>('');
+  const [aiOpinionLoading, setAiOpinionLoading] = useState(false);
+  const aiOpinionCache = useRef<Record<string, string>>({});
   const [fromPage, setFromPage] = useState<string | null>(null);
   const [fromTicker, setFromTicker] = useState<string | null>(null);
   const [customInput, setCustomInput] = useState('');
@@ -538,10 +547,16 @@ export function ChartPage() {
     [chartData]
   );
 
+  const currentMa5 = useMemo(
+    () => [...chartData].reverse().find(d => d.ma5 != null)?.ma5 ?? null,
+    [chartData]
+  );
+
   // 추세 상태 신호
   const statusSignals = useMemo(() => {
     if (!currentMa20 || !currentMa60 || !lastPrice) return null;
     const aboveMa20 = lastPrice > currentMa20;
+    const aboveMa5  = currentMa5 != null ? lastPrice > currentMa5 : null;
     const ma20AboveMa60 = currentMa20 > currentMa60;
     let mainLabel: string, mainColor: string;
     if (aboveMa20 && ma20AboveMa60)        { mainLabel = '상승 추세'; mainColor = 'var(--color-profit)'; }
@@ -552,8 +567,78 @@ export function ChartPage() {
     const high60 = prices.length > 0 ? Math.max(...prices) : 0;
     const low60  = prices.length > 0 ? Math.min(...prices) : 0;
     const range60 = high60 > low60 ? (lastPrice - low60) / (high60 - low60) : null;
-    return { mainLabel, mainColor, aboveMa20, ma20AboveMa60, range60, high60, low60 };
-  }, [currentMa20, currentMa60, lastPrice, rawData]);
+    return { mainLabel, mainColor, aboveMa20, aboveMa5, ma20AboveMa60, range60, high60, low60 };
+  }, [currentMa5, currentMa20, currentMa60, lastPrice, rawData]);
+
+  // 상황별 동적 요약 (MA5 이탈 여부·60일 범위 반영)
+  function getDynamicSummary(s: NonNullable<typeof statusSignals>): string {
+    const pct = s.range60 != null ? Math.round(s.range60 * 100) : null;
+    const rangeNote = pct != null
+      ? pct >= 80 ? `60일 고점 근처(${pct}%) — 분할 익절 검토.`
+      : pct <= 20 ? `60일 저점 근처(${pct}%) — 추가 하락 경계.`
+      : `60일 범위 ${pct}% 위치.`
+      : '';
+
+    if (s.mainLabel === '상승 추세') {
+      if (s.aboveMa5 === false) {
+        return `MA5 이탈 — 단기 조정 진입. MA20 지지선 유지 중이므로 추세는 살아있음. MA20 이탈 시 재검토. ${rangeNote}`;
+      }
+      if (pct != null && pct >= 80) {
+        return `상승 추세 유지. 단 ${rangeNote} 보유 유지하되 분할 익절로 리스크 관리.`;
+      }
+      return `상승 추세 유지. MA20 지지선 위 보유 원칙. ${rangeNote}`;
+    }
+    if (s.mainLabel === '추세 꺾임') {
+      return `MA20 아래로 이탈 — 단기 약세. 골든크로스(MA20>MA60)는 유지 중이므로 MA20 회복 여부 관망. ${rangeNote}`;
+    }
+    if (s.mainLabel === '추세 붕괴') {
+      return `MA20·MA60 모두 아래 — 구조적 약세. 반등 시 분할 정리 원칙. 섣불리 저점 매수 위험. ${rangeNote}`;
+    }
+    if (s.mainLabel === '반등 시도') {
+      return `MA60 돌파 반등 중. 골든크로스(MA20>MA60) 형성 여부가 추세 전환 확인 포인트. ${rangeNote}`;
+    }
+    return rangeNote;
+  }
+
+  async function fetchAiOpinion() {
+    if (!statusSignals || !lastPrice) return;
+    const cacheKey = `${selectedTicker}_${statusSignals.mainLabel}_${Math.round(lastPrice)}`;
+    if (aiOpinionCache.current[cacheKey]) {
+      setAiOpinionText(aiOpinionCache.current[cacheKey]);
+      return;
+    }
+    setAiOpinionLoading(true);
+    try {
+      const recentPrices = rawData.slice(-5).map(d => d.price);
+      const res = await fetch(`${WORKER_URL}/ai-chart-opinion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedName || selectedTicker,
+          ticker: selectedTicker,
+          currentPrice: lastPrice,
+          changeRate: ((lastPrice - (rawData[rawData.length - 2]?.price ?? lastPrice)) / (rawData[rawData.length - 2]?.price ?? lastPrice)) * 100,
+          ma5: currentMa5,
+          ma20: currentMa20,
+          ma60: currentMa60,
+          high60: statusSignals.high60,
+          low60: statusSignals.low60,
+          range60: statusSignals.range60,
+          mainLabel: statusSignals.mainLabel,
+          recentPrices,
+        }),
+      });
+      const data = await res.json() as { opinion?: string; error?: string };
+      if (data.opinion) {
+        aiOpinionCache.current[cacheKey] = data.opinion;
+        setAiOpinionText(data.opinion);
+      }
+    } catch {
+      setAiOpinionText('분석 중 오류가 발생했습니다.');
+    } finally {
+      setAiOpinionLoading(false);
+    }
+  }
 
   return (
     <div style={{ padding: p, maxWidth: 960, margin: '0 auto' }}>
@@ -563,6 +648,8 @@ export function ChartPage() {
           status={statusSignals}
           stockName={selectedName || selectedTicker}
           onClose={() => setShowAiOpinion(false)}
+          aiText={aiOpinionText}
+          aiLoading={aiOpinionLoading}
         />
       )}
 
@@ -920,7 +1007,7 @@ export function ChartPage() {
             {AI_OPINIONS[statusSignals.mainLabel] && (
               <>
                 <button
-                  onClick={() => setShowAiOpinion(true)}
+                  onClick={() => { setShowAiOpinion(true); fetchAiOpinion(); }}
                   style={{
                     padding: isMobile ? '3px 10px' : '6px 10px',
                     borderRadius: 8, cursor: 'pointer', border: 'none',
@@ -935,10 +1022,13 @@ export function ChartPage() {
                 </button>
                 {!isMobile && (
                   <div style={{
-                    fontSize: 10, color: 'var(--text-tertiary)', lineHeight: 1.55,
+                    fontSize: 10, color: 'var(--text-tertiary)', lineHeight: 1.6,
                     paddingTop: 6, borderTop: '1px solid var(--border-secondary)',
-                  }}>
-                    {AI_OPINIONS[statusSignals.mainLabel].conclusion}
+                    cursor: 'pointer',
+                  }} onClick={() => { fetchAiOpinion(); }}>
+                    {aiOpinionLoading
+                      ? '분석 중...'
+                      : aiOpinionText || getDynamicSummary(statusSignals)}
                   </div>
                 )}
               </>

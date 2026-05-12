@@ -104,7 +104,7 @@ interface AccountPlan {
 
 // ── 타이밍 신호 (MA/고저점 기반) ────────────────────────────────
 function noSignal() {
-  return { label: '–', color: 'var(--text-tertiary)', desc: '시세 데이터 로딩 중...' };
+  return { label: '–', color: 'var(--text-tertiary)', desc: '시세 데이터 로딩 중...', strategy: '' };
 }
 
 function fmtP(n: number): string {
@@ -112,7 +112,7 @@ function fmtP(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
-function TimingBadge({ timing }: { timing: { label: string; color: string; desc: string; range?: [number, number] } }) {
+function TimingBadge({ timing, noTooltip }: { timing: { label: string; color: string; desc: string; range?: [number, number] }; noTooltip?: boolean }) {
   const [show, setShow] = useState(false);
   const [tipDir, setTipDir] = useState<'up' | 'down'>('up');
   const [tipAlign, setTipAlign] = useState<'left' | 'right'>('right');
@@ -149,7 +149,7 @@ function TimingBadge({ timing }: { timing: { label: string; color: string; desc:
           </span>
         )}
       </div>
-      {show && (
+      {show && !noTooltip && (
         <div style={{
           position: 'absolute',
           ...(tipDir === 'up' ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }),
@@ -728,7 +728,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
 }
 
 // ── 계좌 카드 ──────────────────────────────────────────────────
-function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll, executedInCycle, executedMap, executionInputs, onExecutionInputChange }: {
+function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll, executedInCycle, executedMap, executionInputs, onExecutionInputChange, onSellDone }: {
   plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; changeRates: Record<string, number>; signalFilter: Set<string>;
   execMode?: boolean; checkedSells?: Set<string>; checkedBuys?: Set<string>;
   onToggleSell?: (key: string) => void; onToggleBuy?: (key: string) => void;
@@ -738,6 +738,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
   executedMap?: Record<string, ExecutionRecord>;
   executionInputs?: Record<string, number>;
   onExecutionInputChange?: (key: string, value: number) => void;
+  onSellDone?: (accId: string, holdingId: string, isPartial: boolean) => void;
 }) {
   const [collapsed, setCollapsed] = useState(true);
   const { acc, sells, keeps, buys, freedCash, projectedSafePct, safeStatus, totalVal, safeAdjust } = plan;
@@ -788,20 +789,29 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
               {/* 상단: 배지 + execMode 체크박스 */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap',
-                    background: 'color-mix(in srgb, var(--color-loss) 15%, transparent)', color: 'var(--color-loss)',
-                    borderRadius: 5, padding: '2px 7px' }}>
-                    {!s.partialRatio || s.partialRatio === 1 ? '전량매도'
+                  {(() => {
+                    const isUrgent = timing.label === '매도 적합' || timing.label === '저점 매도';
+                    const badgeColor = isUrgent ? 'var(--color-loss)' : timing.color || 'var(--color-loss)';
+                    const qtyLabel = !s.partialRatio || s.partialRatio === 1 ? '전량매도'
                       : s.partialRatio === 0.5 ? '1/2 매도'
                       : s.partialRatio < 0.34 ? '1/3 매도'
-                      : '1/4 매도'}
-                  </span>
+                      : '1/4 매도';
+                    return (
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, whiteSpace: 'nowrap',
+                        background: isUrgent ? `color-mix(in srgb, ${badgeColor} 15%, transparent)` : 'transparent',
+                        border: `1px solid color-mix(in srgb, ${badgeColor} 50%, transparent)`,
+                        color: isUrgent ? badgeColor : 'var(--text-secondary)',
+                        borderRadius: 5, padding: '2px 7px' }}>
+                        {qtyLabel}{!isUrgent && timing.label === '매도 가능' ? ' (선택)' : ''}
+                      </span>
+                    );
+                  })()}
                   {s.cls && !isMobile && (
                     <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600,
                       background: `color-mix(in srgb, ${ASSET_COLORS[s.cls]} var(--badge-mix), transparent)`, color: ASSET_COLORS[s.cls],
                       borderRadius: 4, padding: '1px 5px' }}>{s.cls}</span>
                   )}
-                  {!isMobile && <TimingBadge timing={timing} />}
+                  {!isMobile && <TimingBadge timing={timing} noTooltip />}
                 </div>
                 {execMode && (
                   <button onClick={() => onToggleSell?.(rk)}
@@ -822,9 +832,57 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                 {s.h.name}
               </div>
               {/* 모바일: 종목명 하단 timing 뱃지 */}
-              {isMobile && <TimingBadge timing={timing} />}
+              {isMobile && <TimingBadge timing={timing} noTooltip />}
+              {/* 급등락일 경고 */}
+              {cr !== null && Math.abs(cr) >= 3 && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: 'color-mix(in srgb, var(--color-warning) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)',
+                  borderRadius: 6, padding: '4px 9px' }}>
+                  <MIcon name="warning" size={13} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-warning)' }}>
+                    급등락일 ({cr > 0 ? '+' : ''}{cr.toFixed(1)}%) — 오늘은 매매 신중
+                  </span>
+                </div>
+              )}
               {/* 구분선 */}
               <div style={{ height: 1, background: 'var(--border-secondary)' }} />
+              {/* 타이밍 설명 */}
+              {timing.desc && (
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', lineHeight: 1.55 }}>
+                  {timing.desc}
+                </div>
+              )}
+              {/* 실천 전략 뱃지 */}
+              {timing.strategy && (() => {
+                const isWait = timing.label === '반등 대기' || timing.label === '반등 후 매도';
+                const isUrgent = timing.label === '매도 적합' || timing.label === '저점 매도';
+                const fullSell = !s.partialRatio || s.partialRatio === 1;
+                let strategyText = timing.strategy;
+
+                if (!isWait && !isUrgent && fullSell) {
+                  // 분할 매도가 권장되는 경우 → 수량/금액 구체화
+                  if (s.h.isFund && s.h.amount) {
+                    const chunk = Math.round(s.h.amount / 3 / 10000);
+                    strategyText = `1/3씩 분할매도 시작 → 약 ${chunk}만원씩 3회`;
+                  } else if (s.h.quantity) {
+                    const chunk = Math.round(s.h.quantity / 3);
+                    strategyText = `1/3씩 분할매도 시작 → 약 ${chunk}주씩 3회`;
+                  }
+                }
+
+                return (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                    background: 'var(--bg-elevated)',
+                    border: `1px solid color-mix(in srgb, ${timing.color} 40%, transparent)`,
+                    borderRadius: 6, padding: '4px 9px' }}>
+                    <MIcon name="trending_flat" size={13} style={{ color: timing.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                      {strategyText}
+                    </span>
+                  </div>
+                );
+              })()}
               {/* 분할매도 금액 (partialRatio 있을 때만) */}
               {s.partialRatio != null && s.partialRatio < 1 && (
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 1 : 0, flexWrap: 'wrap' }}>
@@ -891,7 +949,29 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                 </div>
               )}
               {/* execMode 수량 입력 */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, flexWrap: 'wrap' }}>
+                {/* 매도 완료 버튼 */}
+                {onSellDone && (
+                  <button
+                    onClick={() => {
+                      const isPartial = !!(s.partialRatio && s.partialRatio < 1);
+                      if (window.confirm(`${s.h.name} ${isPartial ? '부분' : '전량'} 매도 완료로 처리할까요?${isPartial ? '' : '\n계좌에서 해당 종목이 삭제됩니다.'}`)) {
+                        onSellDone(acc.id, s.h.id, isPartial);
+                      }
+                    }}
+                    style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600, padding: '3px 9px',
+                      borderRadius: 6, cursor: 'pointer',
+                      border: '1px solid var(--color-loss)',
+                      background: 'color-mix(in srgb, var(--color-loss) 10%, transparent)',
+                      color: 'var(--color-loss)',
+                      display: 'flex', alignItems: 'center', gap: 3,
+                    }}
+                  >
+                    <MIcon name="check_circle" size={12} />
+                    매도 완료
+                  </button>
+                )}
                 {execMode && isChecked && (() => {
                   const max = s.h.isFund ? (s.h.amount || 0) : (s.h.quantity || 0);
                   const val = executionInputs?.[rk] ?? max;
@@ -2605,6 +2685,15 @@ export function OptimalGuide() {
             sessionStorage.setItem('chart_nav_from', 'optimal-guide');
             sessionStorage.setItem('chart_nav_name', name);
             navigateTo('chart');
+          }}
+          onSellDone={async (accId, holdingId, isPartial) => {
+            const updated = accounts.map(a => {
+              if (a.id !== accId) return a;
+              if (isPartial) return a; // 부분 매도는 수량 수정이 필요해 안내만
+              return { ...a, holdings: a.holdings.filter(h => h.id !== holdingId) };
+            });
+            await saveAccounts(updated);
+            await reloadAccounts();
           }} />
       ))}
 

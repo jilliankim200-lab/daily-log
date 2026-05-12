@@ -2,11 +2,12 @@ interface Env {
   KV: KVNamespace;
   RESEND_API_KEY?: string;
   NOTIFICATION_EMAIL?: string;
+  ANTHROPIC_API_KEY?: string;
 }
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -686,6 +687,61 @@ export default {
       const body = await request.text();
       await env.KV.put(key, body);
       return json({ ok: true });
+    }
+
+    // POST /ai-chart-opinion — Anthropic API로 차트 데이터 분석
+    if (request.method === 'POST' && url.pathname === '/ai-chart-opinion') {
+      if (!env.ANTHROPIC_API_KEY) return json({ error: 'API key not configured' }, 500);
+      try {
+        const body: {
+          name: string; ticker: string;
+          currentPrice: number; changeRate: number;
+          ma5: number | null; ma20: number | null; ma60: number | null;
+          high60: number; low60: number; range60: number | null;
+          mainLabel: string;
+          recentPrices: number[];
+        } = await request.json();
+
+        const fmt = (n: number) => n.toLocaleString('ko-KR');
+        const diff = (a: number, b: number | null) => b ? ((a - b) / b * 100).toFixed(1) : '—';
+        const rangePct = body.range60 != null ? Math.round(body.range60 * 100) : null;
+
+        const recentChange = body.recentPrices.length >= 2
+          ? ((body.recentPrices[body.recentPrices.length - 1] - body.recentPrices[0]) / body.recentPrices[0] * 100).toFixed(1)
+          : null;
+
+        const prompt = `한국 주식/ETF 차트 분석가로서 아래 데이터를 바탕으로 현재 상황을 2~3문장으로 분석해줘.
+수치를 직접 언급하고 구체적으로 말해줘. 마크다운 없이 순수 텍스트로.
+
+종목: ${body.name} (${body.ticker})
+현재가: ${fmt(body.currentPrice)}원 (전일 대비 ${body.changeRate > 0 ? '+' : ''}${body.changeRate.toFixed(2)}%)
+MA5: ${body.ma5 ? fmt(body.ma5) + '원 (현재가 대비 ' + diff(body.currentPrice, body.ma5) + '%)' : '—'}
+MA20: ${body.ma20 ? fmt(body.ma20) + '원 (현재가 대비 ' + diff(body.currentPrice, body.ma20) + '%)' : '—'}
+MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.currentPrice, body.ma60) + '%)' : '—'}
+60일 고점: ${fmt(body.high60)}원 / 저점: ${fmt(body.low60)}원 / 현재 위치: ${rangePct != null ? rangePct + '%' : '—'}
+추세 상태: ${body.mainLabel}
+최근 5일 가격 변화율: ${recentChange != null ? recentChange + '%' : '—'}`;
+
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 250,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!res.ok) return json({ error: 'Anthropic API error' }, 500);
+        const data: any = await res.json();
+        const opinion = data.content?.[0]?.text ?? '';
+        return json({ opinion });
+      } catch (e) {
+        return json({ error: String(e) }, 500);
+      }
     }
 
     // POST /snapshot (수동 트리거)
