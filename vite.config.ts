@@ -107,6 +107,18 @@
           changeOrigin: true,
           rewrite: (path: string) => path.replace(/^\/api\/exchange/, '/marketindex/exchange'),
         },
+        '/kv': {
+          target: 'https://asset-dashboard-api.jilliankim200.workers.dev',
+          changeOrigin: true,
+        },
+        '/snapshot': {
+          target: 'https://asset-dashboard-api.jilliankim200.workers.dev',
+          changeOrigin: true,
+        },
+        '/api/daily-reports': {
+          target: 'https://asset-dashboard-api.jilliankim200.workers.dev',
+          changeOrigin: true,
+        },
       },
     },
   });

@@ -772,8 +772,8 @@ export default {
     if (request.method === 'GET' && url.pathname.startsWith('/kv/')) {
       const key = url.pathname.slice(4);
       const value = await env.KV.get(key);
-      if (value === null) return json(null);
-      return json(JSON.parse(value));
+      if (value === null) return new Response('null', { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+      return new Response(value, { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
     }
 
     // PUT /kv/:key

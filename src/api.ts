@@ -1,7 +1,8 @@
 import type { Account, DailySnapshot, OtherAsset } from './types';
 
 // Cloudflare Worker URL - 배포 후 실제 URL로 교체됨
-const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
+const WORKER_URL = import.meta.env.VITE_WORKER_URL
+  || (import.meta.env.DEV ? '' : 'https://asset-dashboard-api.jilliankim200.workers.dev');
 
 // localStorage keys (폴백용)
 const STORAGE_KEY = 'asset_accounts';
