@@ -19,6 +19,12 @@ export function NewDashboard() {
   useEffect(() => { fetchSnapshots().then(s => setSnapshots(s.filter(Boolean))); }, []);
 
   useEffect(() => {
+    const refresh = () => fetchSnapshots().then(s => setSnapshots(s.filter(Boolean)));
+    window.addEventListener('snapshotsUpdated', refresh);
+    return () => window.removeEventListener('snapshotsUpdated', refresh);
+  }, []);
+
+  useEffect(() => {
     fetchMarketData().then(setMarketData).catch(console.error);
     const timer = setInterval(() => {
       fetchMarketData().then(setMarketData).catch(console.error);

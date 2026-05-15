@@ -87,6 +87,7 @@ export function DataReports() {
       if (!res.ok) throw new Error('failed');
       const data = await res.json() as { ok: boolean; date: string };
       showToast(`${data.date} 보고서 생성 완료`);
+      window.dispatchEvent(new CustomEvent('snapshotsUpdated'));
       await loadDates();
     } catch {
       showToast('생성 실패');
