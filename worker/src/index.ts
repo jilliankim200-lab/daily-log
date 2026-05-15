@@ -550,9 +550,8 @@ function parseKV<T>(raw: string | null, fallback: T): T {
   try { return JSON.parse(raw.replace(/^﻿/, '')); } catch { return fallback; }
 }
 
-async function generateDailyReport(env: Env, date: string, snapshotsOverride?: any[], accountsOverride?: any[]): Promise<string> {
+async function generateDailyReport(env: Env, date: string, snapshotsOverride?: any[]): Promise<string> {
   const snapshots: any[] = snapshotsOverride ?? parseKV(await env.KV.get('snapshots'), []);
-  const accounts: any[] = accountsOverride ?? parseKV(await env.KV.get('accounts'), []);
 
   const fmt = (n: number) => Math.round(n).toLocaleString('ko-KR');
   const fmtSigned = (n: number) => {
@@ -592,33 +591,6 @@ async function generateDailyReport(env: Env, date: string, snapshotsOverride?: a
   for (const s of recent14) {
     txt += `  ${s.date}       ${fmt(s.totalAsset).padStart(15)}원    ${fmtSigned(s.assetChange).padStart(12)}원   ${fmtRate(s.changeRate).padStart(7)}\n`;
   }
-  txt += '\n';
-
-  txt += '[계좌 종목 현황]\n\n';
-
-  const wifeAccounts = accounts.filter((a: any) => a.owner === 'wife');
-  const husbandAccounts = accounts.filter((a: any) => a.owner === 'husband');
-
-  const renderAccount = (acc: any): string => {
-    let s = `  [${acc.institution} · ${acc.alias || ''}]\n`;
-    if (acc.cash > 0) s += `    현금: ${fmt(acc.cash)}원\n`;
-    for (const h of acc.holdings) {
-      const evalAmt = h.isFund ? (h.amount || 0) : Math.round((h.avgPrice || 0) * (h.quantity || 0));
-      const name = (h.name || h.ticker || '').padEnd(24, ' ');
-      s += `    ${name} ${String(h.quantity || 0).padStart(4)}주   평단 ${String(fmt(h.avgPrice || 0)).padStart(9)}원   평가 ${String(fmt(evalAmt)).padStart(15)}원\n`;
-    }
-    return s;
-  };
-
-  const renderOwner = (ownerName: string, accs: any[]): string => {
-    let s = `  ── ${ownerName} ──────────────────────────────────────────\n`;
-    for (const acc of accs) s += renderAccount(acc);
-    return s;
-  };
-
-  txt += renderOwner('지 윤', wifeAccounts);
-  txt += '\n';
-  txt += renderOwner('오 빠', husbandAccounts);
   txt += '\n';
 
   const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -865,8 +837,8 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       try {
         const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
         const today = kstNow.toISOString().slice(0, 10);
-        const body = await request.json().catch(() => ({})) as { snapshots?: any[]; accounts?: any[] };
-        const content = await generateDailyReport(env, today, body.snapshots, body.accounts);
+        const body = await request.json().catch(() => ({})) as { snapshots?: any[] };
+        const content = await generateDailyReport(env, today, body.snapshots);
         await saveDailyReport(env, today, content);
         return json({ ok: true, date: today });
       } catch (e) {

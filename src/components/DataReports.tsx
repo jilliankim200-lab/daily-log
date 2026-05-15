@@ -2,11 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { MIcon } from './MIcon';
 import { useAppContext } from '../App';
 import { fetchSnapshots } from '../api';
+import { holdingValue } from '../types';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 export function DataReports() {
-  const { accounts } = useAppContext();
+  const { accounts, prices, otherAssets } = useAppContext();
+
+  const calcHoldings = (accs: typeof accounts) =>
+    accs.reduce((s, a) => s + (a.cash || 0) + a.holdings.reduce((ss, h) => ss + holdingValue(h, prices[h.ticker]), 0), 0);
+
+  const wifeHoldings = calcHoldings(accounts.filter(a => a.owner === 'wife'));
+  const husbandHoldings = calcHoldings(accounts.filter(a => a.owner === 'husband'));
+  const wifeOtherTotal = otherAssets.filter(a => a.owner === 'wife').reduce((s, a) => s + a.amount, 0);
+  const husbandOtherTotal = otherAssets.filter(a => a.owner === 'husband').reduce((s, a) => s + a.amount, 0);
+  const otherTotal = otherAssets.reduce((s, a) => s + a.amount, 0);
+  const liveTotalAsset = calcHoldings(accounts) + otherTotal;
+  const liveWifeTotal = wifeHoldings + wifeOtherTotal;
+  const liveHusbandTotal = husbandHoldings + husbandOtherTotal;
   const [dates, setDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -86,12 +99,36 @@ export function DataReports() {
   async function handleGenerate() {
     setGenerating(true);
     try {
+      const today = (() => {
+        const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        return kst.toISOString().slice(0, 10);
+      })();
+
       const snapshots = await fetchSnapshots();
       window.dispatchEvent(new CustomEvent('snapshotsUpdated'));
+
+      // 대시보드 실시간 값으로 오늘 스냅샷 구성
+      const latestSnap = snapshots[0];
+      const dailyChange = latestSnap ? liveTotalAsset - latestSnap.totalAsset : 0;
+      const dailyRate = latestSnap && latestSnap.totalAsset > 0
+        ? (dailyChange / latestSnap.totalAsset) * 100 : 0;
+
+      const todaySnap = {
+        date: today,
+        totalAsset: liveTotalAsset,
+        wifeAsset: liveWifeTotal,
+        husbandAsset: liveHusbandTotal,
+        assetChange: dailyChange,
+        changeRate: dailyRate,
+      };
+
+      // 오늘 날짜 스냅샷을 라이브 값으로 교체
+      const snapshotsWithLive = [todaySnap, ...snapshots.filter(s => s.date !== today)];
+
       const res = await fetch(`${WORKER_URL}/api/daily-reports/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshots, accounts }),
+        body: JSON.stringify({ snapshots: snapshotsWithLive }),
       });
       if (!res.ok) throw new Error('failed');
       const data = await res.json() as { ok: boolean; date: string };
