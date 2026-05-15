@@ -860,13 +860,11 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       });
     }
 
-    // POST /api/daily-reports/generate — 수동 보고서 생성 (라이브 가격으로 스냅샷 업데이트 후 생성)
+    // POST /api/daily-reports/generate — 수동 보고서 생성 (현재 KV 스냅샷 그대로 사용)
     if (request.method === 'POST' && url.pathname === '/api/daily-reports/generate') {
       try {
         const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
         const today = kstNow.toISOString().slice(0, 10);
-        // 라이브 가격으로 오늘 스냅샷을 먼저 갱신 → 같은 Worker 실행 내 KV 쓰기는 즉시 반영됨
-        await runDailySnapshot(env, today).catch(() => {});
         const content = await generateDailyReport(env, today);
         await saveDailyReport(env, today, content);
         return json({ ok: true, date: today });
