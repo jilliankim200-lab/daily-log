@@ -544,6 +544,101 @@ async function updateMomentumSignal(env: Env): Promise<string> {
   return `momentum_signal updated: ${signalName} r6m=${signalR6m}% (${marketPhase})`;
 }
 
+// ── 일일 보고서 생성 ──
+function parseKV<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try { return JSON.parse(raw.replace(/^﻿/, '')); } catch { return fallback; }
+}
+
+async function generateDailyReport(env: Env, date: string): Promise<string> {
+  const snapshots: any[] = parseKV(await env.KV.get('snapshots'), []);
+  const accounts: any[] = parseKV(await env.KV.get('accounts'), []);
+
+  const fmt = (n: number) => Math.round(n).toLocaleString('ko-KR');
+  const fmtSigned = (n: number) => {
+    const abs = Math.round(Math.abs(n)).toLocaleString('ko-KR');
+    return (n >= 0 ? '+' : '-') + abs;
+  };
+  const fmtRate = (r: number) => (r >= 0 ? '+' : '-') + Math.abs(r).toFixed(2) + '%';
+
+  const sorted = snapshots.filter((s: any) => s && s.date).sort((a: any, b: any) => b.date.localeCompare(a.date));
+  const enriched = sorted.map((s: any, i: number) => {
+    const prev = sorted[i + 1];
+    const change = prev ? s.totalAsset - prev.totalAsset : 0;
+    const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0;
+    return { ...s, assetChange: change, changeRate: rate };
+  });
+
+  const snap = enriched.find((s: any) => s.date === date) || enriched[0];
+  if (!snap) return `[${date}] 저장된 데이터 없음`;
+
+  const recent14 = enriched.slice(0, 14);
+
+  let txt = '';
+  txt += '================================================================\n';
+  txt += '  자산 일일 보고서\n';
+  txt += `  날짜: ${snap.date}\n`;
+  txt += '================================================================\n\n';
+
+  txt += '[자산 요약]\n';
+  txt += `  부부 합산   : ${fmt(snap.totalAsset)}원\n`;
+  txt += `  전일 대비   : ${fmtSigned(snap.assetChange)}원 (${fmtRate(snap.changeRate)})\n`;
+  txt += `  지 윤       : ${fmt(snap.wifeAsset)}원\n`;
+  txt += `  오 빠       : ${fmt(snap.husbandAsset)}원\n\n`;
+
+  txt += '[자산 증감 내역 (최근 14일)]\n';
+  txt += '  날짜                       총 자산          자산 증감      증감률\n';
+  txt += '  ----------------------------------------------------------\n';
+  for (const s of recent14) {
+    txt += `  ${s.date}       ${fmt(s.totalAsset).padStart(15)}원    ${fmtSigned(s.assetChange).padStart(12)}원   ${fmtRate(s.changeRate).padStart(7)}\n`;
+  }
+  txt += '\n';
+
+  txt += '[계좌 종목 현황]\n\n';
+
+  const wifeAccounts = accounts.filter((a: any) => a.owner === 'wife');
+  const husbandAccounts = accounts.filter((a: any) => a.owner === 'husband');
+
+  const renderAccount = (acc: any): string => {
+    let s = `  [${acc.institution} · ${acc.alias || ''}]\n`;
+    if (acc.cash > 0) s += `    현금: ${fmt(acc.cash)}원\n`;
+    for (const h of acc.holdings) {
+      const evalAmt = h.isFund ? (h.amount || 0) : Math.round((h.avgPrice || 0) * (h.quantity || 0));
+      const name = (h.name || h.ticker || '').padEnd(24, ' ');
+      s += `    ${name} ${String(h.quantity || 0).padStart(4)}주   평단 ${String(fmt(h.avgPrice || 0)).padStart(9)}원   평가 ${String(fmt(evalAmt)).padStart(15)}원\n`;
+    }
+    return s;
+  };
+
+  const renderOwner = (ownerName: string, accs: any[]): string => {
+    let s = `  ── ${ownerName} ──────────────────────────────────────────\n`;
+    for (const acc of accs) s += renderAccount(acc);
+    return s;
+  };
+
+  txt += renderOwner('지 윤', wifeAccounts);
+  txt += '\n';
+  txt += renderOwner('오 빠', husbandAccounts);
+  txt += '\n';
+
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  txt += '================================================================\n';
+  txt += `  생성 시각: ${kstNow.toISOString().slice(0, 10)} ${kstNow.toISOString().slice(11, 16)} KST\n`;
+  txt += '================================================================\n';
+
+  return txt;
+}
+
+async function saveDailyReport(env: Env, date: string, content: string): Promise<void> {
+  await env.KV.put(`daily_report:${date}`, content);
+  const existing: string[] = JSON.parse(await env.KV.get('daily_report_dates') || '[]');
+  if (!existing.includes(date)) {
+    existing.unshift(date);
+    existing.sort((a, b) => b.localeCompare(a));
+    await env.KV.put('daily_report_dates', JSON.stringify(existing.slice(0, 365)));
+  }
+}
+
 // ── Cron 실행 로그 저장 ──
 async function saveCronLog(env: Env, results: string[]): Promise<void> {
   const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -739,6 +834,42 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         const data: any = await res.json();
         const opinion = data.content?.[0]?.text ?? '';
         return json({ opinion });
+      } catch (e) {
+        return json({ error: String(e) }, 500);
+      }
+    }
+
+    // GET /api/daily-reports — 저장된 보고서 날짜 목록
+    if (request.method === 'GET' && url.pathname === '/api/daily-reports') {
+      const dates = JSON.parse(await env.KV.get('daily_report_dates') || '[]');
+      return json(dates);
+    }
+
+    // GET /api/daily-reports/:date — TXT 파일 다운로드
+    if (request.method === 'GET' && url.pathname.startsWith('/api/daily-reports/')) {
+      const date = url.pathname.slice('/api/daily-reports/'.length);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'invalid date' }, 400);
+      const content = await env.KV.get(`daily_report:${date}`);
+      if (!content) return json({ error: 'not found' }, 404);
+      return new Response(content, {
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': `attachment; filename="report_${date}.txt"`,
+        },
+      });
+    }
+
+    // POST /api/daily-reports/generate — 수동 보고서 생성 (라이브 가격으로 스냅샷 업데이트 후 생성)
+    if (request.method === 'POST' && url.pathname === '/api/daily-reports/generate') {
+      try {
+        const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const today = kstNow.toISOString().slice(0, 10);
+        // 라이브 가격으로 오늘 스냅샷을 먼저 갱신 → 같은 Worker 실행 내 KV 쓰기는 즉시 반영됨
+        await runDailySnapshot(env, today).catch(() => {});
+        const content = await generateDailyReport(env, today);
+        await saveDailyReport(env, today, content);
+        return json({ ok: true, date: today });
       } catch (e) {
         return json({ error: String(e) }, 500);
       }
@@ -952,13 +1083,23 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
     return json({ error: 'not found' }, 404);
   },
 
-  // ── Cron 트리거 (매일 UTC 17:00 = KST 02:00 → 전일 장 마감 데이터를 전날 날짜로 저장) ──
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  // ── Cron 트리거 ──
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil((async () => {
-      // KST 02:00 실행 = 전일 종가 기준 → "어제(KST)" 날짜로 저장해야 올바른 일자별 기록이 됨
       const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-      const yesterday = new Date(kstNow.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+      // UTC 09:00 = KST 18:00 — 장 마감 스냅샷 저장 + 일일 보고서 생성
+      if (event.cron === '0 9 * * *') {
+        const today = kstNow.toISOString().slice(0, 10);
+        const snapResult = await runDailySnapshot(env, today).catch((e: unknown) => `snapshot error: ${String(e)}`);
+        const content = await generateDailyReport(env, today);
+        await saveDailyReport(env, today, content);
+        await saveCronLog(env, [snapResult, `daily_report saved: ${today}`]);
+        return;
+      }
+
+      // UTC 17:00 = KST 02:00 — 전일 종가 스냅샷
+      const yesterday = new Date(kstNow.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const [snapshotResult, signalResult, crashResult] = await Promise.all([
         runDailySnapshot(env, yesterday).catch((e: unknown) => `snapshot error: ${String(e)}`),
         updateMomentumSignal(env).catch((e: unknown) => `signal error: ${String(e)}`),

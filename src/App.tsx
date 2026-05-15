@@ -19,6 +19,7 @@ import { DeepResearchViz } from "./components/DeepResearchViz";
 import { FinancialScoring } from "./components/FinancialScoring";
 import { QuantDashboard } from "./components/QuantDashboard";
 import { QuantBasics } from "./components/QuantBasics";
+import { DataReports } from "./components/DataReports";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { MarketIndices } from "./components/MarketIndices";
@@ -72,6 +73,7 @@ const MENU_ITEMS = [
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
   { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
+  { id: "data-reports", label: "데이터", materialIcon: "folder_open" },
 ];
 
 function isRecentlyUpdated(dateStr?: string): boolean {
@@ -234,6 +236,7 @@ export default function App() {
       case "quant-dashboard": return <QuantDashboard />;
       case "quant-basics": return <QuantBasics />;
       case "national-growth-fund": return <NationalGrowthFund />;
+      case "data-reports": return <DataReports />;
     }
   };
 
