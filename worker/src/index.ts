@@ -550,9 +550,9 @@ function parseKV<T>(raw: string | null, fallback: T): T {
   try { return JSON.parse(raw.replace(/^﻿/, '')); } catch { return fallback; }
 }
 
-async function generateDailyReport(env: Env, date: string): Promise<string> {
-  const snapshots: any[] = parseKV(await env.KV.get('snapshots'), []);
-  const accounts: any[] = parseKV(await env.KV.get('accounts'), []);
+async function generateDailyReport(env: Env, date: string, snapshotsOverride?: any[], accountsOverride?: any[]): Promise<string> {
+  const snapshots: any[] = snapshotsOverride ?? parseKV(await env.KV.get('snapshots'), []);
+  const accounts: any[] = accountsOverride ?? parseKV(await env.KV.get('accounts'), []);
 
   const fmt = (n: number) => Math.round(n).toLocaleString('ko-KR');
   const fmtSigned = (n: number) => {
@@ -860,12 +860,13 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       });
     }
 
-    // POST /api/daily-reports/generate — 수동 보고서 생성 (현재 KV 스냅샷 그대로 사용)
+    // POST /api/daily-reports/generate — 수동 보고서 생성
     if (request.method === 'POST' && url.pathname === '/api/daily-reports/generate') {
       try {
         const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
         const today = kstNow.toISOString().slice(0, 10);
-        const content = await generateDailyReport(env, today);
+        const body = await request.json().catch(() => ({})) as { snapshots?: any[]; accounts?: any[] };
+        const content = await generateDailyReport(env, today, body.snapshots, body.accounts);
         await saveDailyReport(env, today, content);
         return json({ ok: true, date: today });
       } catch (e) {

@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MIcon } from './MIcon';
+import { useAppContext } from '../App';
+import { fetchSnapshots } from '../api';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
 export function DataReports() {
+  const { accounts } = useAppContext();
   const [dates, setDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -83,11 +86,16 @@ export function DataReports() {
   async function handleGenerate() {
     setGenerating(true);
     try {
-      const res = await fetch(`${WORKER_URL}/api/daily-reports/generate`, { method: 'POST' });
+      const snapshots = await fetchSnapshots();
+      window.dispatchEvent(new CustomEvent('snapshotsUpdated'));
+      const res = await fetch(`${WORKER_URL}/api/daily-reports/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshots, accounts }),
+      });
       if (!res.ok) throw new Error('failed');
       const data = await res.json() as { ok: boolean; date: string };
       showToast(`${data.date} 보고서 생성 완료`);
-      window.dispatchEvent(new CustomEvent('snapshotsUpdated'));
       await loadDates();
     } catch {
       showToast('생성 실패');
