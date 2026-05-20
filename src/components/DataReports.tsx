@@ -264,7 +264,7 @@ export function DataReports() {
         <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 14 }}>
           <MIcon name="folder_open" size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
           <div>저장된 보고서가 없습니다</div>
-          <div style={{ fontSize: 12, marginTop: 6 }}>오늘 보고서 생성 버튼을 눌러보세요</div>
+          <div style={{ fontSize: 13, marginTop: 6 }}>오늘 보고서 생성 버튼을 눌러보세요</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -287,7 +287,7 @@ export function DataReports() {
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{date} 보고서</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>자산증감내역 · 계좌종목현황</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>자산증감내역 · 계좌종목현황</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -408,7 +408,7 @@ export function DataReports() {
                 </div>
               ) : (
                 <pre style={{
-                  margin: 0, fontSize: 12, lineHeight: 1.7,
+                  margin: 0, fontSize: 13, lineHeight: 1.7,
                   fontFamily: '"Consolas", "D2Coding", "Nanum Gothic Coding", monospace',
                   color: 'var(--text-primary)',
                   whiteSpace: 'pre', overflowX: 'auto',
