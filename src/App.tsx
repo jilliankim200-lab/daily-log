@@ -476,7 +476,13 @@ export default function App() {
                   <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
                 </button>
                 <button
-                  onClick={() => setIsChatOpen(p => !p)}
+                  onClick={() => {
+                    if (isAmountHidden) {
+                      setIsPasswordModalOpen(true);
+                    } else {
+                      setIsChatOpen(p => !p);
+                    }
+                  }}
                   style={{
                     padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
                     background: isChatOpen ? 'rgba(59,130,246,0.12)' : 'transparent',
@@ -485,9 +491,9 @@ export default function App() {
                   }}
                   onMouseEnter={e => { if (!isChatOpen) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
                   onMouseLeave={e => { if (!isChatOpen) e.currentTarget.style.background = 'transparent'; }}
-                  title="AI 챗봇"
+                  title={isAmountHidden ? 'AI 챗봇 (잠금)' : 'AI 챗봇'}
                 >
-                  <MIcon name="smart_toy" size={20} />
+                  <MIcon name={isAmountHidden ? 'lock' : 'smart_toy'} size={20} />
                 </button>
               </div>
             </header>
