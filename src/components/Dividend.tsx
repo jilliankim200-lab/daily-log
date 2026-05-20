@@ -899,7 +899,10 @@ export function Dividend() {
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{stock.name}</span>
+                            <span
+                              onClick={() => window.open(`https://www.tossinvest.com/stocks/${stock.isUSD ? '' : 'A'}${stock.ticker}/order`, '_blank')}
+                              style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-sm)', cursor: 'pointer' }}
+                            >{stock.name}</span>
                             <span style={{ fontSize: 'var(--text-xs)', padding: '1px 6px', borderRadius: 8,
                               background: stock.frequency === "monthly" ? "rgba(49,130,246,0.1)" : "rgba(0,184,148,0.1)",
                               color: stock.frequency === "monthly" ? "var(--accent-blue)" : "#00b894", flexShrink: 0 }}>
@@ -973,7 +976,8 @@ export function Dividend() {
                       const isEditing = editingTicker === stock.ticker;
                       return (
                         <tr key={stock.key} style={{ borderBottom: "1px solid var(--border-primary)" }}>
-                          <td style={{ padding: "10px 12px" }}>
+                          <td style={{ padding: "10px 12px", cursor: 'pointer' }}
+                            onClick={() => window.open(`https://www.tossinvest.com/stocks/${stock.isUSD ? '' : 'A'}${stock.ticker}/order`, '_blank')}>
                             <div style={{ fontWeight: "var(--font-medium)", color: "var(--text-primary)" }}>{stock.name}</div>
                             <div style={{ fontSize: "var(--text-xs)", color: "var(--text-quaternary)", marginTop: 2 }}>{stock.ticker}</div>
                           </td>
