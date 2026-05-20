@@ -294,18 +294,18 @@ export function DataReports() {
                 <button
                   onClick={() => handleRegenerate(date)}
                   disabled={regenerating === date || regeneratingAll}
+                  title="재생성"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '6px 10px', borderRadius: 6,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 30, height: 30, borderRadius: 6,
                     border: '1px solid var(--border-primary)',
                     cursor: (regenerating === date || regeneratingAll) ? 'not-allowed' : 'pointer',
                     background: 'var(--bg-primary)', color: 'var(--text-tertiary)',
-                    fontSize: 12, fontWeight: 500,
                     opacity: (regenerating === date || regeneratingAll) ? 0.5 : 1,
+                    flexShrink: 0,
                   }}
                 >
-                  <MIcon name="sync" size={13} />
-                  {regenerating === date ? '...' : '재생성'}
+                  <MIcon name="sync" size={15} style={{ animation: regenerating === date ? 'spin 1s linear infinite' : undefined }} />
                 </button>
                 <button
                   onClick={() => handlePreview(date)}
