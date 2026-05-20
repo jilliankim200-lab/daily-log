@@ -302,7 +302,6 @@ const NAV = [
   { sep: true },
   { href: "summary",    label: "핵심 요약" },
   { sep: true },
-  { href: "/quant_chat.html", label: "💬 Q&A 아카이브", external: true },
 ];
 
 interface RebalEvent {
@@ -759,12 +758,6 @@ export function QuantBasics() {
             cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap' as const,
           }}>{label}</button>
         ))}
-        <a href="/quant_chat.html" style={{
-          flexShrink: 0, fontSize: 'var(--text-xs)', fontWeight: 600,
-          padding: '5px 12px', borderRadius: 20, textDecoration: 'none',
-          border: '1px solid rgba(56,189,248,.3)', background: 'rgba(56,189,248,.07)',
-          color: '#38bdf8', whiteSpace: 'nowrap' as const,
-        }}>💬 Q&amp;A</a>
       </div>
 
       {/* Content */}
@@ -1513,11 +1506,6 @@ export function QuantBasics() {
               보유 금지 · 사상최고가 · 크래시 탐지 · ETF 선택 · 분산 전략
             </div>
           </div>
-          <a href="/quant_chat.html" style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "9px 20px", borderRadius: 8, fontSize: 12, fontWeight: 700,
-            background: "#38bdf8", color: "#0f172a", textDecoration: "none", flexShrink: 0,
-          }}>대화 보기 →</a>
         </div>
 
       </div>

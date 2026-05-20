@@ -22,6 +22,7 @@ import { QuantBasics } from "./components/QuantBasics";
 import { DataReports } from "./components/DataReports";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
+import { ChatPanel } from "./components/ChatPanel";
 import { MarketIndices } from "./components/MarketIndices";
 import { ExchangeRate } from "./components/ExchangeRate";
 import { fetchAccounts, fetchOtherAssets, saveOtherAssets } from "./api";
@@ -63,6 +64,7 @@ const MENU_ITEMS = [
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
   { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-06" },
   { id: "dividend", label: "배당", materialIcon: "paid", updatedAt: "2026-05-09" },
+  { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
   { id: "chart", label: "차트", materialIcon: "candlestick_chart" },
   { id: "holdings", label: "보유종목", materialIcon: "list" },
@@ -72,7 +74,6 @@ const MENU_ITEMS = [
   { id: "financial-review", label: "재정평가", materialIcon: "summarize" },
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
-  { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
   { id: "data-reports", label: "데이터", materialIcon: "folder_open" },
 ];
 
@@ -105,6 +106,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [prices, setPrices] = useState<Record<string, number>>({});
 
   const setOtherAssets = (assets: OtherAsset[]) => {
@@ -394,9 +396,9 @@ export default function App() {
         </aside>
 
         {/* 메인 영역 */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minWidth: 0 }}>
           {/* 좌측: 헤더 + 콘텐츠 */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             {/* 헤더 좌측 */}
             <header style={{
               height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -445,6 +447,20 @@ export default function App() {
                 <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} title={isDarkMode ? '라이트 모드' : '다크 모드'}>
                   <MIcon name={isDarkMode ? "light_mode" : "dark_mode"} size={20} />
                 </button>
+                <button
+                  onClick={() => setIsChatOpen(p => !p)}
+                  style={{
+                    padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: isChatOpen ? 'rgba(59,130,246,0.12)' : 'transparent',
+                    color: isChatOpen ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isChatOpen) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                  onMouseLeave={e => { if (!isChatOpen) e.currentTarget.style.background = 'transparent'; }}
+                  title="AI 챗봇"
+                >
+                  <MIcon name="smart_toy" size={20} />
+                </button>
               </div>
             </header>
             <main className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'var(--bg-primary)' }}>
@@ -454,32 +470,21 @@ export default function App() {
             </main>
           </div>
 
+          {/* PC: 챗패널 — flex 자식으로 push 효과 */}
+          {!isMobile && (
+            <div style={{
+              width: isChatOpen ? 380 : 0,
+              flexShrink: 0,
+              overflow: 'hidden',
+              transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
+            }}>
+              <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} isInline />
+            </div>
+          )}
         </div>
 
-        {/* HAPPY 모드 버튼 — 우측 하단 hover 존 */}
-        <div
-          onMouseEnter={() => setShowHappyBtn(true)}
-          onMouseLeave={() => !isHappyMode && setShowHappyBtn(false)}
-          style={{ position: 'fixed', bottom: 0, right: 0, width: 80, height: 80, zIndex: 999 }}
-        >
-          <button
-            onClick={() => setIsHappyMode(p => !p)}
-            style={{
-              position: 'absolute', bottom: 20, right: 20,
-              width: 40, height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: isHappyMode ? '#f59e0b' : 'var(--bg-secondary)',
-              color: isHappyMode ? '#fff' : 'var(--text-tertiary)',
-              boxShadow: isHappyMode ? '0 2px 12px rgba(245,158,11,0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: showHappyBtn || isHappyMode ? 1 : 0,
-              pointerEvents: showHappyBtn || isHappyMode ? 'auto' : 'none',
-              transition: 'opacity 0.2s, background 0.2s, box-shadow 0.2s',
-            }}
-            title={isHappyMode ? 'HAPPY 모드 해제' : 'HAPPY 모드 (오빠주식 +1,124,565,712)'}
-          >
-            <MIcon name="celebration" size={20} />
-          </button>
-        </div>
+        {/* 모바일: 기존 fixed overlay */}
+        {isMobile && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
 
         <PasswordModal
           open={isPasswordModalOpen}

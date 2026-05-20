@@ -846,6 +846,34 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       }
     }
 
+    // POST /ai-chat — 대화형 챗봇 (Anthropic 멀티턴)
+    if (request.method === 'POST' && url.pathname === '/ai-chat') {
+      if (!env.ANTHROPIC_API_KEY) return json({ error: 'API key not configured' }, 500);
+      try {
+        const body: { messages: { role: 'user' | 'assistant'; content: string }[] } = await request.json();
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 600,
+            system: '당신은 개인 자산관리 앱의 AI 어시스턴트입니다. 주식, ETF, 자산배분, 투자 전략에 대해 간결하고 실용적으로 답변해주세요. 마크다운 없이 순수 텍스트로 답변하고, 2~4문장 이내로 답변하세요.',
+            messages: body.messages,
+          }),
+        });
+        if (!res.ok) return json({ error: 'Anthropic API error' }, 500);
+        const data: any = await res.json();
+        const reply = data.content?.[0]?.text ?? '';
+        return json({ reply });
+      } catch (e) {
+        return json({ error: String(e) }, 500);
+      }
+    }
+
     // POST /snapshot (수동 트리거)
     if (request.method === 'POST' && url.pathname === '/snapshot') {
       const result = await runDailySnapshot(env);

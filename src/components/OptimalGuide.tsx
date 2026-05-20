@@ -114,8 +114,7 @@ function fmtP(n: number): string {
 
 function TimingBadge({ timing, noTooltip }: { timing: { label: string; color: string; desc: string; range?: [number, number] }; noTooltip?: boolean }) {
   const [show, setShow] = useState(false);
-  const [tipDir, setTipDir] = useState<'up' | 'down'>('up');
-  const [tipAlign, setTipAlign] = useState<'left' | 'right'>('right');
+  const [tipLeft, setTipLeft] = useState(0);
   const wrapRef = React.useRef<HTMLDivElement>(null);
   const hasRange = timing.range && timing.range[0] > 0 && timing.range[1] > 0;
   const rMin = hasRange ? Math.min(timing.range![0], timing.range![1]) : 0;
@@ -124,8 +123,12 @@ function TimingBadge({ timing, noTooltip }: { timing: { label: string; color: st
   const handleEnter = () => {
     if (wrapRef.current) {
       const rect = wrapRef.current.getBoundingClientRect();
-      setTipDir(rect.top < 180 ? 'down' : 'up');
-      setTipAlign(rect.right - 280 < 0 ? 'left' : 'right');
+      const tipW = 280;
+      const margin = 8;
+      let absLeft = rect.right - tipW;
+      if (absLeft < margin) absLeft = margin;
+      if (absLeft + tipW > window.innerWidth - margin) absLeft = window.innerWidth - margin - tipW;
+      setTipLeft(absLeft - rect.left);
     }
     setShow(true);
   };
@@ -152,8 +155,8 @@ function TimingBadge({ timing, noTooltip }: { timing: { label: string; color: st
       {show && !noTooltip && (
         <div style={{
           position: 'absolute',
-          ...(tipDir === 'up' ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }),
-          ...(tipAlign === 'right' ? { right: 0 } : { left: 0 }), zIndex: 300,
+          bottom: 'calc(100% + 6px)',
+          left: tipLeft, zIndex: 300,
           background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
           borderRadius: 10, padding: '9px 14px', fontSize: 'var(--text-sm)', color: 'var(--text-primary)',
           width: 280, lineHeight: 1.55, boxShadow: 'var(--shadow-tooltip)',
@@ -172,7 +175,7 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badg
   ticker?: string; onNameClick?: (ticker: string, name: string) => void;
 }) {
   const [showTip, setShowTip] = useState(false);
-  const [tipAlign, setTipAlign] = useState<'left' | 'right'>('left');
+  const [tipLeft, setTipLeft] = useState(0);
   const [nameHover, setNameHover] = useState(false);
   const badgeRef = React.useRef<HTMLDivElement>(null);
 
@@ -180,7 +183,11 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badg
     if (!badgeTip) return;
     if (badgeRef.current) {
       const rect = badgeRef.current.getBoundingClientRect();
-      setTipAlign(rect.left + 320 > window.innerWidth ? 'right' : 'left');
+      const tipW = Math.min(300, window.innerWidth - 16);
+      let absLeft = rect.left;
+      if (absLeft + tipW > window.innerWidth - 8) absLeft = window.innerWidth - 8 - tipW;
+      if (absLeft < 8) absLeft = 8;
+      setTipLeft(absLeft - rect.left);
     }
     setShowTip(true);
   };
@@ -196,8 +203,7 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badg
           {badge}
         </span>
         {showTip && badgeTip && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', zIndex: 300,
-            ...(tipAlign === 'right' ? { right: 0 } : { left: 0 }),
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: tipLeft, zIndex: 300,
             minWidth: 240, maxWidth: 300,
             background: 'var(--bg-tooltip)', border: '1px solid var(--border-tooltip)',
             borderRadius: 8, padding: '8px 12px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)',
