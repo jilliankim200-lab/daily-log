@@ -568,10 +568,12 @@ async function generateDailyReport(env: Env, date: string, snapshotsOverride?: a
     return { ...s, assetChange: change, changeRate: rate };
   });
 
-  const snap = enriched.find((s: any) => s.date === date) || enriched[0];
+  // 해당 날짜 이하의 스냅샷만 사용 (과거 날짜 보고서 재생성 시 미래 데이터 혼입 방지)
+  const relevant = enriched.filter((s: any) => s.date <= date);
+  const snap = relevant[0];
   if (!snap) return `[${date}] 저장된 데이터 없음`;
 
-  const recent14 = enriched.slice(0, 14);
+  const recent14 = relevant.slice(0, 14);
 
   let txt = '';
   txt += '================================================================\n';
@@ -837,10 +839,11 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       try {
         const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
         const today = kstNow.toISOString().slice(0, 10);
-        const body = await request.json().catch(() => ({})) as { snapshots?: any[] };
-        const content = await generateDailyReport(env, today, body.snapshots);
-        await saveDailyReport(env, today, content);
-        return json({ ok: true, date: today });
+        const body = await request.json().catch(() => ({})) as { snapshots?: any[]; date?: string };
+        const targetDate = body.date || today;
+        const content = await generateDailyReport(env, targetDate, body.snapshots);
+        await saveDailyReport(env, targetDate, content);
+        return json({ ok: true, date: targetDate });
       } catch (e) {
         return json({ error: String(e) }, 500);
       }

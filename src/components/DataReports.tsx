@@ -23,6 +23,8 @@ export function DataReports() {
   const [dates, setDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [regenerating, setRegenerating] = useState<string | null>(null);
+  const [regeneratingAll, setRegeneratingAll] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<string>('');
@@ -96,35 +98,72 @@ export function DataReports() {
     }
   }
 
+  async function buildSnapshotsWithLive() {
+    const snapshots = await fetchSnapshots();
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = kst.toISOString().slice(0, 10);
+    const latestSnap = snapshots[0];
+    const dailyChange = latestSnap ? liveTotalAsset - latestSnap.totalAsset : 0;
+    const dailyRate = latestSnap && latestSnap.totalAsset > 0
+      ? (dailyChange / latestSnap.totalAsset) * 100 : 0;
+    const todaySnap = {
+      date: today,
+      totalAsset: liveTotalAsset,
+      wifeAsset: liveWifeTotal,
+      husbandAsset: liveHusbandTotal,
+      assetChange: dailyChange,
+      changeRate: dailyRate,
+    };
+    return [todaySnap, ...snapshots.filter(s => s.date !== today)];
+  }
+
+  async function handleRegenerate(date: string) {
+    setRegenerating(date);
+    try {
+      const snapshotsWithLive = await buildSnapshotsWithLive();
+      const res = await fetch(`${WORKER_URL}/api/daily-reports/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, snapshots: snapshotsWithLive }),
+      });
+      if (!res.ok) throw new Error('failed');
+      showToast(`${date} 보고서 재생성 완료`);
+      if (previewing === date) {
+        const text = await fetchContent(date);
+        setPreviewContent(text);
+      }
+    } catch {
+      showToast('재생성 실패');
+    } finally {
+      setRegenerating(null);
+    }
+  }
+
+  async function handleRegenerateAll() {
+    setRegeneratingAll(true);
+    try {
+      const snapshotsWithLive = await buildSnapshotsWithLive();
+      for (const date of [...dates]) {
+        await fetch(`${WORKER_URL}/api/daily-reports/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, snapshots: snapshotsWithLive }),
+        });
+      }
+      showToast(`${dates.length}개 보고서 전체 재생성 완료`);
+      await loadDates();
+    } catch {
+      showToast('전체 재생성 실패');
+    } finally {
+      setRegeneratingAll(false);
+    }
+  }
+
   async function handleGenerate() {
     setGenerating(true);
     try {
-      const today = (() => {
-        const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-        return kst.toISOString().slice(0, 10);
-      })();
-
-      const snapshots = await fetchSnapshots();
+      const snapshotsWithLive = await buildSnapshotsWithLive();
       window.dispatchEvent(new CustomEvent('snapshotsUpdated'));
-
-      // 대시보드 실시간 값으로 오늘 스냅샷 구성
-      const latestSnap = snapshots[0];
-      const dailyChange = latestSnap ? liveTotalAsset - latestSnap.totalAsset : 0;
-      const dailyRate = latestSnap && latestSnap.totalAsset > 0
-        ? (dailyChange / latestSnap.totalAsset) * 100 : 0;
-
-      const todaySnap = {
-        date: today,
-        totalAsset: liveTotalAsset,
-        wifeAsset: liveWifeTotal,
-        husbandAsset: liveHusbandTotal,
-        assetChange: dailyChange,
-        changeRate: dailyRate,
-      };
-
-      // 오늘 날짜 스냅샷을 라이브 값으로 교체
-      const snapshotsWithLive = [todaySnap, ...snapshots.filter(s => s.date !== today)];
-
       const res = await fetch(`${WORKER_URL}/api/daily-reports/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,20 +188,38 @@ export function DataReports() {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>데이터 보고서</h2>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>매일 18:00 자동 생성 · 미리보기 · TXT 다운로드</p>
         </div>
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-primary)',
-            cursor: generating ? 'not-allowed' : 'pointer',
-            background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-            fontSize: 13, fontWeight: 500, opacity: generating ? 0.6 : 1,
-          }}
-        >
-          <MIcon name="add_circle" size={16} />
-          {generating ? '생성 중...' : '오늘 보고서 생성'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {dates.length > 0 && (
+            <button
+              onClick={handleRegenerateAll}
+              disabled={regeneratingAll || regenerating !== null}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)',
+                cursor: (regeneratingAll || regenerating !== null) ? 'not-allowed' : 'pointer',
+                background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                fontSize: 13, fontWeight: 500, opacity: (regeneratingAll || regenerating !== null) ? 0.5 : 1,
+              }}
+            >
+              <MIcon name="sync" size={16} />
+              {regeneratingAll ? '재생성 중...' : '전체 재생성'}
+            </button>
+          )}
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-primary)',
+              cursor: generating ? 'not-allowed' : 'pointer',
+              background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+              fontSize: 13, fontWeight: 500, opacity: generating ? 0.6 : 1,
+            }}
+          >
+            <MIcon name="add_circle" size={16} />
+            {generating ? '생성 중...' : '오늘 보고서 생성'}
+          </button>
+        </div>
       </div>
 
       {/* 목록 */}
@@ -199,6 +256,22 @@ export function DataReports() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => handleRegenerate(date)}
+                  disabled={regenerating === date || regeneratingAll}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '6px 10px', borderRadius: 6,
+                    border: '1px solid var(--border-primary)',
+                    cursor: (regenerating === date || regeneratingAll) ? 'not-allowed' : 'pointer',
+                    background: 'var(--bg-primary)', color: 'var(--text-tertiary)',
+                    fontSize: 12, fontWeight: 500,
+                    opacity: (regenerating === date || regeneratingAll) ? 0.5 : 1,
+                  }}
+                >
+                  <MIcon name="sync" size={13} />
+                  {regenerating === date ? '...' : '재생성'}
+                </button>
                 <button
                   onClick={() => handlePreview(date)}
                   style={{
