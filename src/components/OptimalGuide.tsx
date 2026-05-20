@@ -734,12 +734,13 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
 }
 
 // ── 계좌 카드 ──────────────────────────────────────────────────
-function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll, executedInCycle, executedMap, executionInputs, onExecutionInputChange, onSellDone }: {
+function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execMode, checkedSells, checkedBuys, onToggleSell, onToggleBuy, onNameClick, expandAll, jumpTo, executedInCycle, executedMap, executionInputs, onExecutionInputChange, onSellDone }: {
   plan: AccountPlan; isMobile: boolean; signals: Record<string, StockSignal>; changeRates: Record<string, number>; signalFilter: Set<string>;
   execMode?: boolean; checkedSells?: Set<string>; checkedBuys?: Set<string>;
   onToggleSell?: (key: string) => void; onToggleBuy?: (key: string) => void;
   onNameClick?: (ticker: string, name: string) => void;
   expandAll?: boolean | null;
+  jumpTo?: number;
   executedInCycle?: Set<string>;
   executedMap?: Record<string, ExecutionRecord>;
   executionInputs?: Record<string, number>;
@@ -757,6 +758,11 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
     if (expandAll === true) setCollapsed(false);
     else if (expandAll === false) setCollapsed(true);
   }, [expandAll]);
+
+  useEffect(() => {
+    if (!jumpTo) return;
+    setCollapsed(false);
+  }, [jumpTo]);
 
   // 필터 매칭 여부 확인
   const isRowMatch = (ticker: string | undefined, type: 'sell' | 'buy'): boolean => {
@@ -1200,7 +1206,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
   ) : null;
 
   return (
-    <div style={{ border: '1px solid var(--border-primary)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+    <div id={`account-card-${acc.id}`} style={{ border: '1px solid var(--border-primary)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
       {/* 헤더 */}
       <div onClick={() => setCollapsed(c => !c)} style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1672,6 +1678,7 @@ export function OptimalGuide() {
   const [showExecReport, setShowExecReport] = useState(false);
   const [execMode, setExecMode] = useState(false);
   const [expandAll, setExpandAll] = useState<boolean | null>(null);
+  const [jumpToAccId, setJumpToAccId] = useState<{ id: string; ts: number } | null>(null);
   const [checkedSells, setCheckedSells] = useState<Set<string>>(new Set()); // `${accId}__${holdingId}`
   const [checkedBuys, setCheckedBuys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -2391,8 +2398,18 @@ export function OptimalGuide() {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                     <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', flex: 1, minWidth: 0,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accLabel(p.acc)}</span>
-                    <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, flexShrink: 0,
-                      color: p.sells.length > 0 ? 'var(--color-loss)' : 'var(--color-profit)' }}>
+                    <span
+                      onClick={p.sells.length > 0 ? () => {
+                        setJumpToAccId({ id: p.acc.id, ts: Date.now() });
+                        setTimeout(() => {
+                          document.getElementById(`account-card-${p.acc.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 50);
+                      } : undefined}
+                      style={{ fontSize: 'var(--text-base)', fontWeight: 600, flexShrink: 0,
+                        color: p.sells.length > 0 ? 'var(--color-loss)' : 'var(--color-profit)',
+                        cursor: p.sells.length > 0 ? 'pointer' : 'default',
+                        textDecoration: p.sells.length > 0 ? 'underline' : 'none',
+                      }}>
                       {p.sells.length > 0 ? `매도 ${p.sells.length}` : '이상 없음'}
                     </span>
                   </div>
@@ -2692,6 +2709,7 @@ export function OptimalGuide() {
         <AccountCard key={plan.acc.id} plan={plan} isMobile={isMobile} signals={signals} changeRates={changeRates} signalFilter={signalFilter}
           execMode={execMode} checkedSells={checkedSells} checkedBuys={checkedBuys}
           expandAll={expandAll}
+          jumpTo={jumpToAccId?.id === plan.acc.id ? jumpToAccId.ts : undefined}
           executedInCycle={executedInCycle}
           executedMap={executedMap}
           executionInputs={executionInputs}
