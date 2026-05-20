@@ -209,6 +209,36 @@ export const INITIAL_ARCHIVE: ArchivedQA[] = [
 <p>데이터 보고서 각 카드의 <span class="tag tag-b">재생성</span> 버튼을 누르면 해당 날짜의 스냅샷 기준으로 보고서를 다시 생성합니다.<br>
 전체 재생성이 필요하면 <span class="tag tag-b">전체 재생성</span> 버튼(sync 아이콘)을 사용하세요.</p>`,
   },
+
+  // ── 투자 판단 ─────────────────────────────────────────────────
+  {
+    id: 'inv1',
+    date: '2026-05-20',
+    topic: '매도 타이밍 — 급락장',
+    question: '오늘 코스닥이 떨어지고 있는데 오늘 팔아야 해? 내일 오르면 팔면 안 되고?',
+    answerHtml: `
+<h4>전략 원칙 — 손절 기준 도달 = 이미 결론</h4>
+<p>손절 기준(-10%)은 미래 예측이 아니라 <strong>사전에 정한 규칙</strong>입니다. 기준을 넘은 순간 전략은 이미 "판다"고 완료한 것입니다.</p>
+<table class="tbl"><tr><th>시나리오</th><th>결과</th></tr>
+<tr><td>내일 실제로 오른다</td><td class="o">다음에도 같은 논리로 손절 미룸 → 규칙 붕괴</td></tr>
+<tr><td>내일도 떨어진다</td><td class="r">-12%, -15%로 손실 확대</td></tr>
+<tr><td>잠깐 오르다 재하락</td><td class="r">타이밍 놓치고 원점</td></tr></table>
+<div class="warn"><strong>앵커 바이어스(닻 내림 편향)</strong><br>"조금만 더 기다리면"이라는 심리가 손절 규칙을 무력화합니다. 통계적으로 손절을 미루면 손실이 줄어드는 게 아니라 커지는 경우가 더 많습니다.</div>
+
+<h4>현실적인 타이밍 조정 — "언제" 팔 것인가</h4>
+<p>단, <strong>오늘 코스닥이 급락 중</strong>이라면 체결가 관점에서 타이밍 조정이 합리적입니다.</p>
+<table class="tbl"><tr><th>상황</th><th>권장 행동</th></tr>
+<tr><td>장중 급락 중 (낙폭 큰 시간대)</td><td class="o">저점에 팔면 최악의 가격에 체결 → 잠시 대기</td></tr>
+<tr><td>오늘 장 마감 30분 전</td><td class="g">가격이 안정되는 경향 → 매도 실행 권장</td></tr>
+<tr><td>내일 시가 직후</td><td class="g">갭 없이 출발하면 안정적인 체결가 기대 가능</td></tr></table>
+<div class="note"><strong>앱의 급등락일 경고</strong>도 이 이유로 표시됩니다. 급락일에 장중 매도는 손절보다 나쁜 가격이 될 수 있습니다.</div>
+
+<h4>결론</h4>
+<table class="tbl"><tr><th>질문</th><th>답</th></tr>
+<tr><td>팔 것인가 말 것인가</td><td class="r">전략상 결정: 판다</td></tr>
+<tr><td>"내일 오르면 판다"</td><td class="r">조건부 대기 = 손절 규칙 포기와 같음</td></tr>
+<tr><td>"내일 시가에 판다"</td><td class="g">타이밍 조정 = 합리적</td></tr></table>`,
+  },
 ];
 
 const LS_KEY = 'chatArchive_v1';
