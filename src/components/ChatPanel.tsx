@@ -12,11 +12,25 @@ interface Message {
 
 function searchArchive(archive: ArchivedQA[], query: string): ArchivedQA[] {
   if (!query.trim()) return [];
-  const keywords = query.trim().toLowerCase().split(/\s+/).filter(k => k.length >= 2);
-  if (keywords.length === 0) return [];
+
+  const words = query.trim().toLowerCase().split(/\s+/).filter(k => k.length >= 2);
+  if (words.length === 0) return [];
+
+  // 공백 없이 붙여 쓴 한국어 복합어("추세붕괴" → "추세","세붕","붕괴")도
+  // 2글자 슬라이딩 윈도우로 분해해 매칭
+  const keywords = new Set<string>();
+  for (const word of words) {
+    keywords.add(word);
+    if (word.length > 2) {
+      for (let i = 0; i <= word.length - 2; i++) {
+        keywords.add(word.slice(i, i + 2));
+      }
+    }
+  }
+
   return archive.filter(qa => {
     const haystack = (qa.question + ' ' + qa.topic + ' ' + qa.answerHtml.replace(/<[^>]+>/g, '')).toLowerCase();
-    return keywords.some(k => haystack.includes(k));
+    return [...keywords].some(k => haystack.includes(k));
   });
 }
 
