@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MIcon } from './MIcon';
 import { loadArchive, saveToArchive } from '../data/chatArchive';
 import type { ArchivedQA } from '../data/chatArchive';
+import { useAppContext } from '../App';
 
 
 interface Message {
@@ -83,6 +84,7 @@ function groupByDate(items: ArchivedQA[]) {
 }
 
 export function ChatPanel({ isOpen, onClose, isInline = false }: ChatPanelProps) {
+  const { navigateTo } = useAppContext();
   const [tab, setTab] = useState<'chat' | 'archive'>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -228,6 +230,13 @@ export function ChatPanel({ isOpen, onClose, isInline = false }: ChatPanelProps)
             </div>
           </div>
           <div style={{ display: 'flex', gap: 2 }}>
+            <button
+              onClick={() => { navigateTo('dashboard'); }}
+              style={iconBtnStyle} title="대시보드 홈"
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <MIcon name="home" size={18} />
+            </button>
             {tab === 'chat' && messages.length > 1 && (
               <button onClick={saveCurrentChat} style={iconBtnStyle} title="대화 저장"
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
