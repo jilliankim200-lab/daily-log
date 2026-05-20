@@ -327,8 +327,8 @@ export function NewDashboard() {
                       <tbody>
                         {allRows.map((snap, i, arr) => {
                           const prev = arr[i + 1];
-                          const change = i === 0 ? (prev ? snap.totalAsset - prev.totalAsset : 0) : snap.assetChange;
-                          const rate = i === 0 ? (prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : 0) : snap.changeRate;
+                          const change = prev ? snap.totalAsset - prev.totalAsset : snap.assetChange;
+                          const rate = prev && prev.totalAsset > 0 ? (change / prev.totalAsset) * 100 : snap.changeRate;
                           return (
                             <tr key={snap.date}>
                               <td style={{ fontWeight: 'var(--font-medium)' }}>{snap.date}</td>
