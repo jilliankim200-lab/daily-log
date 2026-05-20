@@ -98,6 +98,45 @@ export const INITIAL_ARCHIVE: ArchivedQA[] = [
 <div class="tip"><strong>결론:</strong> 반도체 ETF를 여러 개로 나누는 건 분산 효과 없음.<br>진짜 분산은 <strong>Top-1 → 모멘텀 비례 배분으로 전환</strong>하는 것. MDD 개선 + Sharpe 향상.<br>+137% 극단 모멘텀 구간에서는 비례 배분이 크래시 충격 완화에 유리합니다.</div>`,
   },
   {
+    id: 'q8',
+    date: '2026-05-20',
+    topic: '차트 지표 해설',
+    question: 'MA20 아래로 이탈 — 단기 약세. 골든크로스(MA20>MA60)는 유지 중이므로 MA20 회복 여부 관망. 60일 범위 68% 위치. 자세히 설명해봐.',
+    answerHtml: `
+<h4>현재 상태 수치</h4>
+<table class="tbl"><tr><th>지표</th><th>값</th><th>의미</th></tr>
+<tr><td>현재가</td><td class="r">MA5·MA20 아래</td><td>단기 평균 아래 위치</td></tr>
+<tr><td>MA20</td><td class="o">20일 이동평균</td><td>지난 한 달 평균 매수 단가</td></tr>
+<tr><td>MA60</td><td class="g">60일 이동평균</td><td>중장기 추세선. 현재가 위에 있음</td></tr></table>
+
+<h4>① MA20 아래로 이탈 — 단기 약세</h4>
+<p>MA20은 <strong>최근 한 달 동안 이 종목을 산 사람들의 평균 단가</strong>입니다. 현재가가 MA20 아래라는 것은 지난 달 매수자 대부분이 손실 상태 → <strong>매도 압력 우위 구간</strong>.</p>
+
+<h4>② 골든크로스(MA20 &gt; MA60) 유지 중</h4>
+<p>골든크로스는 <strong>단기선(MA20)이 장기선(MA60) 위에 있는 상태</strong>입니다.</p>
+<table class="tbl"><tr><th>크로스</th><th>조건</th><th>의미</th></tr>
+<tr><td>골든크로스</td><td class="g">MA20 &gt; MA60</td><td>중장기 상승 추세 유지</td></tr>
+<tr><td>데드크로스</td><td class="r">MA20 &lt; MA60</td><td>중장기 추세 전환·약세</td></tr></table>
+<div class="note">골든크로스가 유지된다는 것은 <strong>추세 전환이 아닌 일시적 조정</strong>일 가능성을 지지합니다.</div>
+
+<h4>③ MA20 회복 여부 관망</h4>
+<p>현재가가 MA20 위로 <strong>회복하면 → 상승 재개 신호</strong>, 실패하면 → MA60 지지 여부 추가 확인 필요.</p>
+<table class="tbl"><tr><th>시나리오</th><th>판단</th></tr>
+<tr><td>현재가 &gt; MA20 회복</td><td class="g">골든크로스 + 주가 MA20 위 → 상승 재개 신호</td></tr>
+<tr><td>MA20 회복 실패 반복</td><td class="o">MA60 이탈 전 분할 축소 검토</td></tr>
+<tr><td>MA60 이탈</td><td class="r">데드크로스 위험, 추세 전환 경계</td></tr></table>
+
+<h4>④ 60일 범위 68% 위치</h4>
+<p>최근 60일 <strong>최저가~최고가 범위</strong>에서 현재가의 백분율 위치입니다.</p>
+<div class="tip">68%는 하단에서 상위권에 해당합니다. 고점 대비 조정이지만 <strong>전체 범위로는 중상위</strong>. 폭락이 아닌 고점 조정 수준.</div>
+
+<h4>종합 해석</h4>
+<table class="tbl"><tr><th>시각</th><th>상태</th></tr>
+<tr><td>단기</td><td class="r">MA5·MA20 이탈 → 매도 압력 우위</td></tr>
+<tr><td>중기</td><td class="g">골든크로스 유지 + 60일 68% → 추세 양호</td></tr>
+<tr><td>판단</td><td class="o">MA20 회복 여부가 핵심 분기점 → 관망</td></tr></table>`,
+  },
+  {
     id: 'q7',
     date: '2026-05-14',
     topic: 'MA20 회복 여부 판단',

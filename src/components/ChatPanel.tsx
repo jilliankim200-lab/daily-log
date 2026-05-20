@@ -43,6 +43,14 @@ const QUICK_CHIPS = [
   { label: '2026년5월', icon: 'calendar_month' },
 ];
 
+// 칩별 아카이브 검색 키워드 (label 단어 외 추가 연관어)
+const CHIP_SEARCH_KEYS: Record<string, string> = {
+  '차트':      '차트 MA20 이동평균 골든크로스 추세 이탈',
+  '최적 가이드': '최적 가이드 MA20 추세 보유',
+  '리밸런싱':   'ETF 모멘텀 크래시 매도 분산 반도체 리밸런싱',
+  '보유종목':   '보유 종목 ETF 반도체',
+};
+
 function getTodayLabel() {
   const d = new Date();
   const days = ['일', '월', '화', '수', '목', '금', '토'];
@@ -83,10 +91,16 @@ export function ChatPanel({ isOpen, onClose, isInline = false }: ChatPanelProps)
 
   function selectChip(label: string) {
     setChipsUsed(true);
-    setMessages([
-      { role: 'user', content: label },
-      { role: 'assistant', content: `${label}에서 무엇이 궁금하세요?` },
-    ]);
+    const searchKey = CHIP_SEARCH_KEYS[label] ?? label;
+    const matches = searchArchive(archive, searchKey);
+    const msgs: Message[] = [{ role: 'user', content: label }];
+    if (matches.length > 0) {
+      msgs.push({ role: 'assistant', content: `${label} 관련 저장된 내용 ${matches.length}건이에요. 항목을 선택해서 펼쳐보세요.` });
+      msgs.push({ role: 'archive', content: '', archiveMatches: matches });
+    } else {
+      msgs.push({ role: 'assistant', content: `${label}에서 무엇이 궁금하세요?` });
+    }
+    setMessages(msgs);
   }
 
   async function sendMessage(text: string) {
