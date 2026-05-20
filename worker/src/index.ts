@@ -886,8 +886,8 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
     // POST /api/snapshots/backfill — 과거 종가로 누락 날짜 스냅샷 생성
     if (request.method === 'POST' && url.pathname === '/api/snapshots/backfill') {
       try {
-        const accounts: any[] = JSON.parse(await env.KV.get('accounts') || '[]');
-        const otherAssets: any[] = JSON.parse(await env.KV.get('otherAssets') || '[]');
+        const accounts: any[] = parseKV(await env.KV.get('accounts'), []);
+        const otherAssets: any[] = parseKV(await env.KV.get('otherAssets'), []);
         if (!accounts.length) return json({ error: 'no accounts' }, 400);
 
         const tickers = [...new Set(
@@ -903,7 +903,7 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         }));
 
         // 기존 snapshots 로드
-        const existing: any[] = JSON.parse(await env.KV.get('snapshots') || '[]');
+        const existing: any[] = parseKV(await env.KV.get('snapshots'), []);
         const existingDates = new Set(existing.map((s: any) => s.date));
 
         // 최근 14일 중 누락 날짜 파악
