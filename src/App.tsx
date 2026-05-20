@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import { CoupleAccounts } from "./components/CoupleAccounts";
 import { NewDashboard } from "./components/NewDashboard";
 import { AssetChange } from "./components/AssetChange";
@@ -107,6 +107,9 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatPanelWidth, setChatPanelWidth] = useState(380);
+  const [isChatResizing, setIsChatResizing] = useState(false);
+  const chatResizingRef = useRef(false);
   const [prices, setPrices] = useState<Record<string, number>>({});
 
   const setOtherAssets = (assets: OtherAsset[]) => {
@@ -114,6 +117,31 @@ export default function App() {
     setOtherAssetsState(real);
     saveOtherAssets(real);
   };
+
+  function startChatResize(e: React.MouseEvent) {
+    chatResizingRef.current = true;
+    setIsChatResizing(true);
+    const startX = e.clientX;
+    const startWidth = chatPanelWidth;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    function onMove(ev: MouseEvent) {
+      const delta = startX - ev.clientX;
+      setChatPanelWidth(Math.min(700, Math.max(260, startWidth + delta)));
+    }
+    function onUp() {
+      chatResizingRef.current = false;
+      setIsChatResizing(false);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -470,15 +498,37 @@ export default function App() {
             </main>
           </div>
 
-          {/* PC: 챗패널 — flex 자식으로 push 효과 */}
+          {/* PC: 챗패널 — 리사이즈 핸들 포함 */}
           {!isMobile && (
             <div style={{
-              width: isChatOpen ? 380 : 0,
+              width: isChatOpen ? chatPanelWidth : 0,
               flexShrink: 0,
               overflow: 'hidden',
-              transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
+              display: 'flex',
+              transition: isChatResizing ? 'none' : 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
             }}>
-              <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} isInline />
+              {/* 드래그 핸들 */}
+              <div
+                onMouseDown={startChatResize}
+                style={{
+                  width: 5, flexShrink: 0, cursor: 'col-resize',
+                  background: 'var(--border-primary)',
+                  transition: 'background 0.15s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  position: 'relative', zIndex: 1,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-blue)'}
+                onMouseLeave={e => { if (!chatResizingRef.current) e.currentTarget.style.background = 'var(--border-primary)'; }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none' }}>
+                  {[0,1,2,3,4].map(i => (
+                    <div key={i} style={{ width: 2, height: 2, borderRadius: '50%', background: 'var(--text-quaternary)' }} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+                <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} isInline />
+              </div>
             </div>
           )}
         </div>

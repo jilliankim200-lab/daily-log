@@ -173,11 +173,9 @@ export function ChatPanel({ isOpen, onClose, isInline = false }: ChatPanelProps)
 
       <div style={isInline ? {
         /* PC 인라인 모드: 부모 flex 컨테이너가 너비 제어 */
-        width: 380, height: '100%',
+        width: '100%', height: '100%',
         background: 'var(--bg-secondary)',
-        borderLeft: '1px solid var(--border-primary)',
         display: 'flex', flexDirection: 'column',
-        flexShrink: 0,
       } : {
         /* 모바일 overlay 모드 */
         position: 'fixed', top: 0, right: 0, bottom: 0,
