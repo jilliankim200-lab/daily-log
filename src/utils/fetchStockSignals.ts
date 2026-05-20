@@ -32,18 +32,37 @@ export function getSellSignal(s: StockSignal): SignalResult {
   const pos = s.position;
   const ma20Pct = ((s.currentPrice - s.ma20) / s.ma20 * 100).toFixed(1);
   const p70 = s.low + 0.7 * (s.high - s.low);
+  const w = (n: number) => n.toLocaleString('ko-KR') + '원';
 
   if (trend === 'up' && pos >= 0.7)
-    return { label: '매도 적합', color: 'var(--color-profit)', strategy: '지금이 최적 타이밍 → 전량 또는 1/2씩 분할 매도 실행', desc: `상승 추세 고점권 (60일 중${(pos*100).toFixed(0)}% 위치). 지금이 최적 매도 타이밍. 더 기다리면 고점을 지나 하락 전환 위험이 있으니 분할 매도 고려`, range: [s.currentPrice, s.high] };
+    return { label: '매도 적합', color: 'var(--color-profit)',
+      strategy: `지금이 최적 타이밍 → 전량 또는 1/2씩 분할 매도 (60일 고점 ${w(s.high)})`,
+      desc: `상승 추세 고점권 (60일 중 ${(pos*100).toFixed(0)}% 위치). 60일 고점 ${w(s.high)} 근처. 더 기다리면 하락 전환 위험 — 분할 매도 권장`,
+      range: [s.currentPrice, s.high] };
   if (trend === 'up')
-    return { label: '매도 가능', color: 'var(--color-profit)', strategy: '1/3 분할매도 시작 → 60일 고점 근처에서 나머지 매도', desc: `상승 추세이나 고점까지 여지 있음 (현재 ${(pos*100).toFixed(0)}% / 70% 기준). 60일 고점 근처까지 기다리면 더 비싸게 매도 가능. 급하게 팔 필요 없다면 조금 더 보유 권장`, range: [s.currentPrice, p70] };
+    return { label: '매도 가능', color: 'var(--color-profit)',
+      strategy: `1/3 분할매도 시작 → 60일 고점 ${w(s.high)} 근처에서 나머지 매도`,
+      desc: `상승 추세이나 고점(${w(s.high)})까지 여지 있음 (현재 ${(pos*100).toFixed(0)}% 위치). 고점까지 기다리면 더 비싸게 매도 가능`,
+      range: [s.currentPrice, p70] };
   if (trend === 'sideways' && pos >= 0.5)
-    return { label: '매도 가능', color: 'var(--color-warning)', strategy: '분할매도 시작 → 횡보 구간은 추가 상승 제한적', desc: `횡보 구간 중상단 (${(pos*100).toFixed(0)}%). 지금은 무난한 매도 타이밍. 횡보 구간은 고점이 제한적이므로 더 기다려도 큰 이익 기대 어려움`, range: [s.currentPrice, s.high] };
+    return { label: '매도 가능', color: 'var(--color-warning)',
+      strategy: `분할매도 시작 → MA20(${w(s.ma20)}) 이탈 시 전량 매도`,
+      desc: `횡보 구간 중상단 (${(pos*100).toFixed(0)}%). MA20 ${w(s.ma20)} 유지 중이면 보유, 이탈 시 전량 매도로 손실 제한`,
+      range: [s.currentPrice, s.high] };
   if (trend === 'sideways')
-    return { label: '반등 대기', color: 'var(--color-warning)', strategy: '지금은 대기 → MA20 회복 시 매도', desc: `횡보 구간 하단 (${(pos*100).toFixed(0)}%). 지금 팔면 낮은 가격에 매도. MA20 회복 또는 중상단 반등 후 매도하면 더 유리`, range: [s.ma20, s.high] };
+    return { label: '반등 대기', color: 'var(--color-warning)',
+      strategy: `대기 → MA20(${w(s.ma20)}) 회복 시 절반 매도, 60일 고점(${w(s.high)}) 근처에서 나머지 매도`,
+      desc: `횡보 구간 하단 (${(pos*100).toFixed(0)}%). 지금 팔면 낮은 가격. MA20 ${w(s.ma20)} 회복 후 절반, 60일 고점 ${w(s.high)} 근처에서 전량 매도가 유리`,
+      range: [s.ma20, s.high] };
   if (trend === 'down' && pos <= 0.3)
-    return { label: '저점 매도', color: 'var(--color-loss)', strategy: '손절 검토 → 단기 반등 시 MA20 근처에서 매도', desc: `하락 추세 저점권 (${(pos*100).toFixed(0)}%). 손절 수준. 추가 하락 전 정리하거나, 단기 반등 시 MA20 근처에서 매도하는 방법도 있음`, range: [s.low, s.currentPrice] };
-  return { label: '반등 후 매도', color: 'var(--color-loss)', strategy: '지금은 대기 → 반등 후 MA20~MA60 구간 도달 시 매도', desc: `하락 추세 진행 중 (MA20 대비 ${ma20Pct}%). 지금 팔면 낮은 가격. 단기 반등 시 MA20~MA60 구간 도달할 때 매도하면 더 유리한 가격 기대 가능`, range: [s.ma60, s.ma20] };
+    return { label: '저점 매도', color: 'var(--color-loss)',
+      strategy: `① 손절: 지금 전량 매도(${w(s.currentPrice)}) 또는 ② 반등 시 MA20(${w(s.ma20)}) 도달하면 절반 매도 → 나머지 MA60(${w(s.ma60)}) 도달 시 전량`,
+      desc: `하락 추세 저점권 (${(pos*100).toFixed(0)}%). 손절 수준. 추가 하락 전 전량 정리하거나, 단기 반등 시 MA20 ${w(s.ma20)} 도달하면 절반, MA60 ${w(s.ma60)} 도달 시 전량 매도`,
+      range: [s.low, s.currentPrice] };
+  return { label: '반등 후 매도', color: 'var(--color-loss)',
+    strategy: `대기 → 반등 시 MA20(${w(s.ma20)}) 도달하면 절반 매도, MA60(${w(s.ma60)}) 도달하면 전량 매도`,
+    desc: `하락 추세 진행 중 (MA20 대비 ${ma20Pct}%). 지금 팔면 낮은 가격. 반등 시 MA20 ${w(s.ma20)} 도달하면 절반, MA60 ${w(s.ma60)} 도달 시 전량 매도`,
+    range: [s.ma60, s.ma20] };
 }
 
 // 매수(추가) 타이밍 신호
