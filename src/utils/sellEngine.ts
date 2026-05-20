@@ -5,6 +5,7 @@ export interface SellInput {
   currentPrice: number;
   ma20: number;
   ma60: number;
+  position?: number;  // 0~1, 60일 range 내 위치
 }
 
 export type SellAction = 'hold' | 'sell_half' | 'sell_all';
@@ -20,7 +21,7 @@ export function getSellDecision(
   input: SellInput,
   config: SellConfig = DEFAULT_SELL_CONFIG,
 ): SellDecision {
-  const { currentReturn, currentPrice, ma20, ma60 } = input;
+  const { currentReturn, currentPrice, ma20, ma60, position } = input;
 
   // 매도 보류: 상승추세 — 주가가 MA20 위이면 무조건 홀딩
   if (currentPrice > ma20) {
@@ -30,6 +31,15 @@ export function getSellDecision(
   // 시나리오 1: 추세 붕괴 전량 매도 — 주가 < MA20 AND MA20 < MA60
   if (ma20 < ma60) {
     return { action: 'sell_all', reason: '추세 붕괴 (MA20 < MA60)', urgency: 'high' };
+  }
+
+  // 시나리오 1.5: 추세 꺾임 + 고점 구간 — 주가 < MA20이나 MA20 > MA60, 60일 포지션 60% 이상
+  if (position !== undefined && position >= 0.6) {
+    return {
+      action: 'sell_half',
+      reason: `추세 꺾임 + 고점 구간 (60일 ${(position * 100).toFixed(0)}%)`,
+      urgency: 'medium',
+    };
   }
 
   // 시나리오 3: 긴급 손절 (수익 실현보다 먼저 체크 — 손실 우선)

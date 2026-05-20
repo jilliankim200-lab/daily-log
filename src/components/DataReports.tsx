@@ -214,7 +214,7 @@ export function DataReports() {
             onClick={handleBackfill}
             disabled={backfilling || regeneratingAll || regenerating !== null}
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
               padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)',
               cursor: (backfilling || regeneratingAll || regenerating !== null) ? 'not-allowed' : 'pointer',
               background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
@@ -229,7 +229,7 @@ export function DataReports() {
               onClick={handleRegenerateAll}
               disabled={regeneratingAll || regenerating !== null || backfilling}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
+                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
                 padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)',
                 cursor: (regeneratingAll || regenerating !== null || backfilling) ? 'not-allowed' : 'pointer',
                 background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
@@ -244,7 +244,7 @@ export function DataReports() {
             onClick={handleGenerate}
             disabled={generating}
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
               padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-primary)',
               cursor: generating ? 'not-allowed' : 'pointer',
               background: 'var(--bg-secondary)', color: 'var(--text-primary)',

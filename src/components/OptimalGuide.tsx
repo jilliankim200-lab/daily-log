@@ -1717,6 +1717,21 @@ export function OptimalGuide() {
   const setExecutionInput = (key: string, value: number) => {
     setExecutionInputs(prev => ({ ...prev, [key]: value }));
   };
+  // 차트 페이지에서 돌아왔을 때 스크롤 위치 복원
+  useEffect(() => {
+    const returnTicker = sessionStorage.getItem('chart_return_ticker');
+    const savedScroll = sessionStorage.getItem('chart_nav_scroll');
+    if (returnTicker && savedScroll) {
+      sessionStorage.removeItem('chart_return_ticker');
+      sessionStorage.removeItem('chart_nav_scroll');
+      const scrollY = parseInt(savedScroll, 10);
+      requestAnimationFrame(() => {
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.scrollTop = scrollY;
+      });
+    }
+  }, []);
+
   // KV에서 targets + prevTargets 로드 (마운트 시 1회)
   useEffect(() => {
     kvGet<TargetAllocation>('rebalancing_targets').then(val => {
@@ -1803,6 +1818,7 @@ export function OptimalGuide() {
             currentPrice: sig.currentPrice,
             ma20: sig.ma20,
             ma60: sig.ma60,
+            position: sig.position,
           },
           sellConfig,
         );
@@ -2717,6 +2733,8 @@ export function OptimalGuide() {
           onToggleSell={k => toggleCheck(checkedSells, setCheckedSells, k)}
           onToggleBuy={k => toggleCheck(checkedBuys, setCheckedBuys, k)}
           onNameClick={(ticker, name) => {
+            const mainEl = document.querySelector('main');
+            if (mainEl) sessionStorage.setItem('chart_nav_scroll', String(mainEl.scrollTop));
             sessionStorage.setItem('chart_nav_ticker', ticker);
             sessionStorage.setItem('chart_nav_from', 'optimal-guide');
             sessionStorage.setItem('chart_nav_name', name);

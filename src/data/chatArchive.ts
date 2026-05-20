@@ -239,6 +239,69 @@ export const INITIAL_ARCHIVE: ArchivedQA[] = [
 <tr><td>"내일 오르면 판다"</td><td class="r">조건부 대기 = 손절 규칙 포기와 같음</td></tr>
 <tr><td>"내일 시가에 판다"</td><td class="g">타이밍 조정 = 합리적</td></tr></table>`,
   },
+  {
+    id: 'inv2',
+    date: '2026-05-20',
+    topic: '최적 가이드 — 매도 신호 기준',
+    question: '60일 포지션 60% 이상이 무슨 말이야?',
+    answerHtml: `
+<p>최근 60일 <strong>최저가~최고가 범위</strong>에서 현재가가 어느 위치에 있는지를 0~100%로 나타낸 값입니다.</p>
+<h4>공식</h4>
+<div class="note"><code>포지션 = (현재가 − 60일 저점) ÷ (60일 고점 − 60일 저점)</code></div>
+<h4>예시</h4>
+<table class="tbl"><tr><th>60일 저점</th><th>60일 고점</th><th>현재가</th><th>포지션</th></tr>
+<tr><td>30,000원</td><td>42,000원</td><td>37,200원</td><td class="o">60% (중상위)</td></tr>
+<tr><td>30,000원</td><td>42,000원</td><td>34,800원</td><td class="g">40% (중간)</td></tr>
+<tr><td>30,000원</td><td>42,000원</td><td>40,800원</td><td class="r">90% (고점권)</td></tr></table>
+<h4>매도 신호와의 연결</h4>
+<p>최적 가이드의 매도 판정 로직에는 다음 조건이 추가되어 있습니다:</p>
+<table class="tbl"><tr><th>조건</th><th>판정</th></tr>
+<tr><td>현재가 &lt; MA20 (추세 꺾임)</td><td rowspan="2" class="o">→ <strong>분할 매도 권유</strong></td></tr>
+<tr><td>60일 포지션 ≥ 60% (고점 구간)</td></tr>
+<tr><td>MA20 &lt; MA60 (추세 붕괴)</td><td class="r">→ 전량 매도 권유</td></tr></table>
+<div class="note">포지션이 60% 미만이면 추세 꺾임이 일어나도 "고점 구간이 아니다"로 보고 매도를 권유하지 않습니다. 포지션이 높을수록 고점에서 팔 기회로 판단합니다.</div>`,
+  },
+  {
+    id: 'inv3',
+    date: '2026-05-20',
+    topic: '최적 가이드 — 필터 ON/OFF 전략',
+    question: '최적 가이드 필터 ON/OFF는 어떻게 다르고, 각 조건이 뭔지 알고 싶어.',
+    answerHtml: `
+<h4>필터 ON — 기술적 분석 기반 절세 정리</h4>
+<p>중복 종목 중 <strong>지금 실제로 팔기 좋은 타이밍인 것만</strong> 추려냅니다. MA(이동평균) 기준으로 아래 순서대로 판단하며, 중복 제거이므로 수량과 무관하게 전량 매도입니다.</p>
+<table class="tbl">
+<tr><th>단계</th><th>조건</th><th>판정</th></tr>
+<tr><td class="g">① 홀딩 우선</td><td>현재가 &gt; MA20</td><td class="g">상승 중 → 매도 보류</td></tr>
+<tr><td class="r">② 추세 붕괴</td><td>MA20 &lt; MA60</td><td class="r">전량 매도</td></tr>
+<tr><td class="o">② 추세 꺾임</td><td>현재가 &lt; MA20 + 60일 포지션 ≥ 60%</td><td class="o">분할 매도</td></tr>
+<tr><td class="r">③ 손절</td><td>수익률 ≤ −10% (기본값)</td><td class="r">전량 매도</td></tr>
+<tr><td class="o">④ 수익 실현</td><td>수익률 ≥ +20% (기본값) + 추세 꺾임</td><td class="o">분할 매도</td></tr>
+</table>
+<div class="note">손절 기준과 목표 수익률은 최적 가이드 상단 슬라이더로 조정할 수 있습니다. 기본값: 손절 −10%, 목표 +20%.</div>
+
+<h4>필터 OFF — 변동성 수확 전략</h4>
+<p>추세·중복 여부에 상관없이 <strong>수익률이 충분히 쌓이면 분할 익절</strong>하고, <strong>당일 급락 시 분할 매수</strong>합니다.</p>
+<table class="tbl">
+<tr><th colspan="2" class="r">📤 분할매도 — 수익률 기준</th></tr>
+<tr><td>+20% ~ +35%</td><td>보유의 1/4 매도</td></tr>
+<tr><td>+35% ~ +50%</td><td>보유의 1/3 매도</td></tr>
+<tr><td>+50% 이상</td><td>보유의 1/2 매도</td></tr>
+</table>
+<table class="tbl" style="margin-top:8px">
+<tr><th colspan="2" class="g">📥 분할매수 — 당일 하락률 기준</th></tr>
+<tr><td>−2% ~ −3%</td><td>가용현금의 1/4 매수</td></tr>
+<tr><td>−3% ~ −5%</td><td>가용현금의 1/3 매수</td></tr>
+<tr><td>−5% 이상</td><td>가용현금의 1/2 매수</td></tr>
+</table>
+<div class="note">가용현금 = 계좌 현금 + 이번 사이클 분할매도 예정금</div>
+
+<h4>어떤 걸 써야 할까?</h4>
+<table class="tbl">
+<tr><th>상황</th><th>권장</th></tr>
+<tr><td>지금이 매도 타이밍인지 기술적으로 판단받고 싶을 때</td><td class="g">필터 ON</td></tr>
+<tr><td>수익 기준만으로 단순하게 익절·손절하고 싶을 때</td><td class="o">필터 OFF</td></tr>
+</table>`,
+  },
 ];
 
 const LS_KEY = 'chatArchive_v1';

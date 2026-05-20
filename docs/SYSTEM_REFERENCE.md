@@ -1,7 +1,7 @@
 # 자산 대시보드 시스템 기술 참조 문서
 
 > 이 문서를 보고 동일한 시스템을 재현하거나, 문제 발생 시 원인을 파악할 수 있도록 작성된 기술 참조 문서입니다.  
-> 최종 업데이트: 2026-05-04 (r2)
+> 최종 업데이트: 2026-05-20 (r3)
 
 ---
 
@@ -15,6 +15,8 @@
 - 가계부 (예산 vs 실적)
 - 주가 차트 (MA20/MA60 이동평균)
 - 월별 투자전략 페이지
+- **데이터 보고서**: 매일 18:00 자동 생성, 날짜별 미리보기/다운로드/재생성
+- **AI 챗봇 패널**: Anthropic Claude Haiku 기반 자산관리 상담
 
 ---
 
@@ -50,6 +52,8 @@ daily-log/
 │   │   ├── HouseholdBudget.tsx    ← 가계부 (예산/실적)
 │   │   ├── Holdings.tsx           ← 보유종목 현황 + 신호 기준 가이드 패널
 │   │   ├── CalcChecklist.tsx      ← 계산식 검증 (iframe 래퍼) ★ 신규
+│   │   ├── DataReports.tsx        ← 데이터 보고서 (날짜별 조회/재생성/누락복원) ★ 신규
+│   │   ├── ChatPanel.tsx          ← AI 챗봇 패널 (Claude Haiku, 우측 사이드바) ★ 신규
 │   │   ├── Dividend.tsx           ← 배당 내역 + 월 추정치 localStorage 저장
 │   │   ├── AccountReturn.tsx      ← 계좌별 수익률
 │   │   ├── Rebalancing.tsx        ← 리밸런싱 가이드
@@ -245,6 +249,78 @@ interface StockSignal {
 | 매수 가능 | up + position < 60% | 초록 | |
 
 **"분할 권장" 표시**: `'조정 대기'` 또는 `'반등 대기'` 신호 → 매수 추천 금액 옆에 `· 분할 권장` 텍스트 + 배지 색이 timing.color로 변경 (기존에는 무조건 초록).
+
+---
+
+## 6. 데이터 보고서 (`src/components/DataReports.tsx`) ★ 신규 (2026-05-20)
+
+### 기능 개요
+매일 18:00 Cron이 자동 생성하는 TXT 보고서를 날짜별로 조회·재생성·다운로드하는 페이지.
+
+### Worker KV 구조
+```
+daily_report:{YYYY-MM-DD}  ← 날짜별 보고서 TXT 내용
+daily_report_dates         ← 보고서 날짜 목록 JSON 배열 (최대 365일)
+```
+
+### Worker API
+| 엔드포인트 | 메서드 | 설명 |
+|---|---|---|
+| `/api/daily-reports` | GET | 저장된 보고서 날짜 목록 |
+| `/api/daily-reports/:date` | GET | 특정 날짜 보고서 TXT 다운로드 |
+| `/api/daily-reports/generate` | POST | 보고서 생성 (`{ date?, snapshots? }`) |
+| `/api/snapshots/backfill` | POST | 과거 종가로 누락 날짜 스냅샷+보고서 자동 복원 |
+
+### generateDailyReport 핵심 로직
+```ts
+// 해당 날짜 이하의 스냅샷만 사용 (미래 데이터 혼입 방지)
+const relevant = enriched.filter(s => s.date <= date);
+const snap = relevant[0];          // 해당 날짜 기준 가장 최근 스냅샷
+const recent14 = relevant.slice(0, 14);  // 최근 14일 증감 내역
+```
+> **⚠️ 중요:** `enriched.slice(0, 14)` 처럼 전체에서 자르면 과거 날짜 보고서 재생성 시 미래 스냅샷이 포함됨.
+
+### 누락 스냅샷 복원 (`/api/snapshots/backfill`)
+```
+1. accounts KV → 보유 종목 티커 수집
+2. fetchHistoricalPrices(ticker, 30) — 네이버 일별 종가
+3. 최근 14일 중 snapshots KV에 없는 날짜 파악
+4. 해당 날짜 종가로 totalAsset / wifeAsset / husbandAsset 계산
+5. 종가 데이터 없는 날짜 = 주말/공휴일 → 자동 스킵
+6. snapshots KV 업데이트 + 해당 날짜 보고서 재생성
+```
+> **⚠️ 주의:** `JSON.parse(await env.KV.get('accounts'))` 대신 반드시 `parseKV(await env.KV.get('accounts'), [])` 사용 — KV 값에 UTF-8 BOM(`﻿`)이 붙어 있어 직접 파싱 시 오류 발생.
+
+### UI 버튼 구성
+- **누락 복원**: backfill API 호출 → 누락 날짜 스냅샷+보고서 한 번에 복원
+- **전체 재생성**: 기존 날짜 목록을 대시보드 실시간 데이터로 재생성
+- **재생성** (각 카드): 해당 날짜 보고서만 재생성
+- **오늘 보고서 생성**: 오늘 날짜 보고서 수동 생성
+
+---
+
+## 6-1. AI 챗봇 (`src/components/ChatPanel.tsx`) ★ 신규 (2026-05-20)
+
+- 우측 사이드바 패널에 탑재
+- Worker `/ai-chat` (POST) → Anthropic API `claude-haiku-4-5-20251001` 모델 호출
+- 시스템 프롬프트: 자산관리 어시스턴트 (마크다운 없이 2~4문장 이내)
+- 챗 내역은 `src/data/chatArchive.ts` 로 아카이브 관리 (`quant_chat.html` 폐기)
+
+---
+
+## 7-1. 대시보드 자산 증감 계산 (`src/components/NewDashboard.tsx`) 수정 이력
+
+### 날짜별 증감 실시간 계산 (2026-05-20)
+```ts
+// 기존 (버그): i===0(오늘)만 실시간, 나머지는 KV 저장값 사용
+const change = i === 0 ? (prev ? snap.totalAsset - prev.totalAsset : 0) : snap.assetChange;
+
+// 수정: prev가 있으면 항상 실시간 계산 (KV의 assetChange:0 무시)
+const change = prev ? snap.totalAsset - prev.totalAsset : snap.assetChange;
+```
+> **배경:** backfill로 생성된 스냅샷은 `assetChange: 0`으로 저장됨.  
+> KV 저장값에 의존하면 누락 복원 후에도 증감이 0으로 표시되는 문제 발생.  
+> 테이블 뷰(desktop)와 모바일 카드 뷰 두 곳 모두 적용 필요.
 
 ---
 
@@ -501,6 +577,12 @@ const isCustomTicker = selectedTicker && !allHoldings.find(...);  // ← 정상
 | `/stock-prices-with-change?tickers=A,B` | GET | 현재가 + 등락률 `{A: {price, changeRate}}` |
 | `/stock-detail/{ticker}` | GET | MA20/MA60/고저점/position 통합 |
 | `/market-indices` | GET | 코스피/코스닥/나스닥/S&P/환율 |
+| `/api/daily-reports` | GET | 저장된 보고서 날짜 목록 |
+| `/api/daily-reports/:date` | GET | 특정 날짜 보고서 TXT (`YYYY-MM-DD`) |
+| `/api/daily-reports/generate` | POST | 보고서 생성 `{ date?, snapshots? }` |
+| `/api/snapshots/backfill` | POST | 누락 날짜 과거 종가 기반 스냅샷+보고서 복원 |
+| `/ai-chat` | POST | AI 챗봇 `{ messages: [{role, content}] }` |
+| `/snapshot` | POST | 수동 스냅샷 트리거 |
 
 ---
 

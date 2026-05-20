@@ -393,7 +393,7 @@ export function ChatPanel({ isOpen, onClose, isInline = false }: ChatPanelProps)
               borderTop: '1px solid var(--border-primary)',
             }}>
               <div style={{
-                display: 'flex', gap: 8, alignItems: 'flex-end',
+                display: 'flex', gap: 8, alignItems: 'center',
                 background: 'var(--bg-secondary)',
                 borderRadius: 24, padding: '8px 8px 8px 16px',
                 border: '1.5px solid var(--border-primary)',
