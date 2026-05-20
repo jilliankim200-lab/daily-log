@@ -832,10 +832,16 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
               {/* 종목명 */}
               <div
                 onClick={s.h.ticker && onNameClick ? () => onNameClick!(s.h.ticker!, s.h.name) : undefined}
+                onMouseEnter={e => { if (s.h.ticker && onNameClick) e.currentTarget.style.color = 'var(--accent-blue)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
                 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)',
                   cursor: s.h.ticker && onNameClick ? 'pointer' : 'default',
-                  lineHeight: 1.35, wordBreak: 'keep-all' }}>
-                {s.h.name}
+                  lineHeight: 1.35, wordBreak: 'keep-all',
+                  display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span>{s.h.name}</span>
+                {s.h.ticker && onNameClick && (
+                  <MIcon name="candlestick_chart" size={13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                )}
               </div>
               {/* 모바일: 종목명 하단 timing 뱃지 */}
               {isMobile && <TimingBadge timing={timing} noTooltip />}
@@ -1077,10 +1083,16 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                 {/* 종목명 */}
                 <div
                   onClick={k.h.ticker && onNameClick ? () => onNameClick!(k.h.ticker!, k.h.name) : undefined}
+                  onMouseEnter={e => { if (k.h.ticker && onNameClick) e.currentTarget.style.color = 'var(--accent-blue)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
                   style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)',
                     cursor: k.h.ticker && onNameClick ? 'pointer' : 'default',
-                    lineHeight: 1.35, wordBreak: 'keep-all' }}>
-                  {k.h.name}
+                    lineHeight: 1.35, wordBreak: 'keep-all',
+                    display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span>{k.h.name}</span>
+                  {k.h.ticker && onNameClick && (
+                    <MIcon name="candlestick_chart" size={13} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                  )}
                 </div>
                 <div style={{ height: 1, background: 'var(--border-secondary)' }} />
                 {/* 보유: 수량 · 평단 · 수익률 */}
