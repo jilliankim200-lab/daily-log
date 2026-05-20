@@ -4,6 +4,7 @@ export interface ArchivedQA {
   topic: string;
   question: string;
   answerHtml: string;
+  badge?: string; // '시스템' 등 카테고리 배지
 }
 
 export const INITIAL_ARCHIVE: ArchivedQA[] = [
@@ -152,6 +153,61 @@ export const INITIAL_ARCHIVE: ArchivedQA[] = [
 <ul><li><code>!aboveMa20</code> = 현재가가 MA20 아래 (단기 약세)</li>
 <li><code>ma20AboveMa60</code> = MA20이 MA60 위 (골든크로스 유지, 중기 강세)</li></ul>
 <p>이 두 조건이 동시에 성립하면 <span class="tag tag-o">추세 꺾임</span> 상태가 됩니다. 현재가가 MA20을 회복하면 자동으로 <span class="tag tag-g">상승 추세</span>로 전환됩니다.</p>`,
+  },
+
+  // ── 시스템 항목 ──────────────────────────────────────────────
+  {
+    id: 'sys1',
+    date: '2026-05-20',
+    badge: '시스템',
+    topic: '대시보드 증감 0원 문제',
+    question: '대시보드에서 5월 18일·19일 증감이 0원으로 나와. 왜 그래?',
+    answerHtml: `
+<p><strong>원인:</strong> 백필(자동 복원)로 만들어진 스냅샷에 <code>assetChange: 0</code>이 저장되어 있고, 대시보드가 당일(i===0) 외에는 KV 저장값을 그대로 사용했기 때문입니다.</p>
+<h4>수정 내용 (NewDashboard.tsx)</h4>
+<table class="tbl"><tr><th>위치</th><th>수정 전</th><th>수정 후</th></tr>
+<tr><td>모바일 카드 ~279줄</td><td class="r">i===0 일 때만 prev 비교</td><td class="g">항상 prev 비교</td></tr>
+<tr><td>데스크톱 테이블 ~330줄</td><td class="r">i===0 일 때만 prev 비교</td><td class="g">항상 prev 비교</td></tr></table>
+<div class="note"><strong>적용 패턴:</strong><br>
+<code>const change = prev ? snap.totalAsset - prev.totalAsset : snap.assetChange;</code><br>
+<code>const rate = prev &amp;&amp; prev.totalAsset &gt; 0 ? (change / prev.totalAsset) * 100 : snap.changeRate;</code>
+</div>
+<p>다시 0원이 표시되면 NewDashboard.tsx의 두 위치가 위 패턴으로 되어 있는지 확인하세요.</p>`,
+  },
+  {
+    id: 'sys2',
+    date: '2026-05-20',
+    badge: '시스템',
+    topic: '누락 스냅샷 복원 방법',
+    question: '주말·공휴일 또는 크론 실패로 날짜 데이터가 빠져있어. 어떻게 복원해?',
+    answerHtml: `
+<h4>복원 절차</h4>
+<table class="tbl"><tr><th>단계</th><th>내용</th></tr>
+<tr><td>1</td><td><strong>데이터 보고서</strong> 페이지 이동</td></tr>
+<tr><td>2</td><td>우측 상단 <span class="tag tag-b">누락 복원</span> 버튼 클릭 (history 아이콘)</td></tr>
+<tr><td>3</td><td>Worker가 네이버 일별 종가 조회 → 최근 14일 중 누락된 날짜 자동 복원</td></tr>
+<tr><td>4</td><td>복원 완료 후 <code>snapshotsUpdated</code> 이벤트 → 대시보드 자동 갱신</td></tr></table>
+<div class="note"><strong>자동 스킵:</strong> 주말·공휴일처럼 주가 데이터가 없는 날짜는 건너뜁니다.</div>
+<div class="warn"><strong>KV BOM 주의:</strong> Worker에서 KV 읽을 때 반드시 <code>parseKV()</code> 사용. <code>JSON.parse()</code> 직접 사용 시 <code>SyntaxError: Unexpected token '﻿'</code> 발생.</div>
+<h4>복원 후 증감이 여전히 0원이면</h4>
+<p>→ <strong>sys1 (대시보드 증감 0원 문제)</strong> 항목 참고. NewDashboard.tsx 패턴 확인 필요.</p>`,
+  },
+  {
+    id: 'sys3',
+    date: '2026-05-20',
+    badge: '시스템',
+    topic: '데이터 보고서 날짜 고정 버그',
+    question: '데이터 보고서에서 날짜를 바꿔도 항상 5월 15일 데이터만 나와. 어떻게 고쳐?',
+    answerHtml: `
+<p><strong>원인:</strong> <code>generateDailyReport</code>가 <code>enriched[0]</code> fallback을 사용해 날짜 필터 없이 항상 최신 스냅샷을 반환했습니다.</p>
+<h4>수정 내용 (worker/src/index.ts)</h4>
+<table class="tbl"><tr><th>항목</th><th>내용</th></tr>
+<tr><td>수정 전</td><td class="r"><code>const snap = enriched.find(s =&gt; s.date === date) || enriched[0];</code></td></tr>
+<tr><td>수정 후</td><td class="g"><code>const relevant = enriched.filter(s =&gt; s.date &lt;= date);</code><br><code>const snap = relevant[0];</code><br><code>if (!snap) return \`[\${date}] 저장된 데이터 없음\`;</code></td></tr></table>
+<div class="note">날짜보다 오래된 스냅샷만 필터링해서 해당 날짜 기준 최신값을 사용합니다. 스냅샷이 존재하지 않는 날짜는 "저장된 데이터 없음" 메시지 반환.</div>
+<h4>재발 방지 — 날짜별 재생성</h4>
+<p>데이터 보고서 각 카드의 <span class="tag tag-b">재생성</span> 버튼을 누르면 해당 날짜의 스냅샷 기준으로 보고서를 다시 생성합니다.<br>
+전체 재생성이 필요하면 <span class="tag tag-b">전체 재생성</span> 버튼(sync 아이콘)을 사용하세요.</p>`,
   },
 ];
 

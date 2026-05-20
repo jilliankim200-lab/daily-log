@@ -49,6 +49,7 @@ const CHIP_SEARCH_KEYS: Record<string, string> = {
   '최적 가이드': '최적 가이드 MA20 추세 보유',
   '리밸런싱':   'ETF 모멘텀 크래시 매도 분산 반도체 리밸런싱',
   '보유종목':   '보유 종목 ETF 반도체',
+  '대시보드':   '대시보드 증감 날짜 복원 스냅샷',
 };
 
 function getTodayLabel() {
@@ -474,17 +475,31 @@ export function ChatPanel({ isOpen, onClose, isInline = false }: ChatPanelProps)
                     {items.map(qa => (
                       <div key={qa.id} style={{ marginBottom: 16 }}>
                         {/* 토픽 태그 */}
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 11, fontWeight: 700,
-                          padding: '3px 10px', borderRadius: 20,
-                          background: 'rgba(59,130,246,0.08)',
-                          color: 'var(--accent-blue)',
-                          border: '1px solid rgba(59,130,246,0.2)',
-                          marginBottom: 8,
-                        }}>
-                          <MIcon name="bookmark" size={11} />
-                          {qa.topic}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                          {qa.badge && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 3,
+                              fontSize: 10, fontWeight: 700,
+                              padding: '2px 8px', borderRadius: 20,
+                              background: 'rgba(249,115,22,0.1)',
+                              color: '#f97316',
+                              border: '1px solid rgba(249,115,22,0.25)',
+                            }}>
+                              <MIcon name="build_circle" size={10} />
+                              {qa.badge}
+                            </span>
+                          )}
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            fontSize: 11, fontWeight: 700,
+                            padding: '3px 10px', borderRadius: 20,
+                            background: 'rgba(59,130,246,0.08)',
+                            color: 'var(--accent-blue)',
+                            border: '1px solid rgba(59,130,246,0.2)',
+                          }}>
+                            <MIcon name="bookmark" size={11} />
+                            {qa.topic}
+                          </span>
                         </div>
 
                         {/* 질문 */}
@@ -630,6 +645,20 @@ function ArchiveMatchBlock({ matches }: { matches: ArchivedQA[] }) {
               onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
               onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}
               >
+                {/* 시스템 배지 */}
+                {qa.badge && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, flexShrink: 0,
+                    padding: '2px 7px', borderRadius: 20,
+                    background: 'rgba(249,115,22,0.1)',
+                    color: '#f97316',
+                    border: '1px solid rgba(249,115,22,0.25)',
+                    display: 'flex', alignItems: 'center', gap: 3,
+                  }}>
+                    <MIcon name="build_circle" size={10} />
+                    {qa.badge}
+                  </span>
+                )}
                 {/* 토픽 배지 */}
                 <span style={{
                   fontSize: 11, fontWeight: 700, flexShrink: 0,
