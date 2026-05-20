@@ -883,6 +883,80 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json({ ok: true, result });
     }
 
+    // POST /api/snapshots/backfill — 과거 종가로 누락 날짜 스냅샷 생성
+    if (request.method === 'POST' && url.pathname === '/api/snapshots/backfill') {
+      try {
+        const accounts: any[] = JSON.parse(await env.KV.get('accounts') || '[]');
+        const otherAssets: any[] = JSON.parse(await env.KV.get('otherAssets') || '[]');
+        if (!accounts.length) return json({ error: 'no accounts' }, 400);
+
+        const tickers = [...new Set(
+          accounts.flatMap((a: any) =>
+            a.holdings.map((h: any) => h.ticker).filter((t: string) => t && /^[0-9A-Z]{6,}$/i.test(t))
+          )
+        )] as string[];
+
+        // 각 종목 최근 30일 종가 수집
+        const historicalPrices: Record<string, Record<string, number>> = {};
+        await Promise.all(tickers.map(async (ticker) => {
+          historicalPrices[ticker] = await fetchHistoricalPrices(ticker, 30);
+        }));
+
+        // 기존 snapshots 로드
+        const existing: any[] = JSON.parse(await env.KV.get('snapshots') || '[]');
+        const existingDates = new Set(existing.map((s: any) => s.date));
+
+        // 최근 14일 중 누락 날짜 파악
+        const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const candidateDates: string[] = [];
+        for (let i = 1; i <= 14; i++) {
+          const d = new Date(kstNow.getTime() - i * 24 * 60 * 60 * 1000);
+          const dateStr = d.toISOString().slice(0, 10);
+          if (!existingDates.has(dateStr)) candidateDates.push(dateStr);
+        }
+
+        const filled: { date: string; totalAsset: number }[] = [];
+        for (const date of candidateDates) {
+          // 해당 날짜 종가 맵 구성
+          const prices: Record<string, number> = {};
+          for (const ticker of tickers) {
+            const p = historicalPrices[ticker]?.[date];
+            if (p) prices[ticker] = p;
+          }
+          // 종가 데이터 없으면 주말/공휴일로 간주하고 건너뜀
+          if (Object.keys(prices).length === 0) continue;
+
+          const wifeAccounts = accounts.filter((a: any) => a.owner === 'wife');
+          const husbandAccounts = accounts.filter((a: any) => a.owner === 'husband');
+          const totalAsset = calcHoldings(accounts, prices) + otherAssets.reduce((s: number, a: any) => s + a.amount, 0);
+          const wifeTotal = calcHoldings(wifeAccounts, prices) + otherAssets.filter((a: any) => a.owner === 'wife').reduce((s: number, a: any) => s + a.amount, 0);
+          const husbandTotal = calcHoldings(husbandAccounts, prices) + otherAssets.filter((a: any) => a.owner === 'husband').reduce((s: number, a: any) => s + a.amount, 0);
+
+          existing.push({ date, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal, assetChange: 0, changeRate: 0 });
+          filled.push({ date, totalAsset: Math.round(totalAsset) });
+        }
+
+        if (filled.length > 0) {
+          const sorted = existing
+            .filter((s: any) => s && s.date)
+            .sort((a: any, b: any) => b.date.localeCompare(a.date))
+            .slice(0, 365);
+          await env.KV.put('snapshots', JSON.stringify(sorted));
+
+          // 채워진 날짜 + 기존 누락 보고서 모두 재생성
+          const allSnapshots = sorted;
+          for (const { date } of filled) {
+            const content = await generateDailyReport(env, date, allSnapshots);
+            await saveDailyReport(env, date, content);
+          }
+        }
+
+        return json({ ok: true, filled });
+      } catch (e) {
+        return json({ error: String(e) }, 500);
+      }
+    }
+
     // POST /etf-ranking/refresh (수동 ETF 랭킹 업데이트)
     if (request.method === 'POST' && url.pathname === '/etf-ranking/refresh') {
       const result = await fetchAndStoreEtfRanking(env);

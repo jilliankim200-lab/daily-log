@@ -25,6 +25,7 @@ export function DataReports() {
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [regeneratingAll, setRegeneratingAll] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<string>('');
@@ -139,6 +140,26 @@ export function DataReports() {
     }
   }
 
+  async function handleBackfill() {
+    setBackfilling(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/api/snapshots/backfill`, { method: 'POST' });
+      if (!res.ok) throw new Error('failed');
+      const data = await res.json() as { ok: boolean; filled: { date: string; totalAsset: number }[] };
+      if (data.filled.length === 0) {
+        showToast('누락 날짜 없음 (이미 완전)');
+      } else {
+        showToast(`${data.filled.length}개 날짜 복원 완료: ${data.filled.map(f => f.date).join(', ')}`);
+        window.dispatchEvent(new CustomEvent('snapshotsUpdated'));
+        await loadDates();
+      }
+    } catch {
+      showToast('복원 실패');
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
   async function handleRegenerateAll() {
     setRegeneratingAll(true);
     try {
@@ -189,16 +210,30 @@ export function DataReports() {
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>매일 18:00 자동 생성 · 미리보기 · TXT 다운로드</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleBackfill}
+            disabled={backfilling || regeneratingAll || regenerating !== null}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)',
+              cursor: (backfilling || regeneratingAll || regenerating !== null) ? 'not-allowed' : 'pointer',
+              background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+              fontSize: 13, fontWeight: 500, opacity: (backfilling || regeneratingAll || regenerating !== null) ? 0.5 : 1,
+            }}
+          >
+            <MIcon name="history" size={16} />
+            {backfilling ? '복원 중...' : '누락 복원'}
+          </button>
           {dates.length > 0 && (
             <button
               onClick={handleRegenerateAll}
-              disabled={regeneratingAll || regenerating !== null}
+              disabled={regeneratingAll || regenerating !== null || backfilling}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)',
-                cursor: (regeneratingAll || regenerating !== null) ? 'not-allowed' : 'pointer',
+                cursor: (regeneratingAll || regenerating !== null || backfilling) ? 'not-allowed' : 'pointer',
                 background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
-                fontSize: 13, fontWeight: 500, opacity: (regeneratingAll || regenerating !== null) ? 0.5 : 1,
+                fontSize: 13, fontWeight: 500, opacity: (regeneratingAll || regenerating !== null || backfilling) ? 0.5 : 1,
               }}
             >
               <MIcon name="sync" size={16} />
