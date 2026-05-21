@@ -1156,6 +1156,20 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json({ ticker, currentPrice: cur, changeRate, ma20, ma60, high, low, position: Math.round(position * 100) / 100 });
     }
 
+    // GET /worldcup — 월드컵 대시보드 데이터
+    if (request.method === 'GET' && url.pathname === '/worldcup') {
+      const raw = await env.KV.get('worldcup_data');
+      if (!raw) return json({ error: 'no data' }, 404);
+      return new Response(raw, { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
+    }
+
+    // POST /worldcup/update — 월드컵 데이터 저장 (CLI 전용)
+    if (request.method === 'POST' && url.pathname === '/worldcup/update') {
+      const body = await request.text();
+      await env.KV.put('worldcup_data', body);
+      return json({ ok: true });
+    }
+
     return json({ error: 'not found' }, 404);
   },
 

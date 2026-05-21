@@ -224,22 +224,6 @@ export function DataReports() {
             <MIcon name="history" size={16} />
             {backfilling ? '복원 중...' : '누락 복원'}
           </button>
-          {dates.length > 0 && (
-            <button
-              onClick={handleRegenerateAll}
-              disabled={regeneratingAll || regenerating !== null || backfilling}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-                padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-primary)',
-                cursor: (regeneratingAll || regenerating !== null || backfilling) ? 'not-allowed' : 'pointer',
-                background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
-                fontSize: 13, fontWeight: 500, opacity: (regeneratingAll || regenerating !== null || backfilling) ? 0.5 : 1,
-              }}
-            >
-              <MIcon name="sync" size={16} />
-              {regeneratingAll ? '재생성 중...' : '전체 재생성'}
-            </button>
-          )}
           <button
             onClick={handleGenerate}
             disabled={generating}

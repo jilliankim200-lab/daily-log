@@ -19,6 +19,10 @@ export function Sidebar({ currentPage, onNavigate, isCollapsed = false, onToggle
     return `${year}${month}${date}`;
   };
 
+  const externalItems = [
+    { label: "월드컵", icon: "sports_soccer", url: "/worldcup.html", gradient: "from-yellow-500 to-orange-500" },
+  ];
+
   const menuItems = [
     { id: "couple-accounts", label: "부부 계좌", icon: "person", gradient: "from-purple-500 to-pink-500" },
     { id: "holdings", label: "보유종목", icon: "list", gradient: "from-green-500 to-teal-500" },
@@ -76,6 +80,32 @@ export function Sidebar({ currentPage, onNavigate, isCollapsed = false, onToggle
       {/* Menu Items */}
       <nav className="flex-1 py-6 px-3 relative">
         <div className="flex flex-col gap-1.5">
+          {/* 외부 링크 항목 (새 탭) */}
+          {externalItems.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => window.open(item.url, '_blank')}
+              className={`
+                group relative flex items-center gap-3 rounded-xl transition-all duration-300
+                ${isCollapsed ? 'justify-center px-2 py-3.5' : 'px-4 py-3.5'}
+                hover:bg-[--color-gray-50] dark:hover:bg-[#364153]/50
+              `}
+              title={isCollapsed ? item.label : undefined}
+            >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 flex-shrink-0 bg-[--color-gray-100] dark:bg-[#364153] group-hover:bg-[--color-gray-200] dark:group-hover:bg-[#475569]">
+                <MIcon name={item.icon} size={18} style={{ color: 'var(--color-text-secondary)' }} />
+              </div>
+              {!isCollapsed && (
+                <span className="text-[15px] font-medium text-[--color-text-secondary] dark:text-[#99a1af] group-hover:text-[--color-text-body] dark:group-hover:text-[#d1d5dc] transition-colors">
+                  {item.label}
+                </span>
+              )}
+              {!isCollapsed && (
+                <MIcon name="open_in_new" size={12} style={{ color: 'var(--color-text-secondary)', marginLeft: 'auto', opacity: 0.5 }} />
+              )}
+            </button>
+          ))}
+
           {menuItems.map((item) => {
             const isActive = currentPage === item.id;
 

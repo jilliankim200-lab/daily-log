@@ -1,0 +1,138 @@
+{
+  "updatedAt": "2026-05-21T09:00:00Z",
+  "stage": "group",
+  "todayMatches": [],
+  "upcomingMatches": [
+    {
+      "id": "m001", "group": "A조",
+      "homeTeam": { "name": "Mexico", "flag": "🇲🇽", "code": "MEX", "fifaRank": 16 },
+      "awayTeam": { "name": "Canada", "flag": "🇨🇦", "code": "CAN", "fifaRank": 47 },
+      "utcDate": "2026-06-11T22:00:00Z",
+      "status": "SCHEDULED", "score": { "home": null, "away": null },
+      "prediction": {
+        "homeWin": 52, "draw": 26, "awayWin": 22, "predictedScore": "2-1",
+        "watchPoints": "개막전 특수+홈 어드밴티지를 등에 업은 멕시코. 캐나다는 알폰소 데이비스의 왼쪽 돌파가 유일한 돌파구. 멕시코 수비가 알폰소를 어떻게 막느냐가 관건.",
+        "keyPlayer": "Hirving Lozano"
+      }
+    },
+    {
+      "id": "m002", "group": "B조",
+      "homeTeam": { "name": "Brazil", "flag": "🇧🇷", "code": "BRA", "fifaRank": 5 },
+      "awayTeam": { "name": "Croatia", "flag": "🇭🇷", "code": "CRO", "fifaRank": 10 },
+      "utcDate": "2026-06-12T02:00:00Z",
+      "status": "SCHEDULED", "score": { "home": null, "away": null },
+      "prediction": {
+        "homeWin": 61, "draw": 22, "awayWin": 17, "predictedScore": "2-0",
+        "watchPoints": "Vinicius Jr의 드리블 돌파가 브라질 공격의 핵심. 카타르 4강을 이끈 모드리치가 크로아티아 미드필드를 지휘하지만 브라질의 압박 축구에 고전할 전망.",
+        "keyPlayer": "Vinícius Jr"
+      }
+    },
+    {
+      "id": "m003", "group": "C조",
+      "homeTeam": { "name": "France", "flag": "🇫🇷", "code": "FRA", "fifaRank": 2 },
+      "awayTeam": { "name": "Poland", "flag": "🇵🇱", "code": "POL", "fifaRank": 23 },
+      "utcDate": "2026-06-12T19:00:00Z",
+      "status": "SCHEDULED", "score": { "home": null, "away": null },
+      "prediction": {
+        "homeWin": 72, "draw": 18, "awayWin": 10, "predictedScore": "3-0",
+        "watchPoints": "음바페+그리즈만+뎀벨레 삼각편대 완성된 프랑스는 이번 대회 최강 공격 라인. 레반도프스키가 혼자 싸워야 하는 폴란드는 수비 조직력이 유일한 무기.",
+        "keyPlayer": "Kylian Mbappé"
+      }
+    },
+    {
+      "id": "m004", "group": "D조",
+      "homeTeam": { "name": "England", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "code": "ENG", "fifaRank": 4 },
+      "awayTeam": { "name": "Serbia", "flag": "🇷🇸", "code": "SRB", "fifaRank": 35 },
+      "utcDate": "2026-06-13T19:00:00Z",
+      "status": "SCHEDULED", "score": { "home": null, "away": null },
+      "prediction": {
+        "homeWin": 68, "draw": 20, "awayWin": 12, "predictedScore": "2-0",
+        "watchPoints": "벨링엄의 3선 침투와 살라의 측면 돌파가 잉글랜드 공격의 핵심. 세르비아는 미트로비치의 헤딩을 활용한 세트피스가 유일한 득점 루트.",
+        "keyPlayer": "Jude Bellingham"
+      }
+    },
+    {
+      "id": "m005", "group": "E조",
+      "homeTeam": { "name": "Germany", "flag": "🇩🇪", "code": "GER", "fifaRank": 12 },
+      "awayTeam": { "name": "Japan", "flag": "🇯🇵", "code": "JPN", "fifaRank": 18 },
+      "utcDate": "2026-06-14T02:00:00Z",
+      "status": "SCHEDULED", "score": { "home": null, "away": null },
+      "prediction": {
+        "homeWin": 55, "draw": 24, "awayWin": 21, "predictedScore": "2-1",
+        "watchPoints": "카타르에서 독일을 꺾은 일본이 이번에도 카운터 전술로 도전. 독일은 조기 선제골 실패 시 심리적 압박이 심화될 수 있어 전반 20분이 관건.",
+        "keyPlayer": "Florian Wirtz"
+      }
+    },
+    {
+      "id": "m006", "group": "F조",
+      "homeTeam": { "name": "Argentina", "flag": "🇦🇷", "code": "ARG", "fifaRank": 1 },
+      "awayTeam": { "name": "Morocco", "flag": "🇲🇦", "code": "MAR", "fifaRank": 14 },
+      "utcDate": "2026-06-14T22:00:00Z",
+      "status": "SCHEDULED", "score": { "home": null, "away": null },
+      "prediction": {
+        "homeWin": 62, "draw": 22, "awayWin": 16, "predictedScore": "2-1",
+        "watchPoints": "카타르 4강 모로코가 현 세계 챔피언 아르헨티나에 도전. 라우타로+디마리아vs모로코의 5백 수비 조직, 전술적 흥미로운 대결. 메시 없이 치르는 아르헨티나의 첫 시험대.",
+        "keyPlayer": "Lautaro Martínez"
+      }
+    }
+  ],
+  "groups": {
+    "A": { "name": "A조", "standings": [
+      { "rank": 1, "team": { "name": "United States", "flag": "🇺🇸", "code": "USA", "fifaRank": 13 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Mexico", "flag": "🇲🇽", "code": "MEX", "fifaRank": 16 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Canada", "flag": "🇨🇦", "code": "CAN", "fifaRank": 47 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Uruguay", "flag": "🇺🇾", "code": "URU", "fifaRank": 20 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "B": { "name": "B조", "standings": [
+      { "rank": 1, "team": { "name": "Brazil", "flag": "🇧🇷", "code": "BRA", "fifaRank": 5 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Colombia", "flag": "🇨🇴", "code": "COL", "fifaRank": 9 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Croatia", "flag": "🇭🇷", "code": "CRO", "fifaRank": 10 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Ecuador", "flag": "🇪🇨", "code": "ECU", "fifaRank": 44 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "C": { "name": "C조", "standings": [
+      { "rank": 1, "team": { "name": "France", "flag": "🇫🇷", "code": "FRA", "fifaRank": 2 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Netherlands", "flag": "🇳🇱", "code": "NED", "fifaRank": 7 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Poland", "flag": "🇵🇱", "code": "POL", "fifaRank": 23 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Senegal", "flag": "🇸🇳", "code": "SEN", "fifaRank": 19 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "D": { "name": "D조", "standings": [
+      { "rank": 1, "team": { "name": "England", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "code": "ENG", "fifaRank": 4 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Australia", "flag": "🇦🇺", "code": "AUS", "fifaRank": 24 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Serbia", "flag": "🇷🇸", "code": "SRB", "fifaRank": 35 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Denmark", "flag": "🇩🇰", "code": "DEN", "fifaRank": 21 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "E": { "name": "E조", "standings": [
+      { "rank": 1, "team": { "name": "Germany", "flag": "🇩🇪", "code": "GER", "fifaRank": 12 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Portugal", "flag": "🇵🇹", "code": "POR", "fifaRank": 6 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Japan", "flag": "🇯🇵", "code": "JPN", "fifaRank": 18 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "South Korea", "flag": "🇰🇷", "code": "KOR", "fifaRank": 22 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "F": { "name": "F조", "standings": [
+      { "rank": 1, "team": { "name": "Argentina", "flag": "🇦🇷", "code": "ARG", "fifaRank": 1 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Spain", "flag": "🇪🇸", "code": "ESP", "fifaRank": 8 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Morocco", "flag": "🇲🇦", "code": "MAR", "fifaRank": 14 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Chile", "flag": "🇨🇱", "code": "CHI", "fifaRank": 33 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "G": { "name": "G조", "standings": [
+      { "rank": 1, "team": { "name": "Belgium", "flag": "🇧🇪", "code": "BEL", "fifaRank": 3 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Switzerland", "flag": "🇨🇭", "code": "SUI", "fifaRank": 15 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Nigeria", "flag": "🇳🇬", "code": "NGA", "fifaRank": 28 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Venezuela", "flag": "🇻🇪", "code": "VEN", "fifaRank": 30 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]},
+    "H": { "name": "H조", "standings": [
+      { "rank": 1, "team": { "name": "Portugal", "flag": "🇵🇹", "code": "POR", "fifaRank": 6 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 2, "team": { "name": "Turkey", "flag": "🇹🇷", "code": "TUR", "fifaRank": 29 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 3, "team": { "name": "Cameroon", "flag": "🇨🇲", "code": "CMR", "fifaRank": 43 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 },
+      { "rank": 4, "team": { "name": "Paraguay", "flag": "🇵🇾", "code": "PAR", "fifaRank": 51 }, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0, "goalDifference": 0, "points": 0 }
+    ]}
+  },
+  "bracket": { "r32": [], "r16": [], "qf": [], "sf": [], "final": null },
+  "hotPlayers": [
+    { "name": "Kylian Mbappé", "team": { "name": "France", "flag": "🇫🇷", "code": "FRA" }, "goals": 0, "assists": 0, "minutesPlayed": 0 },
+    { "name": "Vinícius Jr", "team": { "name": "Brazil", "flag": "🇧🇷", "code": "BRA" }, "goals": 0, "assists": 0, "minutesPlayed": 0 },
+    { "name": "Jude Bellingham", "team": { "name": "England", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "code": "ENG" }, "goals": 0, "assists": 0, "minutesPlayed": 0 },
+    { "name": "Florian Wirtz", "team": { "name": "Germany", "flag": "🇩🇪", "code": "GER" }, "goals": 0, "assists": 0, "minutesPlayed": 0 },
+    { "name": "Pedri", "team": { "name": "Spain", "flag": "🇪🇸", "code": "ESP" }, "goals": 0, "assists": 0, "minutesPlayed": 0 },
+    { "name": "Lautaro Martínez", "team": { "name": "Argentina", "flag": "🇦🇷", "code": "ARG" }, "goals": 0, "assists": 0, "minutesPlayed": 0 }
+  ]
+}
