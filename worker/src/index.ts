@@ -1188,10 +1188,14 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         return;
       }
 
-      // UTC 17:00 = KST 02:00 — 전일 종가 스냅샷
+      // UTC 17:00 = KST 02:00 — 전일 종가 스냅샷 (18:00 크론이 이미 저장한 경우 스킵)
       const yesterday = new Date(kstNow.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const existingSnaps: any[] = JSON.parse(await env.KV.get('snapshots') || '[]');
+      const yesterdayExists = existingSnaps.some((s: any) => s.date === yesterday);
       const [snapshotResult, signalResult, crashResult] = await Promise.all([
-        runDailySnapshot(env, yesterday).catch((e: unknown) => `snapshot error: ${String(e)}`),
+        yesterdayExists
+          ? Promise.resolve(`snapshot skipped: ${yesterday} already exists`)
+          : runDailySnapshot(env, yesterday).catch((e: unknown) => `snapshot error: ${String(e)}`),
         updateMomentumSignal(env).catch((e: unknown) => `signal error: ${String(e)}`),
         updateCrashSignals(env).catch((e: unknown) => `crash error: ${String(e)}`),
       ]);
