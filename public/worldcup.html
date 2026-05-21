@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -49,32 +49,32 @@
     }
     .hero-left { display: flex; align-items: center; gap: 20px; }
     .trophy-icon {
-      font-size: 48px; line-height: 1;
+      font-size: 60px; line-height: 1;
       filter: drop-shadow(0 0 20px rgba(212,160,23,0.6));
     }
     .hero-title-block {}
     .hero-eyebrow {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+      font-size: 14px; font-weight: 700; letter-spacing: 0.2em;
       color: var(--fifa-blue); text-transform: uppercase;
       margin-bottom: 2px;
     }
     .hero-title {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(28px, 4vw, 42px);
+      font-size: clamp(35px, 5vw, 53px);
       letter-spacing: 0.04em;
       line-height: 1;
       background: linear-gradient(135deg, #fff 30%, var(--fifa-blue) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     .hero-subtitle {
-      font-size: 12px; color: var(--fifa-dim); margin-top: 4px;
+      font-size: 15px; color: var(--fifa-dim); margin-top: 4px;
       letter-spacing: 0.08em;
     }
     .hero-right { display: flex; gap: 12px; flex-shrink: 0; }
     .badge {
       padding: 6px 16px; border-radius: 20px;
-      font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.06em;
       text-transform: uppercase;
     }
     .badge-stage {
@@ -89,7 +89,7 @@
     }
     .host-flags {
       display: flex; align-items: center; gap: 6px;
-      font-size: 20px;
+      font-size: 25px;
       border-left: 1px solid #1a2f48; padding-left: 16px; margin-left: 4px;
     }
 
@@ -115,11 +115,11 @@
     }
     .section-label-text {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.18em;
       text-transform: uppercase;
     }
     .section-label-count {
-      font-size: 11px; color: var(--fifa-dim);
+      font-size: 14px; color: var(--fifa-dim);
       background: rgba(255,255,255,0.06); border-radius: 10px;
       padding: 1px 8px;
     }
@@ -143,13 +143,13 @@
       gap: 6px;
     }
     .match-group-tag {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.12em;
       text-transform: uppercase; color: var(--fifa-dim);
       background: rgba(255,255,255,0.05); border-radius: 4px;
       padding: 2px 7px;
     }
     .match-live-tag {
-      font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+      font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
       color: #fff; background: var(--fifa-red);
       border-radius: 4px; padding: 2px 8px;
       animation: pulse 1.5s infinite;
@@ -159,7 +159,7 @@
       50% { opacity: 0.6; }
     }
     .match-time {
-      font-size: 11px; color: var(--fifa-dim); margin-left: auto;
+      font-size: 14px; color: var(--fifa-dim); margin-left: auto;
     }
 
     .match-body {
@@ -170,35 +170,35 @@
     .team-side { flex: 1; }
     .team-side.home { text-align: right; }
     .team-side.away { text-align: left; }
-    .team-flag { font-size: 28px; display: block; margin-bottom: 4px; }
+    .team-flag { font-size: 35px; display: block; margin-bottom: 4px; }
     .team-name {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 18px; font-weight: 700; letter-spacing: 0.02em;
+      font-size: 23px; font-weight: 700; letter-spacing: 0.02em;
     }
-    .team-rank { font-size: 10px; color: var(--fifa-dim); margin-top: 1px; }
+    .team-rank { font-size: 13px; color: var(--fifa-dim); margin-top: 1px; }
 
     .score-center { text-align: center; min-width: 90px; flex-shrink: 0; }
     .score-live {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 36px; letter-spacing: 0.04em;
+      font-size: 45px; letter-spacing: 0.04em;
       color: #fff; line-height: 1;
     }
     .score-sep { color: var(--fifa-dim); margin: 0 4px; }
     .score-predicted {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px; color: var(--fifa-dim);
+      font-size: 16px; color: var(--fifa-dim);
       margin-top: 2px;
     }
     .score-kickoff {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 22px; font-weight: 700; color: var(--fifa-dim); line-height: 1;
+      font-size: 28px; font-weight: 700; color: var(--fifa-dim); line-height: 1;
     }
 
     /* 승률 바 */
     .win-bar-wrap { padding: 0 20px 12px; }
     .win-bar-labels {
       display: flex; justify-content: space-between;
-      font-size: 11px; color: var(--fifa-dim); margin-bottom: 5px;
+      font-size: 14px; color: var(--fifa-dim); margin-bottom: 5px;
     }
     .win-bar-labels .home-pct { color: var(--fifa-blue); font-weight: 700; }
     .win-bar-labels .away-pct { color: #c8a0ff; font-weight: 700; }
@@ -218,15 +218,15 @@
       background: rgba(0,0,0,0.2);
     }
     .watch-points-label {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
       text-transform: uppercase; color: var(--fifa-gold);
       margin-bottom: 6px;
     }
     .watch-points-text {
-      font-size: 13px; color: #aabbc8; line-height: 1.65;
+      font-size: 16px; color: #aabbc8; line-height: 1.65;
     }
     .key-player {
-      margin-top: 6px; font-size: 11px;
+      margin-top: 6px; font-size: 14px;
       color: var(--fifa-dim);
     }
     .key-player span { color: var(--fifa-blue); font-weight: 600; }
@@ -241,7 +241,7 @@
     }
     .group-tab {
       padding: 4px 10px; border-radius: 6px;
-      font-size: 11px; font-weight: 700; cursor: pointer;
+      font-size: 14px; font-weight: 700; cursor: pointer;
       background: #0f1e30; border: 1px solid #1a2f48;
       color: var(--fifa-dim); transition: all 0.15s;
     }
@@ -261,7 +261,7 @@
       display: grid;
       grid-template-columns: 18px 1fr 26px 26px 26px 28px 34px;
       padding: 8px 14px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.1em;
       color: var(--fifa-dim); text-transform: uppercase;
       border-bottom: 1px solid #0a1628;
     }
@@ -271,18 +271,18 @@
       display: grid;
       grid-template-columns: 18px 1fr 26px 26px 26px 28px 34px;
       padding: 10px 14px;
-      font-size: 12px;
+      font-size: 15px;
       border-bottom: 1px solid #0a1628;
       align-items: center;
       transition: background 0.15s;
     }
     .st-row:last-child { border-bottom: none; }
     .st-row:hover { background: rgba(255,255,255,0.02); }
-    .st-rank-qualify { color: #22c55e; font-weight: 700; font-size: 11px; }
-    .st-rank-out { color: var(--fifa-dim); font-size: 11px; }
+    .st-rank-qualify { color: #22c55e; font-weight: 700; font-size: 14px; }
+    .st-rank-out { color: var(--fifa-dim); font-size: 14px; }
     .st-team { display: flex; align-items: center; gap: 6px; font-weight: 600; }
-    .st-team-flag { font-size: 14px; }
-    .st-points { font-weight: 800; font-size: 14px; text-align: center; }
+    .st-team-flag { font-size: 18px; }
+    .st-points { font-weight: 800; font-size: 18px; text-align: center; }
     .st-qualify { color: #22c55e; }
     .st-gd-pos { color: #22c55e; }
     .st-gd-neg { color: #f87171; }
@@ -302,22 +302,22 @@
     .player-card:hover { border-color: #2a4060; }
     .player-rank {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px; color: #1a2f48; min-width: 24px; text-align: center;
+      font-size: 28px; color: #1a2f48; min-width: 24px; text-align: center;
     }
     .player-rank.top1 { color: var(--fifa-gold); }
     .player-rank.top2 { color: #94a3b8; }
     .player-rank.top3 { color: #cd7c3a; }
-    .player-flag { font-size: 22px; flex-shrink: 0; }
+    .player-flag { font-size: 28px; flex-shrink: 0; }
     .player-info { flex: 1; min-width: 0; }
-    .player-name { font-weight: 700; font-size: 13px; }
-    .player-team { font-size: 11px; color: var(--fifa-dim); margin-top: 1px; }
+    .player-name { font-weight: 700; font-size: 16px; }
+    .player-team { font-size: 14px; color: var(--fifa-dim); margin-top: 1px; }
     .player-stats { display: flex; gap: 10px; flex-shrink: 0; }
     .player-stat { text-align: center; }
     .player-stat-val {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 18px; font-weight: 700; line-height: 1;
+      font-size: 23px; font-weight: 700; line-height: 1;
     }
-    .player-stat-lbl { font-size: 9px; color: var(--fifa-dim); letter-spacing: 0.08em; }
+    .player-stat-lbl { font-size: 11px; color: var(--fifa-dim); letter-spacing: 0.08em; }
     .goals-val { color: var(--fifa-gold); }
     .assists-val { color: var(--fifa-blue); }
 
@@ -326,14 +326,14 @@
       text-align: center; padding: 60px 20px;
       color: var(--fifa-dim);
     }
-    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
-    .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-    .empty-desc { font-size: 13px; line-height: 1.6; }
+    .empty-icon { font-size: 60px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+    .empty-desc { font-size: 16px; line-height: 1.6; }
     .empty-cmd {
       display: inline-block; margin-top: 14px;
       background: #0f1e30; border: 1px solid #1a2f48;
       border-radius: 8px; padding: 8px 18px;
-      font-family: monospace; font-size: 13px; color: var(--fifa-blue);
+      font-family: monospace; font-size: 16px; color: var(--fifa-blue);
     }
 
     .spinner {
@@ -348,7 +348,7 @@
 
     /* ── UPDATED AT ── */
     .updated-at {
-      font-size: 10px; color: var(--fifa-dim);
+      font-size: 13px; color: var(--fifa-dim);
       text-align: center; margin-top: 40px; letter-spacing: 0.06em;
     }
   </style>
