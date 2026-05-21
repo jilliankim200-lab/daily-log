@@ -360,6 +360,27 @@ export default function App() {
               );
             })}
 
+            {/* 월드컵 외부 링크 */}
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-primary)' }}>
+              <button
+                onClick={() => window.open('/worldcup.html', '_blank')}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  marginBottom: 2, transition: 'background 0.15s',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 500, fontSize: 14,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <MIcon name="sports_soccer" size={20} style={{ opacity: 0.6 }} />
+                <span style={{ flex: 1, textAlign: 'left' }}>월드컵</span>
+                <MIcon name="open_in_new" size={14} style={{ opacity: 0.4 }} />
+              </button>
+            </div>
+
             {/* 지표 섹션 — 접힘/펼침 */}
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-primary)' }}>
               {/* 섹션 헤더 (클릭으로 토글) */}
