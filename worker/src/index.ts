@@ -916,6 +916,7 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         }
 
         const filled: { date: string; totalAsset: number }[] = [];
+        const allSnaps = [...existing].sort((a: any, b: any) => b.date.localeCompare(a.date));
         for (const date of candidateDates) {
           // 해당 날짜 종가 맵 구성
           const prices: Record<string, number> = {};
@@ -923,16 +924,26 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
             const p = historicalPrices[ticker]?.[date];
             if (p) prices[ticker] = p;
           }
-          // 종가 데이터 없으면 주말/공휴일로 간주하고 건너뜀
-          if (Object.keys(prices).length === 0) continue;
 
-          const wifeAccounts = accounts.filter((a: any) => a.owner === 'wife');
-          const husbandAccounts = accounts.filter((a: any) => a.owner === 'husband');
-          const totalAsset = calcHoldings(accounts, prices) + otherAssets.reduce((s: number, a: any) => s + a.amount, 0);
-          const wifeTotal = calcHoldings(wifeAccounts, prices) + otherAssets.filter((a: any) => a.owner === 'wife').reduce((s: number, a: any) => s + a.amount, 0);
-          const husbandTotal = calcHoldings(husbandAccounts, prices) + otherAssets.filter((a: any) => a.owner === 'husband').reduce((s: number, a: any) => s + a.amount, 0);
+          let totalAsset: number, wifeTotal: number, husbandTotal: number;
+          if (Object.keys(prices).length === 0) {
+            // 주말/공휴일 — 직전 거래일 스냅샷 복사
+            const prev = allSnaps.find((s: any) => s.date < date);
+            if (!prev) continue;
+            totalAsset = prev.totalAsset;
+            wifeTotal = prev.wifeAsset;
+            husbandTotal = prev.husbandAsset;
+          } else {
+            const wifeAccounts = accounts.filter((a: any) => a.owner === 'wife');
+            const husbandAccounts = accounts.filter((a: any) => a.owner === 'husband');
+            totalAsset = calcHoldings(accounts, prices) + otherAssets.reduce((s: number, a: any) => s + a.amount, 0);
+            wifeTotal = calcHoldings(wifeAccounts, prices) + otherAssets.filter((a: any) => a.owner === 'wife').reduce((s: number, a: any) => s + a.amount, 0);
+            husbandTotal = calcHoldings(husbandAccounts, prices) + otherAssets.filter((a: any) => a.owner === 'husband').reduce((s: number, a: any) => s + a.amount, 0);
+          }
 
           existing.push({ date, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal, assetChange: 0, changeRate: 0 });
+          allSnaps.push({ date, totalAsset, wifeAsset: wifeTotal, husbandAsset: husbandTotal });
+          allSnaps.sort((a: any, b: any) => b.date.localeCompare(a.date));
           filled.push({ date, totalAsset: Math.round(totalAsset) });
         }
 
