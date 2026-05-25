@@ -843,6 +843,21 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         const targetDate = body.date || today;
         const content = await generateDailyReport(env, targetDate, body.snapshots);
         await saveDailyReport(env, targetDate, content);
+        // 프론트에서 보낸 live 스냅샷으로 KV도 동기화 (TXT와 KV 값 일치)
+        if (body.snapshots && body.snapshots.length > 0) {
+          const liveSnap = body.snapshots.find((s: any) => s.date === targetDate);
+          if (liveSnap) {
+            const existing: any[] = JSON.parse(await env.KV.get('snapshots') || '[]');
+            const idx = existing.findIndex((s: any) => s.date === targetDate);
+            if (idx >= 0) existing[idx] = liveSnap;
+            else existing.push(liveSnap);
+            const sorted = existing
+              .filter((s: any) => s && s.date)
+              .sort((a: any, b: any) => b.date.localeCompare(a.date))
+              .slice(0, 365);
+            await env.KV.put('snapshots', JSON.stringify(sorted));
+          }
+        }
         return json({ ok: true, date: targetDate });
       } catch (e) {
         return json({ error: String(e) }, 500);
