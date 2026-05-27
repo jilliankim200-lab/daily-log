@@ -119,6 +119,11 @@
           target: 'https://asset-dashboard-api.jilliankim200.workers.dev',
           changeOrigin: true,
         },
+        '/naver-stock': {
+          target: 'https://m.stock.naver.com',
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/naver-stock/, '/api/stock'),
+        },
       },
     },
   });

@@ -1350,7 +1350,8 @@ function GuideModal({ onClose }: { onClose: () => void }) {
             <div>① 동일 종목이 여러 계좌에 있으면 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>절세 우선순위 낮은 계좌에서 매도</span></div>
             <div style={{ paddingLeft: 14, color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', lineHeight: 1.8 }}>IRP &gt; 퇴직연금 &gt; 연금저축 &gt; ISA &gt; 일반/CMA</div>
             <div>② 매도 현금은 <span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>같은 계좌 유지 종목에 목표 비중 기반 재배분</span> (계좌 간 이동 없음)</div>
-            <div>③ <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)</div>
+            <div>③ <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)<br />
+              <span style={{ paddingLeft: 14, color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', lineHeight: 1.8, display: 'block' }}>단, <b>MA60 이탈</b> 시에는 예외 — 추세 붕괴 가능성으로 매도 권유로 전환</span></div>
             <div>④ 퇴직/IRP는 매도 후 안전자산(채권+금) 비율이 <span style={{ fontWeight: 600 }}>30~35%</span> 유지되는지 별도 체크</div>
           </div>
 
@@ -1807,9 +1808,9 @@ export function OptimalGuide() {
     }
     if (Object.keys(signals).length === 0) return rawAccountPlans;
     // 필터 ON: 기술적 분석 기반 매도 필터
-    return rawAccountPlans.map(plan => ({
-      ...plan,
-      sells: plan.sells.flatMap(s => {
+    return rawAccountPlans.map(plan => {
+      // 기존 sells: sellEngine 통과 여부 판단
+      const filteredSells = plan.sells.flatMap(s => {
         if (!s.h.ticker || !signals[s.h.ticker]) return [s];
         const sig = signals[s.h.ticker];
         const decision = getSellDecision(
@@ -1823,10 +1824,25 @@ export function OptimalGuide() {
           sellConfig,
         );
         if (decision.action === 'hold') return [];
-        // 원래 이유(중복 제거 등)는 유지하고, 타이밍 신호는 부가 설명으로 추가
         return [{ ...s, reasonDetail: `타이밍 신호: ${decision.reason}` }];
-      }),
-    }));
+      });
+
+      // ★유지(40%↑ 보호) 종목 중 MA60 이탈 시 → 예외의 예외: sells로 이동
+      const ma60BreakSells: SellItem[] = [];
+      const safeKeeps = plan.keeps.filter(k => {
+        if (!k.isHighReturn || !k.h.ticker) return true;
+        const sig = signals[k.h.ticker];
+        if (!sig || sig.currentPrice >= sig.ma60) return true;
+        ma60BreakSells.push({
+          h: k.h, val: k.val, cls: k.cls, ret: k.ret,
+          reason: 'MA60 이탈 — 40%↑ 보호 예외',
+          reasonDetail: `수익률 +${k.ret?.toFixed(1)}%이나 현재가(${sig.currentPrice.toLocaleString()})가 MA60(${sig.ma60.toLocaleString()}) 이탈 → 추세 붕괴 가능성, 매도 검토`,
+        });
+        return false;
+      });
+
+      return { ...plan, sells: [...filteredSells, ...ma60BreakSells], keeps: safeKeeps };
+    });
   }, [rawAccountPlans, signals, sellConfig, sellEngineEnabled, changeRates, prices]);
 
   // 현재 월 배당금 (전 계좌 전 종목)

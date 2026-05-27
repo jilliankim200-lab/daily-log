@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>주식 가치 평가 — PBR · PER 분석</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #FFFFFF;  --bg-secondary: #F4F5F7; --bg-tertiary: #EAEBEE;
+      --bg-page: #F4F5F7;     --text-primary: #191F28; --text-secondary: #425870;
+      --text-tertiary: #8B95A1;
+      --accent-blue: #3182F6; --accent-blue-hover: #1B64DA;
+      --accent-blue-bg: #E8F3FF; --accent-blue-fg: #FFFFFF;
+      --color-profit: #F07178; --color-profit-bg: #FFF0F0;
+      --color-loss: #3182F6;  --color-loss-bg: #E8F3FF;
+      --color-warning: #FF9500; --color-warning-bg: #FFF4E5;
+      --color-success: #30C85E; --color-success-bg: #EDFBF2;
+      --border-primary: #E5E8EB; --border-secondary: #F2F3F5;
+      --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+      --text-xs: 12px; --text-sm: 13px; --text-base: 15px;
+      --text-lg: 17px; --text-xl: 20px; --text-2xl: 24px; --text-3xl: 28px;
+    }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-page); color: var(--text-primary);
+      line-height: 1.5; letter-spacing: -0.02em; -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── 전체 레이아웃 ─── */
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    /* ─── 사이드바 — 우측 sticky ─── */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--bg-primary);
+      border-left: 1px solid var(--border-primary);
+      display: flex; flex-direction: column;
+      position: sticky; top: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--border-secondary);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .sidebar-title {
+      font-size: 11px; font-weight: 700; color: var(--text-secondary);
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .sb-add-btn {
+      padding: 4px 10px; background: var(--accent-blue-bg); color: var(--accent-blue);
+      border: none; border-radius: 6px; font-size: var(--text-xs); font-weight: 700;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 3px;
+      transition: background 0.15s;
+    }
+    .sb-add-btn:hover { background: #d0e8ff; }
+
+    .sb-add-form {
+      padding: 10px 12px; border-bottom: 1px solid var(--border-secondary);
+      display: none; gap: 6px;
+    }
+    .sb-add-form.open { display: flex; }
+    .sb-add-input {
+      flex: 1; padding: 7px 10px; font-size: var(--text-sm); font-family: inherit;
+      background: var(--bg-secondary); border: 1px solid transparent;
+      border-radius: var(--radius-sm); outline: none; transition: all 0.15s;
+    }
+    .sb-add-input:focus { border-color: var(--accent-blue); background: white; }
+    .sb-confirm-btn {
+      padding: 7px 12px; background: var(--accent-blue); color: white;
+      border: none; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 700;
+      font-family: inherit; cursor: pointer; transition: background 0.15s;
+    }
+    .sb-confirm-btn:hover { background: var(--accent-blue-hover); }
+
+    .portfolio-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+    .sb-empty {
+      padding: 28px 14px; text-align: center;
+      color: var(--text-tertiary); font-size: var(--text-xs); line-height: 1.8;
+    }
+    .sb-empty .material-icons { font-size: 28px; opacity: 0.3; display: block; margin-bottom: 8px; }
+
+    .sb-item {
+      padding: 8px 10px; cursor: pointer;
+      transition: background 0.1s; display: flex; align-items: center; gap: 6px;
+    }
+    .sb-item:hover { background: var(--bg-secondary); }
+    .sb-item.active { background: var(--accent-blue-bg); }
+    .sb-item-info { flex: 1; min-width: 0; }
+    .sb-name {
+      font-size: var(--text-xs); font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sb-item.active .sb-name { color: var(--accent-blue); }
+    .sb-code { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; }
+    .sb-del {
+      background: none; border: none; cursor: pointer; color: var(--text-tertiary);
+      font-size: 15px; padding: 2px 4px; border-radius: 4px;
+      opacity: 0; flex-shrink: 0; line-height: 1; transition: all 0.1s;
+    }
+    .sb-item:hover .sb-del { opacity: 1; }
+    .sb-del:hover { background: var(--color-profit-bg); color: var(--color-profit); }
+
+    /* ─── 메인 콘텐츠 ─── */
+    .main-content { flex: 1; min-width: 0; background: var(--bg-page); }
+    .page { max-width: 800px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    /* ─── 페이지 헤더 ─── */
+    .page-header { margin-bottom: 24px; }
+    .page-header h1 { font-size: var(--text-2xl); font-weight: 700; margin-bottom: 4px; }
+    .page-header p  { font-size: var(--text-sm); color: var(--text-tertiary); }
+
+    /* ─── 카드 ─── */
+    .card { background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: var(--text-base); font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-secondary); display: flex; align-items: center; gap: 8px; }
+    .card-title .material-icons { font-size: 18px; color: var(--accent-blue); }
+
+    /* ─── 입력 ─── */
+    .input-row { display: flex; gap: 10px; align-items: flex-end; }
+    .input-row .field { flex: 1; }
+    .field label { display: block; font-size: var(--text-xs); font-weight: 600; color: var(--text-tertiary); margin-bottom: 6px; }
+    .field input {
+      width: 100%; padding: 11px 14px; font-size: var(--text-base); font-family: inherit;
+      color: var(--text-primary); background: var(--bg-secondary);
+      border: 1px solid transparent; border-radius: var(--radius-sm); outline: none; transition: all 0.15s;
+    }
+    .field input:focus { border-color: var(--accent-blue); background: var(--bg-primary); }
+    .fetch-btn {
+      padding: 11px 20px; background: var(--accent-blue); color: var(--accent-blue-fg);
+      border: none; border-radius: var(--radius-sm); font-size: var(--text-base); font-weight: 700;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
+    }
+    .fetch-btn:hover { background: var(--accent-blue-hover); }
+    .fetch-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ─── 상태바 ─── */
+    .status-bar { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: var(--text-sm); display: none; align-items: center; gap: 8px; }
+    .status-bar.loading { display: flex; background: var(--accent-blue-bg); color: var(--accent-blue); }
+    .status-bar.error   { display: flex; background: var(--color-profit-bg); color: var(--color-profit); }
+    .status-bar.success { display: flex; background: var(--color-success-bg); color: var(--color-success); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { animation: spin 1s linear infinite; display: inline-block; }
+
+    /* ─── 종목명 바 ─── */
+    .stock-name-bar {
+      display: none; align-items: center; gap: 12px;
+      padding: 16px 20px; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: 16px;
+    }
+    .stock-name-bar.show { display: flex; }
+    .snb-name { font-size: var(--text-xl); font-weight: 700; }
+    .snb-price { font-size: var(--text-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .snb-change { font-size: var(--text-sm); font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+    .snb-sector { font-size: var(--text-xs); color: var(--text-tertiary); margin-left: auto; }
+
+    /* ─── 지표 그리드 ─── */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .metric-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 16px; }
+    .metric-card.accent { background: var(--accent-blue-bg); }
+    .m-label { font-size: var(--text-xs); color: var(--text-tertiary); font-weight: 600; margin-bottom: 4px; }
+    .m-value { font-size: var(--text-2xl); font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+    .m-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: var(--text-xs); font-weight: 700; padding: 3px 8px; border-radius: 20px;
+    }
+    .badge-cheap   { background: var(--color-loss-bg); color: var(--color-loss); }
+    .badge-fair    { background: var(--bg-tertiary);   color: var(--text-secondary); }
+    .badge-caution { background: var(--color-warning-bg); color: var(--color-warning); }
+    .badge-high    { background: var(--color-profit-bg);  color: var(--color-profit); }
+    .badge-na      { background: var(--bg-tertiary); color: var(--text-tertiary); }
+    .m-desc { font-size: var(--text-xs); color: var(--text-tertiary); margin-top: 6px; line-height: 1.5; }
+
+    /* ─── 52주 범위 ─── */
+    .range-wrap { margin-top: 6px; }
+    .range-bar { height: 6px; background: var(--bg-tertiary); border-radius: 3px; position: relative; margin: 6px 0; }
+    .range-fill { height: 100%; background: linear-gradient(to right, var(--color-loss), var(--color-profit)); border-radius: 3px; }
+    .range-dot {
+      width: 12px; height: 12px; background: var(--text-primary); border-radius: 50%;
+      border: 2px solid white; position: absolute; top: 50%; transform: translateY(-50%);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .range-labels { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--text-tertiary); }
+
+    /* ─── 비교 테이블 ─── */
+    .compare-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .compare-input { flex: 1; padding: 9px 12px; font-size: var(--text-sm); font-family: inherit; color: var(--text-primary); background: var(--bg-secondary); border: 1px solid transparent; border-radius: var(--radius-sm); outline: none; transition: all 0.15s; }
+    .compare-input:focus { border-color: var(--accent-blue); background: var(--bg-primary); }
+    .add-btn { padding: 9px 14px; background: var(--bg-tertiary); color: var(--text-primary); border: none; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .add-btn:hover { background: var(--border-primary); }
+    .compare-table { width: 100%; border-collapse: collapse; }
+    .compare-table th { padding: 10px 12px; font-size: var(--text-xs); font-weight: 600; color: var(--text-tertiary); border-bottom: 1px solid var(--border-primary); text-align: left; }
+    .compare-table td { padding: 12px 12px; font-size: var(--text-sm); border-bottom: 1px solid var(--border-secondary); font-variant-numeric: tabular-nums; }
+    .compare-table tbody tr:last-child td { border-bottom: none; }
+    .compare-table tbody tr:hover td { background: var(--bg-secondary); }
+    .compare-table .td-name { font-weight: 600; }
+    .cmp-del { background: none; border: none; cursor: pointer; color: var(--text-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 16px; }
+    .cmp-del:hover { background: var(--color-profit-bg); color: var(--color-profit); }
+
+    /* ─── 가이드 ─── */
+    .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .guide-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px 16px; }
+    .guide-item h4 { font-size: var(--text-sm); font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .guide-item ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .guide-item li { font-size: var(--text-xs); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-blue   { background: var(--color-loss); }
+    .dot-green  { background: var(--color-success); }
+    .dot-yellow { background: var(--color-warning); }
+    .dot-red    { background: var(--color-profit); }
+
+    /* ─── 빈 상태 ─── */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-tertiary); }
+    .empty-state .material-icons { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-state p { font-size: var(--text-sm); }
+
+    .result-section { display: none; }
+    .result-section.show { display: block; }
+
+    /* ─── 반응형 ─── */
+    @media(max-width: 768px) {
+      .sidebar { display: none; }
+      .guide-grid { grid-template-columns: 1fr; }
+      .input-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- ====== 좌측: 보유 종목 사이드바 ====== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">보유 종목</span>
+      <button class="sb-add-btn" onclick="toggleAddForm()">
+        <span class="material-icons" style="font-size:13px">add</span> 추가
+      </button>
+    </div>
+    <div class="sb-add-form" id="sbAddForm">
+      <input class="sb-add-input" id="sbInput" placeholder="종목코드 (예: 005930)"
+             onkeydown="if(event.key==='Enter') sbConfirm(); if(event.key==='Escape') toggleAddForm()">
+      <button class="sb-confirm-btn" onclick="sbConfirm()">확인</button>
+    </div>
+    <div class="portfolio-list" id="portfolioList">
+      <div class="sb-empty">
+        <span class="material-icons">bookmark_border</span>
+        종목을 추가하면<br>여기에 목록이 표시됩니다
+      </div>
+    </div>
+  </aside>
+
+  <!-- ====== 우측: 분석 메인 ====== -->
+  <main class="main-content">
+  <div class="page">
+
+    <div class="page-header">
+      <h1>주식 가치 평가</h1>
+      <p>PBR · PER 핵심 지표로 저평가 여부를 빠르게 확인합니다</p>
+    </div>
+
+    <!-- 입력 -->
+    <div class="card">
+      <div class="card-title">
+        <span class="material-icons">search</span>
+        종목 조회
+      </div>
+      <div class="input-row">
+        <div class="field">
+          <label>종목 티커 (국내: 6자리, 해외: AAPL 등)</label>
+          <input type="text" id="ticker" placeholder="예: 005930  또는  AAPL" style="text-transform:uppercase"
+                 onkeydown="if(event.key==='Enter') fetchValuation()">
+        </div>
+        <button class="fetch-btn" id="fetchBtn" onclick="fetchValuation()">
+          <span class="material-icons">analytics</span>
+          분석
+        </button>
+      </div>
+      <div id="statusBar" class="status-bar"></div>
+    </div>
+
+    <!-- 결과 -->
+    <div id="resultSection" class="result-section">
+
+      <div id="stockNameBar" class="stock-name-bar">
+        <div>
+          <div class="snb-name" id="snbName">-</div>
+          <div style="font-size:var(--text-xs);color:var(--text-tertiary)" id="snbTicker">-</div>
+        </div>
+        <div>
+          <div class="snb-price" id="snbPrice">-</div>
+          <span class="snb-change" id="snbChange">-</span>
+        </div>
+        <div class="snb-sector" id="snbSector"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="material-icons">bar_chart</span>
+          핵심 가치 지표
+        </div>
+        <div class="metric-grid" id="metricGrid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="material-icons">show_chart</span>
+          52주 가격 범위
+        </div>
+        <div id="rangeSection"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="material-icons">compare_arrows</span>
+          유사 종목 비교
+        </div>
+        <div class="compare-input-row">
+          <input class="compare-input" id="compareInput" placeholder="비교할 티커 입력 (예: 000660)" style="text-transform:uppercase"
+                 onkeydown="if(event.key==='Enter') addCompare()">
+          <button class="add-btn" onclick="addCompare()">
+            <span class="material-icons" style="font-size:16px">add</span> 추가
+          </button>
+        </div>
+        <div id="compareTableWrap">
+          <div class="empty-state">
+            <span class="material-icons">table_chart</span>
+            <p>비교할 종목 티커를 입력하세요</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 지표 해석 가이드 -->
+    <div class="card">
+      <div class="card-title">
+        <span class="material-icons">school</span>
+        지표 해석 가이드
+      </div>
+      <div class="guide-grid">
+        <div class="guide-item">
+          <h4><span class="material-icons" style="font-size:16px;color:var(--accent-blue)">account_balance</span> PBR (주가순자산비율)</h4>
+          <ul>
+            <li><span class="dot dot-blue"></span> 1.0 미만 — 자산가치 이하, 저평가 가능</li>
+            <li><span class="dot dot-green"></span> 1.0 ~ 2.0 — 적정 수준</li>
+            <li><span class="dot dot-yellow"></span> 2.0 ~ 4.0 — 프리미엄, 주의</li>
+            <li><span class="dot dot-red"></span> 4.0 초과 — 고평가 가능성</li>
+          </ul>
+        </div>
+        <div class="guide-item">
+          <h4><span class="material-icons" style="font-size:16px;color:var(--accent-blue)">trending_up</span> PER (주가수익비율)</h4>
+          <ul>
+            <li><span class="dot dot-blue"></span> 10 미만 — 저평가 가능</li>
+            <li><span class="dot dot-green"></span> 10 ~ 20 — 적정 수준</li>
+            <li><span class="dot dot-yellow"></span> 20 ~ 30 — 성장 프리미엄</li>
+            <li><span class="dot dot-red"></span> 30 초과 — 고평가 주의</li>
+          </ul>
+        </div>
+        <div class="guide-item">
+          <h4><span class="material-icons" style="font-size:16px;color:var(--accent-blue)">speed</span> PEG (성장 대비 PER)</h4>
+          <ul>
+            <li><span class="dot dot-blue"></span> 1.0 미만 — 성장 대비 저평가</li>
+            <li><span class="dot dot-green"></span> 1.0 ~ 2.0 — 적정</li>
+            <li><span class="dot dot-red"></span> 2.0 초과 — 성장 대비 고평가</li>
+          </ul>
+        </div>
+        <div class="guide-item">
+          <h4><span class="material-icons" style="font-size:16px;color:var(--accent-blue)">info</span> 활용 원칙</h4>
+          <ul>
+            <li><span class="dot dot-green"></span> 낮은 숫자 = 상대적으로 저렴</li>
+            <li><span class="dot dot-green"></span> 유사 업종 끼리 비교해야 의미 있음</li>
+            <li><span class="dot dot-yellow"></span> 단독 지표보다 복합 판단 권장</li>
+            <li><span class="dot dot-yellow"></span> 업종마다 적정 PER 범위 다름</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  </main>
+
+</div>
+
+<script>
+  const compareList = [];
+  let activeCode = '';
+
+  // ─── 상태바 ───
+  function showStatus(type, icon, msg) {
+    const el = document.getElementById('statusBar');
+    el.className = `status-bar ${type}`;
+    el.innerHTML = `<span class="material-icons${type==='loading'?' spinning':''}" style="font-size:16px">${icon}</span> ${msg}`;
+  }
+
+  // ─── 포트폴리오 (localStorage) ───
+  const STORAGE_KEY = 'valuationPortfolio';
+
+  function loadPortfolio() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+  }
+  function savePortfolio(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+  function addToPortfolio(code, name) {
+    const list = loadPortfolio();
+    if (!list.find(i => i.code === code)) {
+      list.push({ code, name });
+      savePortfolio(list);
+    }
+    renderPortfolio(code);
+  }
+  function removeFromPortfolio(e, code) {
+    e.stopPropagation();
+    const list = loadPortfolio().filter(i => i.code !== code);
+    savePortfolio(list);
+    if (activeCode === code) activeCode = '';
+    renderPortfolio(activeCode);
+  }
+  function renderPortfolio(highlightCode) {
+    const list = loadPortfolio();
+    const wrap = document.getElementById('portfolioList');
+    if (list.length === 0) {
+      wrap.innerHTML = `<div class="sb-empty"><span class="material-icons">bookmark_border</span>종목을 추가하면<br>여기에 목록이 표시됩니다</div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(({ code, name }) => `
+      <div class="sb-item${code === highlightCode ? ' active' : ''}" onclick="loadFromPortfolio('${code}')">
+        <div class="sb-item-info">
+          <div class="sb-name">${name}</div>
+          <div class="sb-code">${code}</div>
+        </div>
+        <button class="sb-del" onclick="removeFromPortfolio(event,'${code}')" title="삭제">×</button>
+      </div>`).join('');
+  }
+
+  // ─── 사이드바 추가 폼 ───
+  function toggleAddForm() {
+    const form = document.getElementById('sbAddForm');
+    const isOpen = form.classList.toggle('open');
+    if (isOpen) { document.getElementById('sbInput').focus(); document.getElementById('sbInput').value = ''; }
+  }
+  async function sbConfirm() {
+    const raw = document.getElementById('sbInput').value.trim();
+    if (!raw) return;
+    const code = raw.match(/^\d{6}$/) ? raw : raw.toUpperCase();
+    toggleAddForm();
+    // 종목명 가져와서 저장
+    try {
+      const basic = await tryFetchProxy(`https://m.stock.naver.com/api/stock/${code}/basic`);
+      addToPortfolio(code, basic.stockName || code);
+    } catch {
+      addToPortfolio(code, code); // 이름 모를 경우 코드로 저장
+    }
+  }
+  function loadFromPortfolio(code) {
+    activeCode = code;
+    document.getElementById('ticker').value = code;
+    renderPortfolio(code);
+    fetchValuation();
+  }
+
+  // ─── CORS 프록시 (네이버 금융용) ───
+  async function tryFetchProxy(url) {
+    const proxies = [
+      async u => {
+        const local = u.replace('https://m.stock.naver.com/api/stock/', '/naver-stock/');
+        if (local === u) throw new Error('not naver');
+        const r = await fetch(local);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      },
+      async u => {
+        const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
+        const w = await r.json();
+        if (!w.contents) throw new Error('empty');
+        return JSON.parse(w.contents);
+      },
+      async u => {
+        const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      },
+    ];
+    for (const proxy of proxies) {
+      try { return await proxy(url); } catch(e) { continue; }
+    }
+    throw new Error('조회 실패');
+  }
+
+  // ─── 직접 + 프록시 (Yahoo Finance 해외주식용) ───
+  async function tryFetch(url) {
+    const attempts = [
+      u => fetch(u).then(r => r.json()),
+      async u => { const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`); return r.json(); },
+      async u => {
+        const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
+        const w = await r.json(); return JSON.parse(w.contents);
+      },
+    ];
+    for (const a of attempts) {
+      try { const j = await a(url); if (j) return j; } catch(e) { continue; }
+    }
+    throw new Error('모든 경로에서 조회 실패');
+  }
+
+  // ─── 네이버 금융 (국내 6자리) ───
+  async function fetchNaverQuote(code) {
+    const [basic, integ] = await Promise.all([
+      tryFetchProxy(`https://m.stock.naver.com/api/stock/${code}/basic`),
+      tryFetchProxy(`https://m.stock.naver.com/api/stock/${code}/integration`),
+    ]);
+    const info = {};
+    for (const item of (integ.totalInfos || [])) info[item.code] = item.value;
+
+    const pn = s => {
+      if (!s) return null;
+      const n = parseFloat(s.replace(/,/g, '').replace(/[^0-9.-]/g, ''));
+      return isNaN(n) ? null : n;
+    };
+
+    const priceRaw = basic.closePrice ? parseInt(basic.closePrice.replace(/,/g, ''), 10) : null;
+    const changeDir = basic.compareToPreviousPrice?.code;
+    const fluctRatio = parseFloat(basic.fluctuationsRatio || '0');
+    const changeFrac = (changeDir === '4' ? -fluctRatio : fluctRatio) / 100;
+    const h52 = info.highPriceOf52Weeks ? parseInt(info.highPriceOf52Weeks.replace(/,/g, ''), 10) : null;
+    const l52 = info.lowPriceOf52Weeks  ? parseInt(info.lowPriceOf52Weeks.replace(/,/g, ''), 10)  : null;
+
+    const n = v => ({ raw: v });
+    const base = {
+      price: {
+        longName: basic.stockName, shortName: basic.stockName,
+        regularMarketPrice: n(priceRaw),
+        regularMarketChangePercent: n(changeFrac),
+        marketCap: n(null), marketCapStr: info.marketValue || null,
+        sector: basic.stockExchangeName || null,
+      },
+      summaryDetail: {
+        fiftyTwoWeekHigh: n(h52),
+        fiftyTwoWeekLow:  n(l52),
+      },
+    };
+
+    // ETF 감지: nav 필드 존재 여부로 판단
+    if (info.nav) {
+      return {
+        ...base,
+        isEtf: true,
+        etf: {
+          nav:              pn(info.nav),
+          baseIndex:        info.etfBaseIdx  || null,
+          returnOneMonth:   info.oneMonthEarnRate   || null,
+          returnThreeMonth: info.threeMonthEarnRate  || null,
+          returnSixMonth:   info.sixMonthEarnRate    || null,
+          returnOneYear:    info.oneYearEarnRate      || null,
+          fundPay:          info.fundPay     || null,
+          isDividend:       info.isDividend === 'Y',
+        },
+        defaultKeyStatistics: { priceToBook:n(null), trailingPE:n(null), forwardPE:n(null), pegRatio:n(null) },
+        summaryDetail: { ...base.summaryDetail, dividendYield:n(null), trailingPE:n(null) },
+        financialData: { returnOnEquity: n(null) },
+      };
+    }
+
+    // 개별 주식
+    const divFrac = pn(info.dividendYieldRatio) != null ? pn(info.dividendYieldRatio) / 100 : null;
+    return {
+      ...base,
+      isEtf: false,
+      defaultKeyStatistics: {
+        priceToBook: n(pn(info.pbr)),
+        trailingPE:  n(pn(info.per)),
+        forwardPE:   n(pn(info.cnsPer)),
+        pegRatio:    n(null),
+      },
+      summaryDetail: {
+        ...base.summaryDetail,
+        dividendYield: n(divFrac),
+        trailingPE:    n(pn(info.per)),
+      },
+      financialData: { returnOnEquity: n(null) },
+    };
+  }
+
+  // ─── Yahoo Finance (해외주식) ───
+  async function fetchYahooQuote(ticker) {
+    const url = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
+    const json = await tryFetch(url);
+    const results = json?.quoteResponse?.result;
+    if (!results?.length) throw new Error(`${ticker} 데이터 없음 — 티커를 확인해주세요`);
+    const q = results[0];
+    const n = v => v != null ? { raw: v } : { raw: null };
+    return {
+      price: {
+        longName: q.longName, shortName: q.shortName,
+        regularMarketPrice: n(q.regularMarketPrice),
+        regularMarketChangePercent: n(q.regularMarketChangePercent != null ? q.regularMarketChangePercent / 100 : null),
+        marketCap: n(q.marketCap), marketCapStr: null, sector: q.sector,
+      },
+      defaultKeyStatistics: {
+        priceToBook: n(q.priceToBook), trailingPE: n(q.trailingPE),
+        forwardPE:   n(q.forwardPE),   pegRatio:   n(q.pegRatio),
+      },
+      summaryDetail: {
+        dividendYield:    n(q.dividendYield),
+        fiftyTwoWeekHigh: n(q.fiftyTwoWeekHigh),
+        fiftyTwoWeekLow:  n(q.fiftyTwoWeekLow),
+        trailingPE:       n(q.trailingPE),
+      },
+      financialData: { returnOnEquity: n(q.returnOnEquity) },
+    };
+  }
+
+  // ─── 라우팅: 국내 6자리 → 네이버, 나머지 → Yahoo ───
+  async function fetchQuote(ticker) {
+    if (/^\d{6}(\.(KS|KQ))?$/i.test(ticker)) {
+      const code = ticker.replace(/\.(KS|KQ)$/i, '');
+      return fetchNaverQuote(code);
+    }
+    return fetchYahooQuote(ticker);
+  }
+
+  // ─── 포맷 유틸 ───
+  function fmt(v, digits=2) {
+    if (v == null || isNaN(v)) return 'N/A';
+    return v.toFixed(digits);
+  }
+  function fmtKRW(v) {
+    if (v == null) return 'N/A';
+    if (v >= 1e12) return (v/1e12).toFixed(1) + '조';
+    if (v >= 1e8)  return (v/1e8).toFixed(0) + '억';
+    return v.toLocaleString();
+  }
+
+  function getBadge(metric, value) {
+    if (value == null || isNaN(value)) return '<span class="m-badge badge-na">데이터 없음</span>';
+    const rules = {
+      pbr:  [{v:1,c:'badge-cheap',l:'저평가 가능'},{v:2,c:'badge-fair',l:'적정'},{v:4,c:'badge-caution',l:'주의'},{v:Infinity,c:'badge-high',l:'고평가'}],
+      per:  [{v:10,c:'badge-cheap',l:'저평가 가능'},{v:20,c:'badge-fair',l:'적정'},{v:30,c:'badge-caution',l:'성장 프리미엄'},{v:Infinity,c:'badge-high',l:'고평가 주의'}],
+      peg:  [{v:1,c:'badge-cheap',l:'성장 대비 저평가'},{v:2,c:'badge-fair',l:'적정'},{v:Infinity,c:'badge-high',l:'성장 대비 고평가'}],
+    };
+    const r = rules[metric]; if (!r) return '';
+    const found = r.find(rule => value < rule.v); if (!found) return '';
+    return `<span class="m-badge ${found.c}">${found.l}</span>`;
+  }
+
+  function getColor(metric, value) {
+    if (value == null || isNaN(value)) return 'var(--text-tertiary)';
+    const t = { pbr:[1,2,4], per:[10,20,30], peg:[1,2] }[metric];
+    if (!t) return 'var(--text-primary)';
+    if (value < t[0]) return 'var(--color-loss)';
+    if (value < t[1]) return 'var(--color-success)';
+    if (t[2] && value < t[2]) return 'var(--color-warning)';
+    return 'var(--color-profit)';
+  }
+
+  // ─── 지표 렌더링 ───
+  function renderMetrics(d) {
+    const grid = document.getElementById('metricGrid');
+    const cardTitle = grid.closest('.card').querySelector('.card-title');
+
+    if (d.isEtf && d.etf) {
+      // ETF 전용 지표
+      cardTitle.innerHTML = `<span class="material-icons">bar_chart</span> ETF 성과 지표`;
+      const e = d.etf;
+      const rateColor = s => {
+        if (!s) return 'var(--text-tertiary)';
+        return s.startsWith('+') ? 'var(--color-profit)' : s.startsWith('-') ? 'var(--color-loss)' : 'var(--text-primary)';
+      };
+      const rateCard = (label, val, desc) => `
+        <div class="metric-card">
+          <div class="m-label">${label}</div>
+          <div class="m-value" style="color:${rateColor(val)};font-size:var(--text-xl)">${val || 'N/A'}</div>
+          <div class="m-desc">${desc}</div>
+        </div>`;
+
+      grid.innerHTML = `
+        <div class="metric-card" style="grid-column:span 2">
+          <div class="m-label">추종 지수</div>
+          <div style="font-size:var(--text-lg);font-weight:700;margin-bottom:4px">${e.baseIndex || 'N/A'}</div>
+          <div class="m-desc">NAV: ${e.nav ? e.nav.toLocaleString()+'원' : 'N/A'} · 분배율: ${e.fundPay || 'N/A'} · 배당: ${e.isDividend ? '지급' : '미지급'}</div>
+        </div>
+        ${rateCard('1개월 수익률', e.returnOneMonth, '최근 1개월 기준 수익률')}
+        ${rateCard('3개월 수익률', e.returnThreeMonth, '최근 3개월 기준 수익률')}
+        ${rateCard('6개월 수익률', e.returnSixMonth, '최근 6개월 기준 수익률')}
+        ${rateCard('1년 수익률', e.returnOneYear, '최근 1년 기준 수익률')}
+      `;
+      return;
+    }
+
+    // 개별 주식 지표
+    cardTitle.innerHTML = `<span class="material-icons">bar_chart</span> 핵심 가치 지표`;
+    const ks = d.defaultKeyStatistics || {}, sd = d.summaryDetail || {};
+    const pr = d.price || {}, fd = d.financialData || {};
+    const pbr = ks.priceToBook?.raw,  per = ks.trailingPE?.raw ?? sd.trailingPE?.raw;
+    const fpe = ks.forwardPE?.raw,    peg = ks.pegRatio?.raw;
+    const div = sd.dividendYield?.raw, mkt = pr.marketCap?.raw;
+    const roe = fd.returnOnEquity?.raw;
+
+    const metrics = [
+      { id:'pbr', label:'PBR (주가순자산비율)', value:pbr,  desc:'자산 대비 주가 수준. 1 미만 = 장부가 이하', metric:'pbr' },
+      { id:'per', label:'PER (주가수익비율)',   value:per,  desc:'순이익 대비 주가. 낮을수록 이익 대비 저렴', metric:'per' },
+      { id:'fpe', label:'Forward PER (예상)',   value:fpe,  desc:'향후 12개월 예상 이익 기준 PER', metric:'per' },
+      { id:'peg', label:'PEG (성장 대비 PER)',  value:peg,  desc:'PER ÷ 성장률. 1 미만이면 성장 대비 저평가', metric:'peg' },
+      { id:'roe', label:'ROE (자기자본이익률)', value:roe ? roe*100 : null, unit:'%', desc:'자기자본으로 얼마나 이익을 냈는지', metric:null },
+      { id:'div', label:'배당수익률', value:div ? div*100 : null, unit:'%', desc:'주가 대비 연간 배당금 비율', metric:null },
+      { id:'mkt', label:'시가총액', raw:mkt, rawStr:pr.marketCapStr, desc:'', metric:null, isMkt:true },
+    ];
+
+    grid.innerHTML = metrics.map(m => {
+      let displayVal, color;
+      if (m.isMkt) {
+        displayVal = m.rawStr || fmtKRW(m.raw);
+        color = 'var(--text-primary)';
+      } else {
+        displayVal = m.value != null && !isNaN(m.value) ? fmt(m.value)+(m.unit||'') : 'N/A';
+        color = m.metric ? getColor(m.metric, m.value) : 'var(--text-primary)';
+      }
+      const badge = m.metric ? getBadge(m.metric, m.value) : '';
+      return `<div class="metric-card">
+        <div class="m-label">${m.label}</div>
+        <div class="m-value" style="color:${color}">${displayVal}</div>
+        ${badge}
+        <div class="m-desc">${m.desc}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ─── 52주 범위 렌더링 ───
+  function renderRange(d) {
+    const sd = d.summaryDetail || {}, pr = d.price || {};
+    const low=sd.fiftyTwoWeekLow?.raw, high=sd.fiftyTwoWeekHigh?.raw, cur=pr.regularMarketPrice?.raw;
+    if (!low||!high||!cur) { document.getElementById('rangeSection').innerHTML='<p style="color:var(--text-tertiary);font-size:var(--text-sm)">52주 데이터 없음</p>'; return; }
+    const pct = Math.min(100,Math.max(0,((cur-low)/(high-low))*100));
+    const fromLow=((cur-low)/low*100).toFixed(1), fromHigh=((cur-high)/high*100).toFixed(1);
+    document.getElementById('rangeSection').innerHTML = `
+      <div class="range-wrap">
+        <div style="display:flex;justify-content:space-between;font-size:var(--text-sm);margin-bottom:4px">
+          <span style="font-weight:700">${cur.toLocaleString()}원</span>
+          <span style="color:var(--text-tertiary);font-size:var(--text-xs)">52주 범위 내 위치: <strong>${pct.toFixed(0)}%</strong></span>
+        </div>
+        <div class="range-bar">
+          <div class="range-fill" style="width:100%"></div>
+          <div class="range-dot" style="left:calc(${pct}% - 6px)"></div>
+        </div>
+        <div class="range-labels">
+          <span>저가 ${low.toLocaleString()}원</span>
+          <span>고가 ${high.toLocaleString()}원</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:10px">
+          <div style="background:var(--color-loss-bg);border-radius:8px;padding:8px 14px;font-size:var(--text-xs)">
+            <span style="color:var(--text-tertiary)">저가 대비</span>
+            <span style="font-weight:700;color:var(--color-profit);margin-left:6px">+${fromLow}%</span>
+          </div>
+          <div style="background:var(--color-profit-bg);border-radius:8px;padding:8px 14px;font-size:var(--text-xs)">
+            <span style="color:var(--text-tertiary)">고가 대비</span>
+            <span style="font-weight:700;color:var(--color-loss);margin-left:6px">${fromHigh}%</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ─── 메인 분석 ───
+  let mainTicker = '', mainData = null;
+
+  async function fetchValuation() {
+    const raw = document.getElementById('ticker').value.trim();
+    if (!raw) return;
+    const ticker = raw.match(/^\d{6}$/) ? raw+'.KS' : raw.toUpperCase();
+    document.getElementById('fetchBtn').disabled = true;
+    document.getElementById('resultSection').className = 'result-section';
+    showStatus('loading','sync',`${ticker} 가치 지표 조회 중...`);
+    try {
+      const data = await fetchQuote(ticker);
+      mainTicker = ticker; mainData = data;
+
+      const pr = data.price || {};
+      const name = pr.longName || pr.shortName || ticker;
+      const price = pr.regularMarketPrice?.raw;
+      const changePct = pr.regularMarketChangePercent?.raw;
+
+      document.getElementById('snbName').textContent = name;
+      document.getElementById('snbTicker').textContent = ticker;
+      document.getElementById('snbPrice').textContent = price ? price.toLocaleString()+'원' : '-';
+      const chEl = document.getElementById('snbChange');
+      if (changePct != null) {
+        const up = changePct >= 0;
+        chEl.textContent = (up?'+':'')+(changePct*100).toFixed(2)+'%';
+        chEl.style.background = up ? 'var(--color-profit-bg)' : 'var(--color-loss-bg)';
+        chEl.style.color = up ? 'var(--color-profit)' : 'var(--color-loss)';
+      }
+      document.getElementById('snbSector').textContent = pr.sector || '';
+      document.getElementById('stockNameBar').className = 'stock-name-bar show';
+
+      renderMetrics(data);
+      renderRange(data);
+
+      if (!compareList.find(c=>c.ticker===ticker)) { compareList.unshift({ticker,data}); renderCompare(); }
+
+      document.getElementById('resultSection').className = 'result-section show';
+      showStatus('success','check_circle',`${name} 조회 완료`);
+
+      // 포트폴리오에 자동 추가 (6자리 국내주식만)
+      if (/^\d{6}/.test(ticker)) {
+        const code = ticker.replace(/\.(KS|KQ)$/i, '');
+        activeCode = code;
+        addToPortfolio(code, name);
+      }
+    } catch(e) {
+      showStatus('error','error',`조회 실패: ${e.message}`);
+    }
+    document.getElementById('fetchBtn').disabled = false;
+  }
+
+  // ─── 비교 테이블 ───
+  async function addCompare() {
+    const raw = document.getElementById('compareInput').value.trim();
+    if (!raw) return;
+    const ticker = raw.match(/^\d{6}$/) ? raw+'.KS' : raw.toUpperCase();
+    if (compareList.find(c=>c.ticker===ticker)) { document.getElementById('compareInput').value=''; return; }
+    try {
+      const data = await fetchQuote(ticker);
+      compareList.push({ticker,data}); renderCompare();
+      document.getElementById('compareInput').value='';
+    } catch(e) { alert(`${ticker} 조회 실패`); }
+  }
+  function removeCompare(ticker) {
+    const idx = compareList.findIndex(c=>c.ticker===ticker);
+    if (idx>-1) { compareList.splice(idx,1); renderCompare(); }
+  }
+  function cmpBg(metric,value) {
+    if (value==null||isNaN(value)) return '';
+    const c = getColor(metric,value);
+    const map = {
+      'var(--color-loss)':    'background:var(--color-loss-bg);color:var(--color-loss)',
+      'var(--color-success)': 'background:var(--color-success-bg);color:var(--color-success)',
+      'var(--color-warning)': 'background:var(--color-warning-bg);color:var(--color-warning)',
+      'var(--color-profit)':  'background:var(--color-profit-bg);color:var(--color-profit)',
+    };
+    return map[c]||'';
+  }
+  function renderCompare() {
+    const wrap = document.getElementById('compareTableWrap');
+    if (compareList.length===0) {
+      wrap.innerHTML='<div class="empty-state"><span class="material-icons">table_chart</span><p>비교할 종목 티커를 입력하세요</p></div>'; return;
+    }
+    const rows = compareList.map(({ticker,data})=>{
+      const ks=data.defaultKeyStatistics||{}, sd=data.summaryDetail||{}, pr=data.price||{};
+      const name=pr.shortName||pr.longName||ticker;
+      const pbr=ks.priceToBook?.raw, per=ks.trailingPE?.raw??sd.trailingPE?.raw;
+      const fpe=ks.forwardPE?.raw, peg=ks.pegRatio?.raw;
+      const div=sd.dividendYield?.raw, price=pr.regularMarketPrice?.raw;
+      const isMain=ticker===mainTicker;
+      return `<tr style="${isMain?'font-weight:700;background:var(--accent-blue-bg)':''}">
+        <td class="td-name">${name}<div style="font-size:10px;color:var(--text-tertiary);font-weight:400">${ticker}</div></td>
+        <td>${price?price.toLocaleString():'-'}</td>
+        <td><span style="padding:2px 6px;border-radius:6px;font-size:var(--text-xs);${cmpBg('pbr',pbr)}">${fmt(pbr)}</span></td>
+        <td><span style="padding:2px 6px;border-radius:6px;font-size:var(--text-xs);${cmpBg('per',per)}">${fmt(per)}</span></td>
+        <td><span style="padding:2px 6px;border-radius:6px;font-size:var(--text-xs);${cmpBg('per',fpe)}">${fmt(fpe)}</span></td>
+        <td><span style="padding:2px 6px;border-radius:6px;font-size:var(--text-xs);${cmpBg('peg',peg)}">${fmt(peg)}</span></td>
+        <td>${div?(div*100).toFixed(2)+'%':'N/A'}</td>
+        <td><button class="cmp-del" onclick="removeCompare('${ticker}')">×</button></td>
+      </tr>`;
+    }).join('');
+    wrap.innerHTML=`<table class="compare-table">
+      <thead><tr><th>종목</th><th>현재가</th><th>PBR</th><th>PER</th><th>Forward PER</th><th>PEG</th><th>배당수익률</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // ─── 초기화 ───
+  const DEFAULT_PORTFOLIO = [
+    {code:"005930",name:"삼성전자"},
+    {code:"000660",name:"SK하이닉스"},
+    {code:"058470",name:"리노공업"},
+    {code:"347700",name:"스피어"},
+    {code:"133690",name:"TIGER 미국나스닥100"},
+    {code:"272580",name:"TIGER 단기채권액티브"},
+    {code:"308620",name:"KODEX 미국10년국채선물"},
+    {code:"487230",name:"KODEX 미국AI전력핵심인프라"},
+    {code:"491620",name:"RISE 미국테크100데일리고정커버드콜"},
+    {code:"229200",name:"KODEX 코스닥150"},
+    {code:"498400",name:"KODEX 200타겟위클리커버드콜"},
+    {code:"360200",name:"ACE 미국S&P500"},
+    {code:"448540",name:"ACE 엔비디아채권혼합"},
+    {code:"458250",name:"TIGER 미국30년국채스트립액티브(합성H)"},
+    {code:"466940",name:"TIGER 은행고배당플러스TOP10"},
+    {code:"411060",name:"ACE KRX금현물"},
+    {code:"305080",name:"TIGER 미국채10년선물"},
+    {code:"473330",name:"SOL 미국30년국채커버드콜(합성)"},
+    {code:"453810",name:"KODEX 인도Nifty50"},
+    {code:"475080",name:"KODEX 테슬라커버드콜채권혼합액티브"},
+    {code:"481060",name:"KODEX 미국30년국채타겟커버드콜(합성H)"},
+    {code:"381180",name:"TIGER 미국필라델피아반도체나스닥"},
+    {code:"456600",name:"TIME 글로벌AI인공지능액티브"},
+    {code:"491010",name:"TIGER 글로벌AI전력인프라액티브"},
+    {code:"232080",name:"TIGER 코스닥150"},
+    {code:"447770",name:"TIGER 테슬라채권혼합Fn"},
+    {code:"453850",name:"ACE 미국30년국채액티브(H)"},
+    {code:"438100",name:"ACE 미국나스닥100채권혼합액티브"},
+    {code:"402970",name:"ACE 미국배당다우존스"},
+    {code:"226490",name:"KODEX 코스피100"},
+    {code:"475630",name:"TIGER CD1년금리액티브(합성)"},
+    {code:"486450",name:"SOL 미국AI전력인프라"},
+    {code:"148070",name:"KIWOOM 국고채10년"},
+    {code:"161510",name:"PLUS 고배당주"},
+    {code:"483340",name:"ACE 구글밸류체인액티브"},
+  ];
+  // 기존 목록에 없는 항목만 추가 (순서: 새 항목 앞에 삽입)
+  const current = loadPortfolio();
+  const merged = [...DEFAULT_PORTFOLIO];
+  for (const item of current) {
+    if (!merged.find(m => m.code === item.code)) merged.push(item);
+  }
+  savePortfolio(merged);
+  renderPortfolio('');
+</script>
+</body>
+</html>

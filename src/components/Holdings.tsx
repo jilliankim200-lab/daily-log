@@ -641,6 +641,7 @@ function OwnerSection({
 
 export function Holdings() {
   const { accounts, isAmountHidden, isMobile } = useAppContext();
+  const [activeTab, setActiveTab] = useState<'holdings' | 'valuation'>('holdings');
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [dailyChangeRates, setDailyChangeRates] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
@@ -681,51 +682,78 @@ export function Holdings() {
   const wifeAccounts = accounts.filter(a => a.owner === 'wife');
   const husbandAccounts = accounts.filter(a => a.owner === 'husband');
 
+  const tabs = [
+    { id: 'holdings' as const, label: '보유종목', icon: 'list' },
+    { id: 'valuation' as const, label: '종목분석', icon: 'analytics' },
+  ];
+
   return (
-    <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: isMobile ? 16 : 28,
-      }}>
-        <div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-            보유종목
-          </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 6 }}>
-            매입가 대비 3% 이상 하락 시 매수 신호, 10% 이상 상승 시 매도 신호
-          </p>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+
+      {/* 페이지 타이틀 + 탭 (재정평가와 동일한 위치) */}
+      <div style={{ padding: isMobile ? '12px 12px 0' : '12px 12px 0', flexShrink: 0 }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 16,
+          }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                보유종목
+              </h1>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
+                매입가 대비 3% 이상 하락 시 매수 신호, 10% 이상 상승 시 매도 신호
+              </p>
+            </div>
+            {activeTab === 'holdings' && (
+              <button
+                onClick={loadPrices}
+                disabled={loading}
+                className="toss-btn toss-btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', padding: '6px 12px', opacity: loading ? 0.6 : 1 }}
+              >
+                <MIcon name="sync" size={14} style={loading ? { animation: 'spin 1s linear infinite' } : undefined} />
+                {!isMobile && (loading ? '조회 중...' : '현재가 새로고침')}
+              </button>
+            )}
+          </div>
+
+          {/* 탭 — 재정평가와 동일 스타일/위치 */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`toss-tab ${activeTab === tab.id ? 'toss-tab-active' : ''}`}
+                style={{ padding: '8px 20px', borderRadius: 20, fontSize: 'var(--text-sm)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <MIcon name={tab.icon} size={15} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <button
-          onClick={loadPrices}
-          disabled={loading}
-          className="toss-btn toss-btn-secondary"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', padding: '6px 12px', opacity: loading ? 0.6 : 1 }}
-        >
-          <MIcon name="sync" size={14} style={loading ? { animation: 'spin 1s linear infinite' } : undefined} />
-          {!isMobile && (loading ? '조회 중...' : '현재가 새로고침')}
-        </button>
       </div>
 
-      {/* Sections */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-        <OwnerSection
-          ownerName="지윤"
-          accounts={wifeAccounts}
-          prices={prices}
-          dailyChangeRates={dailyChangeRates}
-          isAmountHidden={isAmountHidden}
-          isMobile={isMobile}
+      {/* 탭 콘텐츠 */}
+      {activeTab === 'holdings' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0 12px 12px' : '0 12px 16px' }}>
+          <div style={{ maxWidth: 960, margin: '0 auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+              <OwnerSection ownerName="지윤" accounts={wifeAccounts} prices={prices} dailyChangeRates={dailyChangeRates} isAmountHidden={isAmountHidden} isMobile={isMobile} />
+              <OwnerSection ownerName="오빠" accounts={husbandAccounts} prices={prices} dailyChangeRates={dailyChangeRates} isAmountHidden={isAmountHidden} isMobile={isMobile} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'valuation' && (
+        <iframe
+          src="/valuation.html"
+          style={{ flex: 1, width: '100%', border: 'none', display: 'block' }}
+          title="종목 분석"
         />
-        <OwnerSection
-          ownerName="오빠"
-          accounts={husbandAccounts}
-          prices={prices}
-          dailyChangeRates={dailyChangeRates}
-          isAmountHidden={isAmountHidden}
-          isMobile={isMobile}
-        />
-      </div>
+      )}
     </div>
   );
 }
