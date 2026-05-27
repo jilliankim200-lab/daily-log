@@ -309,7 +309,7 @@ export default function App() {
           transition: 'width 0.2s ease, box-shadow 0.2s ease',
         }}>
           {/* 로고 + 닫기 버튼 */}
-          <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 8 }}>
+          <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 8, marginTop: 12 }}>
             <div
               onClick={() => setCurrentPage('dashboard')}
               style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
