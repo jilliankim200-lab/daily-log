@@ -20,6 +20,7 @@ import { FinancialScoring } from "./components/FinancialScoring";
 import { QuantDashboard } from "./components/QuantDashboard";
 import { QuantBasics } from "./components/QuantBasics";
 import { DataReports } from "./components/DataReports";
+import { StopLoss } from "./components/StopLoss";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { ChatPanel } from "./components/ChatPanel";
@@ -75,6 +76,7 @@ const MENU_ITEMS = [
   { id: "household-budget", label: "가계부", materialIcon: "receipt_long" },
   { id: "monthly-strategy", label: "2026년5월", materialIcon: "calendar_month" },
   { id: "data-reports", label: "데이터", materialIcon: "folder_open" },
+  { id: "stop-loss", label: "손절매", materialIcon: "trending_down" },
 ];
 
 function isRecentlyUpdated(dateStr?: string): boolean {
@@ -267,6 +269,7 @@ export default function App() {
       case "quant-basics": return <QuantBasics />;
       case "national-growth-fund": return <NationalGrowthFund />;
       case "data-reports": return <DataReports />;
+      case "stop-loss": return <StopLoss />;
     }
   };
 
