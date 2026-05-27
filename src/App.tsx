@@ -21,6 +21,7 @@ import { QuantDashboard } from "./components/QuantDashboard";
 import { QuantBasics } from "./components/QuantBasics";
 import { DataReports } from "./components/DataReports";
 import { StopLoss } from "./components/StopLoss";
+import { TrailingStopLoss } from "./components/TrailingStopLoss";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { ChatPanel } from "./components/ChatPanel";
@@ -63,7 +64,8 @@ export const useAppContext = () => useContext(AppContext);
 const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드", materialIcon: "dashboard" },
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
-  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-06" },
+  { id: "trailing-stop", label: "추적손절매", materialIcon: "track_changes", updatedAt: "2026-05-27" },
+  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-27" },
   { id: "dividend", label: "배당", materialIcon: "paid", updatedAt: "2026-05-09" },
   { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
@@ -270,6 +272,7 @@ export default function App() {
       case "national-growth-fund": return <NationalGrowthFund />;
       case "data-reports": return <DataReports />;
       case "stop-loss": return <StopLoss />;
+      case "trailing-stop": return <TrailingStopLoss />;
     }
   };
 
