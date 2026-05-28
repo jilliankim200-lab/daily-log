@@ -56,6 +56,8 @@ const QUICK_CHIPS = [
   { label: '재정평가', icon: 'summarize' },
   { label: '가계부', icon: 'receipt_long' },
   { label: '2026년5월', icon: 'calendar_month' },
+  { label: '투자루틴', icon: 'checklist' },
+  { label: '심리점검', icon: 'self_improvement' },
 ];
 
 // 칩별 아카이브 검색 키워드 (label 단어 외 추가 연관어)
@@ -65,6 +67,8 @@ const CHIP_SEARCH_KEYS: Record<string, string> = {
   '리밸런싱':   'ETF 모멘텀 크래시 매도 분산 반도체 리밸런싱',
   '보유종목':   '보유 종목 ETF 반도체',
   '대시보드':   '대시보드 증감 날짜 복원 스냅샷',
+  '투자루틴':   '투자루틴 국채 금리 시황 NVDA 빅테크 포트폴리오 매매 거시 섹터 FCF ROE 영업이익 매출 분기',
+  '심리점검':   '심리 FOMO 앵커링 매도 소유 손실 매수 원칙',
 };
 
 function getTodayLabel() {

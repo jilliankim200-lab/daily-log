@@ -302,6 +302,319 @@ export const INITIAL_ARCHIVE: ArchivedQA[] = [
 <tr><td>수익 기준만으로 단순하게 익절·손절하고 싶을 때</td><td class="o">필터 OFF</td></tr>
 </table>`,
   },
+
+  // ── 투자 루틴 ──
+  {
+    id: 'ir1',
+    date: '2026-05-28',
+    topic: '미 10년물 국채 금리',
+    badge: '투자루틴',
+    question: '미 10년물 국채 금리가 뭐야? 왜 확인해야 해?',
+    answerHtml: `<p><strong>미 10년물 국채 금리</strong>는 전 세계 돈의 기준입니다. 모든 자산 가격이 여기에 연결됩니다.</p>
+<h4>금리가 움직이면 시장도 움직인다</h4>
+<table class="tbl">
+<tr><th>방향</th><th>의미</th><th>시장 반응</th></tr>
+<tr><td class="r">금리 상승 ↑</td><td>기업 차입비용·할인율 증가</td><td class="r">주가 하락 압력 — 특히 성장주</td></tr>
+<tr><td class="g">금리 하락 ↓</td><td>채권 매력 하락</td><td class="g">주식 매력 상승 → 시장 자금 유입</td></tr>
+<tr><td class="o">금리 급변동</td><td>시장 불확실성 확대</td><td class="o">섣불리 매매 자제, 관망 우선</td></tr>
+</table>
+<div class="note">"국채 4~5% 받으면 굳이 위험한 주식을?" — 이 심리가 시장을 움직입니다. 금리가 높을수록 주식의 상대 매력이 떨어집니다.</div>
+<h4>매일 루틴에서 확인하는 법</h4>
+<ul>
+<li>전일 대비 <strong>방향</strong>이 중요 — 숫자 자체보다 "오르고 있나 내리고 있나"</li>
+<li>3.8% → 4.3%처럼 <strong>0.5%p 이상 급변동</strong>이면 시장 기류 변화 신호</li>
+<li>금리 급등 시 → 보유 성장주 리스크 재점검</li>
+</ul>
+<div class="tip"><strong>결론:</strong> 미 10년물 금리는 매일 아침 확인해야 할 첫 번째 숫자입니다. 절대값보다 <strong>전일 대비 방향과 변화폭</strong>에 집중하세요.</div>`,
+  },
+  {
+    id: 'ir2',
+    date: '2026-05-28',
+    topic: '아침 시황 루틴',
+    badge: '투자루틴',
+    question: '아침에 뭘 확인해야 해? 시황 체크 루틴 알려줘',
+    answerHtml: `<p>매일 아침 <strong>4가지</strong>를 순서대로 확인합니다. 뉴스를 보되, 해석은 천천히 — 제목에 휘둘리지 마십시오.</p>
+<h4>① 세계 시장 뉴스 훑기</h4>
+<ul>
+<li>뉴욕 증시 방향 확인 (상승/하락/보합)</li>
+<li><strong>"삼성전자 실적 쇼크"</strong> 같은 기사는 실제 공시를 직접 확인 — 헤드라인에 속지 말 것</li>
+</ul>
+<h4>② 환율 확인</h4>
+<ul>
+<li>원/달러 전일 대비 변화폭</li>
+<li>환율 급등(원화 약세) → 외국인 자금 이탈 신호 → 코스피 하락 압력</li>
+</ul>
+<h4>③ 미국 10년물 국채 금리</h4>
+<ul>
+<li>금리 상승 → 기업 비용 증가 → 주가 하락 압력</li>
+<li>금리 하락 → 주식 매력 상승 → 시장 자금 유입</li>
+<li>금리 급변동 시 → 섣불리 매매 자제</li>
+</ul>
+<h4>④ 주요 기업 주가 체크</h4>
+<ul>
+<li>NVDA (AI 온도계), 빅테크 5총사, JPM·WMT, 삼성전자·SK하이닉스</li>
+<li>변동폭이 컸던 종목 이유 한 줄 파악</li>
+</ul>
+<div class="note">아침 루틴은 <strong>30분 이내</strong>로 끝내는 것이 좋습니다. 시황 분석에 매몰되면 감정적 판단이 늘어납니다.</div>`,
+  },
+  {
+    id: 'ir3',
+    date: '2026-05-28',
+    topic: '주요 기업 주가 체크',
+    badge: '투자루틴',
+    question: '매일 어떤 종목을 봐야 해? NVDA 빅테크 삼성전자',
+    answerHtml: `<p>대표주의 흐름이 오늘 시장의 신호입니다. 매일 아침 다음 기업들의 방향을 확인합니다.</p>
+<table class="tbl">
+<tr><th>기업</th><th>역할</th><th>보는 이유</th></tr>
+<tr><td><strong>NVDA</strong></td><td>AI 온도계</td><td>기술주 흐름의 출발점. NVDA가 급락하면 기술주 전체 위험 신호</td></tr>
+<tr><td>AAPL · MSFT · AMZN · GOOGL · TSLA</td><td>빅테크 5총사</td><td>나스닥 방향과 거의 동일. 5개 중 3개 이상 하락이면 기술주 약세</td></tr>
+<tr><td>JPM</td><td>금융·금리 민감</td><td>금리 상승 수혜주. JPM 강세 = 금리 상승 기대감</td></tr>
+<tr><td>WMT</td><td>소비 흐름</td><td>경기 방어주. WMT 강세 = 소비 방어적 흐름</td></tr>
+<tr><td>삼성전자 · SK하이닉스</td><td>코스피 핵심</td><td>코스피 전체 방향. HBM·AI 수요와 직결</td></tr>
+</table>
+<div class="tip"><strong>핵심 원칙:</strong> 변동폭이 컸던 종목의 이유를 <strong>한 줄</strong>로 파악합니다. "왜 올랐나/내렸나" 이유 없이 주가만 보는 것은 소음 소비입니다.</div>`,
+  },
+  {
+    id: 'ir4',
+    date: '2026-05-28',
+    topic: '매일 계획 기록',
+    badge: '투자루틴',
+    question: '오늘의 계획은 어떻게 기록해?',
+    answerHtml: `<p>짧은 한 줄이 하루를, 하루가 돈을 지킵니다. 매일 아침 <strong>오늘의 계획</strong>을 한 줄로 기록하십시오.</p>
+<h4>아침 — 계획 한 줄</h4>
+<ul>
+<li>"오늘은 매수하지 않는다"</li>
+<li>"○○ 종목 흐름 관찰만 한다"</li>
+<li>"현금 비중 유지"</li>
+</ul>
+<h4>장 마감 후 — 마무리 기록</h4>
+<ul>
+<li>"오늘 잘 참았다" 또는 "감정이 흔들렸다"</li>
+<li>실제 매매가 있었다면 <strong>이유와 감정 상태</strong> 메모</li>
+</ul>
+<div class="note">기록의 목적은 반성이 아닙니다. <strong>패턴을 발견</strong>하는 것입니다. "나는 급락 뉴스가 나오면 충동 매도한다"는 패턴을 알아야 다음에 막을 수 있습니다.</div>`,
+  },
+  {
+    id: 'ir5',
+    date: '2026-05-28',
+    topic: '주간 포트폴리오 구조 점검',
+    badge: '투자루틴',
+    question: '매주 포트폴리오 구조 점검 어떻게 해?',
+    answerHtml: `<p>수익률이 아니라 <strong>구조</strong>를 보십시오. 이번 주 수익이 우연인가, 전략의 힘인가를 판단하는 것이 핵심입니다.</p>
+<h4>3가지 점검 항목</h4>
+<table class="tbl">
+<tr><th>항목</th><th>확인 내용</th><th>주의 신호</th></tr>
+<tr><td>수익률 원인</td><td>"이번 주 수익률이 우연인가, 구조의 힘인가?"</td><td class="o">운이었다면 전략 재점검</td></tr>
+<tr><td>비중 쏠림</td><td>보유 종목별 비중이 계획 대비 과도하게 쏠린 곳</td><td class="r">특정 종목 20% 초과 시 리밸런싱 검토</td></tr>
+<tr><td>현금 비중</td><td>목표 현금 비중 범위 안에 있는가</td><td class="r">현금 너무 적으면 기회비용 손실</td></tr>
+</table>
+<div class="tip"><strong>핵심 질문:</strong> "나는 지금 전략을 실행하고 있는가, 아니면 시장에 끌려다니고 있는가?"</div>`,
+  },
+  {
+    id: 'ir6',
+    date: '2026-05-28',
+    topic: '매매 이유 기록 주간',
+    badge: '투자루틴',
+    question: '매매 이유는 왜 기록해야 해?',
+    answerHtml: `<p>이유가 반복되면 전략이 되고, 전략이 쌓이면 수익률을 지킵니다.</p>
+<h4>매주 기록할 항목</h4>
+<ul>
+<li>이번 주 <strong>매수한 종목</strong> — 이유 한 줄 기록</li>
+<li>이번 주 <strong>매도한 종목</strong> — 이유 한 줄 기록</li>
+<li>잘한 판단 vs <strong>감정에 휘둘린 판단</strong> 구분</li>
+</ul>
+<h4>기록 예시</h4>
+<div class="note">
+"삼성전자 매도 후 주가 상승 → 매도 타이밍이 조급함에서 비롯됨"<br>
+"현금 유지 → 금리 불확실성 대응 성공 → 원칙 준수"
+</div>
+<h4>다음 주 계획</h4>
+<ul>
+<li>반복된 실수 패턴이 있다면 → 다음 주 주의사항 한 줄 기록</li>
+<li>관심 종목 중 다음 주 점검할 항목 정리</li>
+<li>"이유 없이 사고 싶다"는 충동이 있다면 → <strong>1주 대기 원칙</strong></li>
+</ul>`,
+  },
+  {
+    id: 'ir7',
+    date: '2026-05-28',
+    topic: '거시 지표 월간 확인',
+    badge: '투자루틴',
+    question: '매월 거시 지표 어떻게 봐야 해? 환율 코스피',
+    answerHtml: `<p>숫자 하나가 아니라 <strong>방향과 속도</strong>를 읽는 것이 핵심입니다.</p>
+<h4>3가지 거시 지표</h4>
+<table class="tbl">
+<tr><th>지표</th><th>전월 대비 확인 포인트</th><th>의미</th></tr>
+<tr><td>미 10년물 금리</td><td>방향과 변화폭</td><td>금리 3.8→4.3%: 단순 수치가 아닌 <strong>기류 변화</strong></td></tr>
+<tr><td>원/달러 환율</td><td>상승/하락 방향</td><td>환율 1,350→1,400: 외국인 이탈 신호 → 코스피 하락 압력</td></tr>
+<tr><td>코스피</td><td>단순 반등 vs 새로운 추세</td><td>반등의 이유가 있는가, 일시적인가</td></tr>
+</table>
+<div class="warn"><strong>함정:</strong> 수치 자체가 아니라 "왜 바뀌었는가"가 중요합니다. 금리가 올랐다면 인플레이션 우려인지, 경기 회복인지에 따라 의미가 다릅니다.</div>`,
+  },
+  {
+    id: 'ir8',
+    date: '2026-05-28',
+    topic: '섹터 흐름 월간',
+    badge: '투자루틴',
+    question: '매월 섹터 흐름은 어떻게 파악해? 성장주 가치주',
+    answerHtml: `<p>어떤 종목이 올랐는가보다 <strong>어떤 흐름이 만들어지는가</strong>를 봐야 합니다.</p>
+<h4>3가지 확인 포인트</h4>
+<ul>
+<li><strong>강한 섹터 / 약한 섹터</strong> — 시장 관심이 어디로 이동하고 있는가</li>
+<li><strong>성장주 vs 가치주</strong> — 어디로 돈이 움직이는가<br>
+  금리 상승 구간 → 가치주 유리 / 금리 하락 구간 → 성장주 유리</li>
+<li><strong>내 포트폴리오</strong>가 이 흐름과 맞닿아 있는가</li>
+</ul>
+<div class="note">섹터 흐름은 경제 사이클과 연결됩니다. 경기 확장기엔 기술·소비주, 경기 둔화기엔 필수소비·헬스케어·배당주가 강세를 보이는 경향이 있습니다.</div>`,
+  },
+  {
+    id: 'ir9',
+    date: '2026-05-28',
+    topic: '분기 실적 점검 — 매출 영업이익 FCF ROE',
+    badge: '투자루틴',
+    question: '분기 실적 점검은 어떻게 해? 매출 영업이익 FCF ROE',
+    answerHtml: `<p>매 분기 이 4가지를 기록하면 <strong>기업 점검표</strong>가 완성됩니다.</p>
+<table class="tbl">
+<tr><th>지표</th><th>핵심 확인</th><th>경고 신호</th></tr>
+<tr><td><strong>매출</strong></td><td>전분기 대비 방향 + 이유</td><td class="o">매출 ↑이지만 이유가 가격 인상뿐이면 주의</td></tr>
+<tr><td><strong>영업이익</strong></td><td>영업이익률 방향</td><td class="r">매출↑ + 영업이익↓ = 비용 문제</td></tr>
+<tr><td><strong>FCF</strong></td><td>플러스 / 마이너스</td><td class="r">순이익 1,000억 + FCF 마이너스 = 현금이 묶임</td></tr>
+<tr><td><strong>ROE</strong></td><td>전분기 대비 방향</td><td class="r">ROE 지속 하락 = 경쟁력 약화 경고</td></tr>
+</table>
+<h4>패턴 해석</h4>
+<table class="tbl">
+<tr><th>패턴</th><th>의미</th></tr>
+<tr><td>매출 ↑ + 영업이익 ↓</td><td class="r">비용 구조 문제 → 손익계산서 직접 확인</td></tr>
+<tr><td>매출 ↓ + 영업이익 ↑</td><td class="g">구조 개선 중 — 비용 효율화 성공</td></tr>
+<tr><td>FCF 마이너스 (투자 확대)</td><td class="o">신규 투자 확대인가, 운영 문제인가 구분 필요</td></tr>
+</table>
+<div class="tip"><strong>마무리 두 가지 질문:</strong> "실적이 개선됐는가?" + "전망이 유지되는가?" 이 두 질문으로 분기 점검을 마무리합니다.</div>`,
+  },
+  {
+    id: 'ir10',
+    date: '2026-05-28',
+    topic: 'FCF 잉여현금흐름',
+    badge: '투자루틴',
+    question: 'FCF가 뭐야? 잉여현금흐름 왜 중요해?',
+    answerHtml: `<p><strong>FCF(Free Cash Flow, 잉여현금흐름)</strong> — 기업이 영업 활동과 투자 후 <strong>실제로 손에 남는 현금</strong>입니다.</p>
+<div class="warn">이익이 있어도 현금이 빠지면 기업은 숨이 찹니다. 순이익과 FCF는 다릅니다.</div>
+<h4>왜 FCF가 중요한가</h4>
+<table class="tbl">
+<tr><th>상황</th><th>의미</th></tr>
+<tr><td class="g">FCF 플러스 (+)</td><td>배당·자사주 매입·부채 상환 가능 — 주주 친화적</td></tr>
+<tr><td class="r">FCF 마이너스 (−)</td><td>외부 자금 조달 필요 → 부채 증가 위험</td></tr>
+<tr><td class="o">FCF 마이너스 (투자 확대)</td><td>신규 설비·R&D 투자 → 미래 성장 가능성 (단, 회수 여부 확인 필요)</td></tr>
+</table>
+<div class="note">순이익 1,000억 + FCF 마이너스 = 현금이 설비·재고에 묶인 상태. 장부상 이익이 실제 현금이 아닐 수 있습니다.</div>
+<h4>분기 점검 체크리스트</h4>
+<ul>
+<li>FCF가 플러스인가 마이너스인가 확인</li>
+<li>FCF 마이너스 시 → 신규 투자 확대인가, 운영 문제인가 구분</li>
+<li>순이익과 FCF의 괴리가 크면 이유 파악</li>
+</ul>`,
+  },
+  {
+    id: 'ir11',
+    date: '2026-05-28',
+    topic: 'ROE 자기자본이익률',
+    badge: '투자루틴',
+    question: 'ROE가 뭐야? 자기자본이익률 어떻게 봐?',
+    answerHtml: `<p><strong>ROE(Return on Equity, 자기자본이익률)</strong> — 주주가 맡긴 자본으로 기업이 얼마나 잘 버는가를 보여줍니다.</p>
+<div class="note">ROE = 순이익 ÷ 자기자본 × 100%<br>ROE 15%라면 주주가 100원을 맡겼을 때 15원을 번다는 뜻입니다.</div>
+<h4>ROE 분기 점검</h4>
+<table class="tbl">
+<tr><th>신호</th><th>의미</th></tr>
+<tr><td class="g">ROE 유지 또는 상승</td><td>자본 효율성 양호 — 경쟁력 유지</td></tr>
+<tr><td class="r">ROE 지속 하락</td><td>경쟁력 약화 경고 신호 → 매도 검토</td></tr>
+<tr><td class="o">ROE 일시 하락</td><td>일회성 비용인지, 구조적 문제인지 확인 필요</td></tr>
+</table>
+<h4>워런 버핏이 ROE를 중시하는 이유</h4>
+<p>버핏은 <strong>"10년 연속 ROE 15% 이상"</strong> 기업을 선호합니다. 꾸준한 ROE는 경쟁 우위(해자)의 증거이기 때문입니다.</p>
+<div class="tip"><strong>결론:</strong> ROE가 꾸준히 높고 유지된다면 → 좋은 기업 신호. ROE가 빠르게 떨어진다면 → 보유 이유를 다시 점검하세요.</div>`,
+  },
+  {
+    id: 'ir12',
+    date: '2026-05-28',
+    topic: '심리 점검 — FOMO 앵커링 매수 전 질문',
+    badge: '심리점검',
+    question: '투자 심리 점검 어떻게 해? FOMO 앵커링',
+    answerHtml: `<p>투자는 마음의 싸움입니다. 감정이 아닌 <strong>원칙으로 스스로를 붙잡아야</strong> 합니다.</p>
+<h4>매수 전 반드시 물어볼 질문</h4>
+<div class="warn">
+"왜 지금, 왜 이 가격에 사려는가?"<br>
+"무엇이 변하거나 틀리면 바로 팔 것인가?"
+</div>
+<h4>FOMO (Fear of Missing Out) 차단</h4>
+<ul>
+<li>남들의 수익보다 <strong>나의 원칙</strong>이 중요합니다</li>
+<li>목표 투자금·현금 비율·산업 비중·개별 종목 한도를 미리 설정</li>
+<li>계획이 있으면 조급함은 줄어듭니다</li>
+</ul>
+<h4>앵커 제거 (Anchoring Bias)</h4>
+<ul>
+<li>과거의 매수 단가(본전)를 잊고, <strong>현재의 가치와 미래 현금흐름</strong>으로 재평가</li>
+<li>"본전"이라는 단어를 마음에서 지우는 순간, 비로소 현실이 보입니다</li>
+</ul>
+<h4>반대 근거 찾기</h4>
+<ul>
+<li>확신보다 의심이 투자를 지킵니다</li>
+<li>"내 생각보다 논리를 무너뜨릴 데이터는 무엇인가?" — 항상 반대 근거를 먼저 찾으십시오</li>
+</ul>`,
+  },
+  {
+    id: 'ir13',
+    date: '2026-05-28',
+    topic: '매도 규칙 소유 감정 손실 대응',
+    badge: '심리점검',
+    question: '매도 규칙은 뭐야? 언제 팔아야 해?',
+    answerHtml: `<p>감정이 아니라 <strong>근거로 행동</strong>하십시오.</p>
+<h4>매도 전 반드시 물어볼 질문</h4>
+<div class="warn">
+"나는 왜 팔려고 하는가?"<br>
+"지금 처음 투자한다면 이 가격에 살까?"
+</div>
+<h4>소유 감정 억제</h4>
+<ul>
+<li>보유의 이유가 감정이라면, 그것은 투자보다 <strong>집착</strong>에 가깝습니다</li>
+<li>좋은 기업이 반드시 좋은 투자로 이어지는 것은 아닙니다</li>
+<li>"이 주식을 여전히 들고 있을 이유가 있는가?" — 정기적으로 물어보십시오</li>
+</ul>
+<h4>손실 대응</h4>
+<ul>
+<li>손실은 피할 수 없습니다. 다만 <strong>손실을 대하는 태도</strong>는 선택할 수 있습니다</li>
+<li>잃은 자리에서 배울 것을 기록하고, 다음 투자 대상을 찾아두십시오</li>
+<li>투자는 후회가 아니라 <strong>회복의 기술</strong>입니다</li>
+</ul>
+<div class="tip"><strong>원칙 행동 공식:</strong> 시장은 감정을 시험하지만, 원칙은 감정을 다스립니다. 판단과 행동의 기준을 늘 "계획"에 두십시오. 결과보다 과정이 더 중요합니다.</div>`,
+  },
+  {
+    id: 'ir14',
+    date: '2026-05-28',
+    topic: '연간 자기평가 태도의 성장',
+    badge: '투자루틴',
+    question: '매년 투자 자기평가는 어떻게 해? 태도의 성장',
+    answerHtml: `<p>일 년에 한 번은 계좌를 닫고 <strong>자신을 평가</strong>하십시오. 수익률을 보기 전에 올해의 나를 먼저 들여다보는 시간입니다.</p>
+<h4>3단계 연간 자기평가</h4>
+<h4>① 원칙 준수 점검</h4>
+<ul>
+<li>"올해 세운 투자 원칙을 실제로 지켰는가?"</li>
+<li>"급락장에서 공포를 이기고 매수했는가, 뉴스에 흔들려 매도했는가?"</li>
+<li>지킨 하루는 <strong>신념</strong>이 되고, 흔들린 하루는 <strong>교훈</strong>이 됩니다</li>
+</ul>
+<h4>② 판단을 흔든 요인 기록</h4>
+<ul>
+<li>친구 추천, 유튜브 낙관론, 추격 매수… 구체적으로 적기</li>
+<li>그 순간의 감정(조급함·불안·탐욕)을 기록 → 내년의 실수를 막는 방패</li>
+</ul>
+<h4>③ 태도의 성장 점검</h4>
+<table class="tbl">
+<tr><th>작년</th><th>올해</th><th>평가</th></tr>
+<tr><td>매일 수십 번 시세 확인</td><td>주 1회 포트폴리오 점검</td><td class="g">성장</td></tr>
+<tr><td>손실에 분노</td><td>이유 분석 후 담담히 기록</td><td class="g">성장</td></tr>
+</table>
+<div class="note">수익보다 더 큰 자산은 바로 이 "태도의 변화"입니다. 한 해의 마지막 날, 그래프보다 일기를 먼저 여십시오. 그 안에 당신의 진짜 수익률이 적혀 있을 것입니다.</div>
+<div class="tip"><strong>루틴의 힘:</strong> 루틴은 단조로워야 합니다. 단조로움이 마음을 단단하게 만듭니다. 버핏이 수십 년을 같은 방식으로 살았던 이유도 그것입니다. "Process becomes routine." — 과정이 습관이 되고, 습관이 결과를 만듭니다.</div>`,
+  },
 ];
 
 const LS_KEY = 'chatArchive_v1';
