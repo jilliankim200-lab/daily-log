@@ -7,6 +7,7 @@ const TABS = [
   { id: 'weekly',    label: '매주',  icon: 'date_range' },
   { id: 'monthly',   label: '매월',  icon: 'calendar_month' },
   { id: 'quarterly', label: '매분기', icon: 'event_note' },
+  { id: 'yearly',    label: '매년',  icon: 'emoji_events' },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -541,6 +542,134 @@ function QuarterlyTab({ isMobile }: { isMobile: boolean }) {
   );
 }
 
+// ── 매년할일 ──
+const YEARLY_SECTIONS = [
+  {
+    icon: 'verified_user',
+    color: '#3182F6',
+    bg: '#EDF3FF',
+    title: '원칙 준수 자기평가',
+    subtitle: '수익률보다 먼저 올해의 나를 들여다보는 시간',
+    items: [
+      '"올해 세운 투자 원칙을 실제로 지켰는가?" 솔직하게 점검',
+      '급락장에서 원칙대로 매수했는가, 아니면 뉴스에 흔들려 매도했는가',
+      '지킨 하루는 신념으로, 흔들린 하루는 교훈으로 기록',
+    ],
+    note: '"3월 급락장에서 공포를 이기고 매수했는가, 아니면 뉴스에 흔들려 매도 버튼을 눌렀는가?"',
+  },
+  {
+    icon: 'psychology_alt',
+    color: '#F04452',
+    bg: '#FFF0F1',
+    title: '판단을 흔든 요인 기록',
+    subtitle: '이 기록은 내년의 실수를 막는 방패입니다',
+    items: [
+      '친구 추천 / 유튜브 낙관론 / 추격 매수 등 외부 요인에 흔들린 사례 기록',
+      '그 순간의 감정(조급함 · 불안 · 탐욕)을 구체적으로 적기',
+      '"왜 그 판단을 했는가?" — 감정이 아닌 이유를 역추적',
+    ],
+  },
+  {
+    icon: 'trending_up',
+    color: '#30C85E',
+    bg: '#EDFBF2',
+    title: '태도의 성장 점검',
+    subtitle: '돈이 아니라 태도의 성장이 진짜 수익률',
+    items: [
+      '작년 대비 시세 확인 빈도가 줄었는가 (매일→주 1회 등)',
+      '손실에 반응하는 방식이 바뀌었는가 (분노→분석→기록)',
+      '내년의 루틴·원칙 한 가지 개선사항 기록',
+    ],
+    note: '수익보다 더 큰 자산은 바로 이 "태도의 변화"입니다. 태도의 변화가 없으면, 다음 해의 수익도 없습니다.',
+  },
+  {
+    icon: 'repeat',
+    color: '#8B5CF6',
+    bg: '#F3F0FF',
+    title: '루틴의 힘 — 꾸준함으로 마무리',
+    subtitle: '단조로움이 마음을 단단하게 만든다',
+    items: [
+      '버핏처럼: 같은 시간 · 같은 원칙 · 같은 방식으로 한 해를 마무리',
+      '"시장의 싸움, 정보의 싸움, 자신과의 싸움" — 셋 중 가장 중요한 싸움은?',
+      '한 해의 마지막 날, 그래프보다 일기를 먼저 열기',
+    ],
+    note: '"Process becomes routine." 과정이 습관이 되고, 습관이 결과를 만든다.',
+  },
+];
+
+function yearKey() {
+  return `routine_yearly_${new Date().getFullYear()}`;
+}
+
+function YearlyTab({ isMobile }: { isMobile: boolean }) {
+  const [checked, setChecked] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(yearKey()) || '[]')); } catch { return new Set(); }
+  });
+
+  const toggle = (key: string) => {
+    setChecked(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      localStorage.setItem(yearKey(), JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const totalItems = YEARLY_SECTIONS.reduce((acc, s) => acc + s.items.length, 0);
+  const pct = Math.round((checked.size / totalItems) * 100);
+
+  return (
+    <div>
+      <div style={{ background: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>올해 루틴</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: pct === 100 ? '#30C85E' : 'var(--text-tertiary)' }}>{checked.size}/{totalItems}</span>
+        </div>
+        <div style={{ height: 6, background: 'var(--bg-tertiary)', borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? '#30C85E' : '#8B5CF6', borderRadius: 99, transition: 'width 0.3s' }} />
+        </div>
+      </div>
+
+      {YEARLY_SECTIONS.map((section, si) => (
+        <div key={si} style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: section.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <MIcon name={section.icon} size={17} style={{ color: section.color }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{section.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>{section.subtitle}</div>
+            </div>
+          </div>
+          {'note' in section && section.note && (
+            <div style={{ background: section.bg, borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 12, color: section.color, lineHeight: 1.7, fontWeight: 500 }}>
+              {section.note}
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {section.items.map((item, ii) => {
+              const key = `${si}-${ii}`;
+              const done = checked.has(key);
+              return (
+                <button key={ii} onClick={() => toggle(key)}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 10px', borderRadius: 10, border: 'none', background: done ? section.bg : 'var(--bg-secondary)', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit', transition: 'background 0.15s' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: done ? 'none' : `1.5px solid ${section.color}55`, background: done ? section.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                    {done && <MIcon name="check" size={13} style={{ color: '#fff' }} />}
+                  </div>
+                  <span style={{ fontSize: 13, color: done ? section.color : 'var(--text-primary)', fontWeight: done ? 600 : 400, textDecoration: done ? 'line-through' : 'none', lineHeight: 1.5, opacity: done ? 0.75 : 1 }}>
+                    {item}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>체크 항목은 매년 1월 1일에 초기화됩니다</p>
+    </div>
+  );
+}
+
 export function InvestmentRoutine() {
   const { isMobile } = useAppContext();
   const [activeTab, setActiveTab] = useState<TabId>('daily');
@@ -576,6 +705,7 @@ export function InvestmentRoutine() {
         {activeTab === 'weekly' && <WeeklyTab isMobile={isMobile} />}
         {activeTab === 'monthly' && <MonthlyTab isMobile={isMobile} />}
         {activeTab === 'quarterly' && <QuarterlyTab isMobile={isMobile} />}
+        {activeTab === 'yearly' && <YearlyTab isMobile={isMobile} />}
 
       </div>
     </div>
