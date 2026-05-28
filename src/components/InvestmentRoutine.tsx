@@ -1,6 +1,148 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MIcon } from './MIcon';
 import { useAppContext } from '../App';
+
+const WORKER_URL = (import.meta as any).env?.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
+
+// ── 아침 시황 위젯 ──
+interface BriefItem { price: number; change?: number; changePct: number; }
+interface MorningData {
+  indices: { kospi: BriefItem; kosdaq: BriefItem; nasdaq: BriefItem; sp500: BriefItem };
+  usdKrw: BriefItem;
+  tnx: BriefItem | null;
+  usStocks: Record<string, BriefItem | null>;
+  krStocks: { '005930': { price: number; changePct: number } | null; '000660': { price: number; changePct: number } | null };
+  lastUpdated: string;
+}
+
+function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
+  const [data, setData] = useState<MorningData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState('');
+
+  const fetch_ = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/morning-brief`);
+      if (res.ok) {
+        setData(await res.json());
+        setFetchedAt(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+      }
+    } catch { /* silent */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  const upColor = '#F04452';   // 한국 증시 관행: 상승=빨강
+  const dnColor = '#3182F6';   // 하락=파랑
+  const pColor = (pct: number) => pct > 0 ? upColor : pct < 0 ? dnColor : 'var(--text-tertiary)';
+  const pStr = (pct: number) => `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
+  const numFmt = (n: number, digits = 0) => n.toLocaleString('ko-KR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+  const IndexChip = ({ label, item }: { label: string; item?: BriefItem }) => (
+    <div style={{ flex: '1 1 0', minWidth: 0, background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 10px 8px', textAlign: 'center' }}>
+      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 3 }}>{label}</div>
+      {item ? (
+        <>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{numFmt(item.price)}</div>
+          <div style={{ fontSize: 11, color: pColor(item.changePct), fontWeight: 600 }}>{pStr(item.changePct)}</div>
+        </>
+      ) : (
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</div>
+      )}
+    </div>
+  );
+
+  const StockChip = ({ label, price, changePct, prefix = '' }: { label: string; price: number; changePct: number; prefix?: string }) => (
+    <div style={{ flexShrink: 0, background: 'var(--bg-secondary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 72 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 700, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{prefix}{numFmt(price, price < 100 ? 2 : 0)}</div>
+      <div style={{ fontSize: 10, color: pColor(changePct), fontWeight: 600 }}>{pStr(changePct)}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '14px 14px' : '16px 20px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MIcon name="bar_chart" size={16} style={{ color: '#3182F6' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>아침 시황</span>
+          {fetchedAt && <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>· {fetchedAt} 기준</span>}
+        </div>
+        <button onClick={fetch_} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: '#fff', cursor: loading ? 'default' : 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
+          <MIcon name="refresh" size={14} style={{ opacity: loading ? 0.4 : 1, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+          {loading ? '조회 중...' : '새로고침'}
+        </button>
+      </div>
+
+      {!data && !loading && (
+        <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-tertiary)', fontSize: 13 }}>데이터를 불러오지 못했습니다</div>
+      )}
+
+      {loading && !data && (
+        <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-tertiary)', fontSize: 13 }}>시황 조회 중...</div>
+      )}
+
+      {data && (
+        <>
+          {/* 지수 */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em' }}>지수</div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            <IndexChip label="KOSPI" item={data.indices.kospi} />
+            <IndexChip label="KOSDAQ" item={data.indices.kosdaq} />
+            <IndexChip label="NASDAQ" item={data.indices.nasdaq} />
+            <IndexChip label="S&P500" item={data.indices.sp500} />
+          </div>
+
+          {/* 환율 · 금리 */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em' }}>환율 · 금리</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+            <div style={{ flex: 1, background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>달러 / 원</span>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{numFmt(data.usdKrw.price, 1)}원</div>
+                <div style={{ fontSize: 11, color: pColor(data.usdKrw.changePct) }}>{data.usdKrw.change !== undefined ? `${data.usdKrw.change > 0 ? '+' : ''}${data.usdKrw.change.toFixed(1)}원` : ''} ({pStr(data.usdKrw.changePct)})</div>
+              </div>
+            </div>
+            <div style={{ flex: 1, background: data.tnx ? (data.tnx.changePct > 0 ? '#FFF4E5' : '#EDF3FF') : 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>미 10년물 금리</div>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{data.tnx ? (data.tnx.changePct > 0 ? '주가 하락 압력 ↑' : '주식 매력 상승 ↑') : ''}</div>
+              </div>
+              {data.tnx ? (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: data.tnx.changePct > 0 ? '#FF9500' : '#3182F6' }}>{data.tnx.price.toFixed(3)}%</div>
+                  <div style={{ fontSize: 11, color: pColor(data.tnx.changePct) }}>{pStr(data.tnx.changePct)}</div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</div>
+              )}
+            </div>
+          </div>
+
+          {/* 주요 종목 — 가로 스크롤 */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em' }}>주요 종목</div>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+            {data.usStocks['NVDA'] && <StockChip label="NVDA" prefix="$" price={data.usStocks['NVDA']!.price} changePct={data.usStocks['NVDA']!.changePct} />}
+            {data.usStocks['AAPL'] && <StockChip label="AAPL" prefix="$" price={data.usStocks['AAPL']!.price} changePct={data.usStocks['AAPL']!.changePct} />}
+            {data.usStocks['MSFT'] && <StockChip label="MSFT" prefix="$" price={data.usStocks['MSFT']!.price} changePct={data.usStocks['MSFT']!.changePct} />}
+            {data.usStocks['AMZN'] && <StockChip label="AMZN" prefix="$" price={data.usStocks['AMZN']!.price} changePct={data.usStocks['AMZN']!.changePct} />}
+            {data.usStocks['GOOGL'] && <StockChip label="GOOGL" prefix="$" price={data.usStocks['GOOGL']!.price} changePct={data.usStocks['GOOGL']!.changePct} />}
+            {data.usStocks['TSLA'] && <StockChip label="TSLA" prefix="$" price={data.usStocks['TSLA']!.price} changePct={data.usStocks['TSLA']!.changePct} />}
+            {data.usStocks['JPM'] && <StockChip label="JPM" prefix="$" price={data.usStocks['JPM']!.price} changePct={data.usStocks['JPM']!.changePct} />}
+            {data.usStocks['WMT'] && <StockChip label="WMT" prefix="$" price={data.usStocks['WMT']!.price} changePct={data.usStocks['WMT']!.changePct} />}
+            {data.krStocks['005930'] && <StockChip label="삼성" price={data.krStocks['005930']!.price} changePct={data.krStocks['005930']!.changePct} />}
+            {data.krStocks['000660'] && <StockChip label="SK하이닉" price={data.krStocks['000660']!.price} changePct={data.krStocks['000660']!.changePct} />}
+          </div>
+        </>
+      )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 const TABS = [
   { id: 'daily',     label: '매일',  icon: 'today' },
@@ -97,6 +239,9 @@ function DailyTab({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div>
+      {/* 아침 시황 위젯 */}
+      <MorningBriefWidget isMobile={isMobile} />
+
       {/* 진행률 */}
       <div style={{ background: '#fff', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>

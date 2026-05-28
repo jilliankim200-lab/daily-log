@@ -1182,6 +1182,93 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json({ ticker, currentPrice: cur, changeRate, ma20, ma60, high, low, position: Math.round(position * 100) / 100 });
     }
 
+    // GET /morning-brief — 아침 시황 위젯 (지수·환율·금리·주요 종목)
+    if (request.method === 'GET' && url.pathname === '/morning-brief') {
+      try {
+        const parseYahoo = async (symbol: string) => {
+          try {
+            const r = await fetch(
+              `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
+              { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
+            );
+            if (!r.ok) return null;
+            const d: any = await r.json();
+            const meta = d.chart?.result?.[0]?.meta;
+            if (!meta) return null;
+            const price = meta.regularMarketPrice ?? 0;
+            const prev = meta.chartPreviousClose ?? meta.previousClose ?? price;
+            const change = price - prev;
+            const changePct = prev > 0 ? (change / prev * 100) : 0;
+            return { price: parseFloat(price.toFixed(2)), change: parseFloat(change.toFixed(2)), changePct: parseFloat(changePct.toFixed(2)) };
+          } catch { return null; }
+        };
+
+        const parseNaverIdx = async (r: Response) => {
+          try {
+            const d: any = await r.json();
+            const item = d.datas?.[0] ?? d;
+            const cp = parseFloat(String(item.closePrice ?? item.currentValue ?? 0).replace(/,/g, ''));
+            const pct = parseFloat(String(item.fluctuationsRatio ?? 0).replace(/,/g, ''));
+            const dir = item.compareToPreviousPrice?.name ?? (pct > 0 ? 'RISING' : pct < 0 ? 'FALLING' : 'FLAT');
+            return { price: cp, changePct: dir === 'FALLING' ? -Math.abs(pct) : pct };
+          } catch { return { price: 0, changePct: 0 }; }
+        };
+
+        const US_STOCKS = ['NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA', 'JPM', 'WMT'];
+
+        const [
+          kospiR, kosdaqR, nasdaqR, sp500R, usdKrwR,
+          tnx, samsung, skHynix,
+          ...usArr
+        ] = await Promise.all([
+          fetch('https://polling.finance.naver.com/api/realtime/domestic/index/KOSPI', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://polling.finance.naver.com/api/realtime/domestic/index/KOSDAQ', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://polling.finance.naver.com/api/realtime/worldstock/index/.IXIC', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://polling.finance.naver.com/api/realtime/worldstock/index/.INX', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          parseYahoo('^TNX'),
+          fetchCurrentPriceWithChange('005930'),
+          fetchCurrentPriceWithChange('000660'),
+          ...US_STOCKS.map(s => parseYahoo(s)),
+        ] as const);
+
+        const [kospi, kosdaq, nasdaq, sp500] = await Promise.all([
+          parseNaverIdx(kospiR as Response),
+          parseNaverIdx(kosdaqR as Response),
+          parseNaverIdx(nasdaqR as Response),
+          parseNaverIdx(sp500R as Response),
+        ]);
+
+        const usdKrw = await (async () => {
+          try {
+            const d: any = await (usdKrwR as Response).json();
+            const cp = parseFloat(String(d.closePrice ?? 0).replace(/,/g, ''));
+            const ch = parseFloat(String(d.fluctuations ?? 0).replace(/,/g, ''));
+            const pct = parseFloat(String(d.fluctuationsRatio ?? 0).replace(/,/g, ''));
+            const dir = d.fluctuationsType?.name ?? (pct > 0 ? 'RISING' : pct < 0 ? 'FALLING' : 'FLAT');
+            return { price: cp, change: dir === 'FALLING' ? -Math.abs(ch) : ch, changePct: dir === 'FALLING' ? -Math.abs(pct) : pct };
+          } catch { return { price: 0, change: 0, changePct: 0 }; }
+        })();
+
+        const usStocks: Record<string, { price: number; change: number; changePct: number } | null> = {};
+        US_STOCKS.forEach((sym, i) => { usStocks[sym] = (usArr as any[])[i] ?? null; });
+
+        return json({
+          indices: { kospi, kosdaq, nasdaq, sp500 },
+          usdKrw,
+          tnx,
+          usStocks,
+          krStocks: {
+            '005930': samsung ? { price: samsung.price, changePct: samsung.changeRate } : null,
+            '000660': skHynix ? { price: skHynix.price, changePct: skHynix.changeRate } : null,
+          },
+          lastUpdated: new Date().toISOString(),
+        });
+      } catch (e) {
+        return json({ error: String(e) }, 500);
+      }
+    }
+
     // GET /worldcup — 월드컵 대시보드 데이터
     if (request.method === 'GET' && url.pathname === '/worldcup') {
       const raw = await env.KV.get('worldcup_data');
