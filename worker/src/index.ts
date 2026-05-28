@@ -1182,21 +1182,24 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json({ ticker, currentPrice: cur, changeRate, ma20, ma60, high, low, position: Math.round(position * 100) / 100 });
     }
 
-    // GET /chart/usdkrw — 달러/원 30일 추이
+    // GET /chart/usdkrw — 달러/원 30일 추이 (Yahoo Finance USDKRW=X)
     if (request.method === 'GET' && url.pathname === '/chart/usdkrw') {
       try {
-        const days = Math.min(parseInt(url.searchParams.get('days') || '30'), 60);
+        const range = url.searchParams.get('range') || '1mo';
         const res = await fetch(
-          `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/days?pageSize=${days}`,
-          { headers: { 'User-Agent': 'Mozilla/5.0' } }
+          `https://query1.finance.yahoo.com/v8/finance/chart/USDKRW%3DX?interval=1d&range=${range}`,
+          { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
         );
         if (!res.ok) return json({ error: 'fetch failed' }, 500);
         const data: any = await res.json();
-        const list: any[] = data.priceList ?? data.marketIndexes ?? data.historicalPriceList ?? (Array.isArray(data) ? data : []);
-        const rows = list.map((r: any) => ({
-          date: r.localTradedAt ?? r.tradeDate ?? r.date,
-          price: parseFloat(String(r.closePrice ?? r.price ?? 0).replace(/,/g, '')),
-        })).filter((r: any) => r.date && r.price > 0).reverse();
+        const result = data.chart?.result?.[0];
+        if (!result) return json([]);
+        const timestamps: number[] = result.timestamp ?? [];
+        const closes: number[] = result.indicators?.quote?.[0]?.close ?? [];
+        const rows = timestamps.map((ts, i) => ({
+          date: new Date(ts * 1000).toISOString().slice(0, 10),
+          price: closes[i] ? parseFloat(closes[i].toFixed(1)) : null,
+        })).filter((r: any) => r.price !== null && r.price > 0);
         return json(rows);
       } catch (e) { return json({ error: String(e) }, 500); }
     }
