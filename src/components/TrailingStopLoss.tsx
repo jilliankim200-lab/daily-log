@@ -257,6 +257,25 @@ export function TrailingStopLoss() {
     }
   }, [tickers.join(',')]);
 
+  // name === ticker인 항목 이름 자동 재조회 후 저장
+  const repairNames = async (stocks: CustomStock[]) => {
+    const broken = stocks.filter(s => s.name === s.ticker);
+    if (broken.length === 0) return stocks;
+    const repaired = [...stocks];
+    await Promise.all(broken.map(async s => {
+      try {
+        const r = await fetch(`/naver-stock/${s.ticker}/basic`);
+        if (r.ok) {
+          const d = await r.json();
+          const name = d.stockName || s.ticker;
+          const idx = repaired.findIndex(x => x.id === s.id);
+          if (idx >= 0) repaired[idx] = { ...repaired[idx], name };
+        }
+      } catch { /* 실패 시 그대로 */ }
+    }));
+    return repaired;
+  };
+
   // KV에서 데이터 로드 (마운트 시 1회 — localStorage보다 최신이면 덮어씀)
   useEffect(() => {
     kvGet<Record<string, TrailingEntry>>(LS_KEY).then(remote => {
@@ -265,11 +284,13 @@ export function TrailingStopLoss() {
         localStorage.setItem(LS_KEY, JSON.stringify(remote));
       }
     }).catch(() => {});
-    kvGet<CustomStock[]>(CUSTOM_KEY).then(remote => {
-      if (remote && remote.length > 0) {
-        setCustomStocks(remote);
-        localStorage.setItem(CUSTOM_KEY, JSON.stringify(remote));
-      }
+    kvGet<CustomStock[]>(CUSTOM_KEY).then(async remote => {
+      const stocks = (remote && remote.length > 0) ? remote : loadCustom();
+      const repaired = await repairNames(stocks);
+      const changed = repaired.some((s, i) => s.name !== stocks[i]?.name);
+      setCustomStocks(repaired);
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(repaired));
+      if (changed) kvSet(CUSTOM_KEY, repaired).catch(() => {});
     }).catch(() => {});
   }, []);
 
