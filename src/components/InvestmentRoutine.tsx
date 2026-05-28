@@ -1,8 +1,256 @@
 import { useState, useEffect, useCallback } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { MIcon } from './MIcon';
 import { useAppContext } from '../App';
 
 const WORKER_URL = (import.meta as any).env?.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
+
+// ── 차트 모달 ──
+interface ChartConfig { title: string; endpoint: string; color: string; unit: string; decimals: number; }
+
+function ChartModal({ config, onClose }: { config: ChartConfig; onClose: () => void }) {
+  const [data, setData] = useState<{ date: string; price: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/${config.endpoint}`)
+      .then(r => r.json())
+      .then(d => { setData(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [config.endpoint]);
+
+  const latest = data[data.length - 1];
+  const first = data[0];
+  const totalChange = latest && first ? latest.price - first.price : 0;
+  const min = data.length ? Math.min(...data.map(d => d.price)) : 0;
+  const max = data.length ? Math.max(...data.map(d => d.price)) : 0;
+  const pad = (max - min) * 0.12;
+  const isUp = totalChange >= 0;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 20, padding: '22px 20px 20px', width: '100%', maxWidth: 460, boxShadow: '0 24px 64px rgba(0,0,0,0.22)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{config.title}</div>
+            {latest && (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 3 }}>
+                현재 <strong>{latest.price.toFixed(config.decimals)}{config.unit}</strong>
+                <span style={{ marginLeft: 8, color: isUp ? '#F04452' : '#3182F6', fontWeight: 700 }}>
+                  {isUp ? '+' : ''}{totalChange.toFixed(config.decimals)}{config.unit} <span style={{ fontSize: 11, fontWeight: 400 }}>30일 누적</span>
+                </span>
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--border-primary)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MIcon name="close" size={17} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>차트 로딩 중...</div>
+        ) : data.length === 0 ? (
+          <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>데이터를 불러오지 못했습니다</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+              <XAxis dataKey="date" tickFormatter={(v: string) => v.slice(5)} tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+              <YAxis domain={[min - pad, max + pad]} tickFormatter={(v: number) => v.toFixed(config.decimals)} tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} width={48} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v: number) => [`${v.toFixed(config.decimals)}${config.unit}`, '']} labelStyle={{ fontSize: 12 }} contentStyle={{ borderRadius: 10, border: '1px solid var(--border-primary)', fontSize: 12 }} />
+              <Line type="monotone" dataKey="price" stroke={config.color} strokeWidth={2.5} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+
+        {data.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span>30일 최저 {min.toFixed(config.decimals)}{config.unit}</span>
+            <span>30일 최고 {max.toFixed(config.decimals)}{config.unit}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 종목 링크 ──
+function getStockUrl(symbol: string): string {
+  if (/^\d{6}$/.test(symbol)) return `https://finance.naver.com/item/main.nhn?code=${symbol}`;
+  return `https://finance.yahoo.com/quote/${symbol}`;
+}
+
+const NEWS_LINKS = [
+  { label: '네이버 시황', icon: 'article', url: 'https://finance.naver.com/news/marketflash.naver' },
+  { label: '뉴욕 증시', icon: 'trending_up', url: 'https://finance.naver.com/news/news_list.naver?mode=LSS3D&section_id=101&section_id2=261&section_id3=0' },
+  { label: '한국 증시', icon: 'show_chart', url: 'https://finance.naver.com/news/news_list.naver?mode=LSS3D&section_id=101&section_id2=258&section_id3=0' },
+  { label: 'Bloomberg', icon: 'language', url: 'https://www.bloomberg.com/markets' },
+  { label: 'Yahoo 뉴스', icon: 'feed', url: 'https://finance.yahoo.com/topic/stock-market-news/' },
+];
+
+// ── 오늘의 계획 · 마무리 기록 ──
+interface DailyNote { plan: string; review: string; }
+const NOTE_PREFIX = 'daily_note_';
+function loadNote(date: string): DailyNote {
+  try { return JSON.parse(localStorage.getItem(NOTE_PREFIX + date) || 'null') ?? { plan: '', review: '' }; }
+  catch { return { plan: '', review: '' }; }
+}
+function saveNote(date: string, note: DailyNote) {
+  localStorage.setItem(NOTE_PREFIX + date, JSON.stringify(note));
+}
+function getAllNoteDates(): string[] {
+  const dates: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k?.startsWith(NOTE_PREFIX)) {
+      const date = k.slice(NOTE_PREFIX.length);
+      const n = loadNote(date);
+      if (n.plan || n.review) dates.push(date);
+    }
+  }
+  return dates;
+}
+function getCalGrid(year: number, month: number) {
+  return { firstDay: new Date(year, month, 1).getDay(), daysInMonth: new Date(year, month + 1, 0).getDate() };
+}
+
+function NotesCalendarModal({ selectedDate, onSelectDate, onClose }: {
+  selectedDate: string; onSelectDate: (d: string) => void; onClose: () => void;
+}) {
+  const [year, setYear] = useState(() => parseInt(selectedDate.slice(0, 4)));
+  const [month, setMonth] = useState(() => parseInt(selectedDate.slice(5, 7)) - 1);
+  const [previewDate, setPreviewDate] = useState<string | null>(null);
+  const noteDates = new Set(getAllNoteDates());
+  const today = new Date().toISOString().slice(0, 10);
+  const { firstDay, daysInMonth } = getCalGrid(year, month);
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const prev = () => month === 0 ? (setYear(y => y - 1), setMonth(11)) : setMonth(m => m - 1);
+  const next = () => month === 11 ? (setYear(y => y + 1), setMonth(0)) : setMonth(m => m + 1);
+
+  const btnStyle = (base: boolean, active: boolean): React.CSSProperties => ({
+    padding: '0 6px', minWidth: 28, height: 34, borderRadius: 8, border: 'none',
+    background: active ? '#191F28' : base ? '#EDF3FF' : 'transparent',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
+  });
+
+  const previewNote = previewDate ? loadNote(previewDate) : null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <button onClick={prev} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border-primary)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MIcon name="chevron_left" size={18} /></button>
+          <span style={{ fontSize: 15, fontWeight: 800 }}>{year}년 {month + 1}월</span>
+          <button onClick={next} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border-primary)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MIcon name="chevron_right" size={18} /></button>
+        </div>
+        {/* 요일 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
+          {DAYS.map((d, i) => <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, padding: '3px 0', color: i === 0 ? '#F04452' : i === 6 ? '#3182F6' : 'var(--text-tertiary)' }}>{d}</div>)}
+        </div>
+        {/* 날짜 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+          {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1;
+            const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const hasNote = noteDates.has(ds);
+            const isToday = ds === today;
+            const isSel = ds === selectedDate;
+            const dow = (firstDay + i) % 7;
+            return (
+              <button key={day} onClick={() => { setPreviewDate(ds); onSelectDate(ds); }}
+                style={btnStyle(isToday, isSel)}>
+                <span style={{ fontSize: 12, fontWeight: isToday || isSel ? 700 : 400, color: isSel ? '#fff' : dow === 0 ? '#F04452' : dow === 6 ? '#3182F6' : 'var(--text-primary)', lineHeight: 1.2 }}>{day}</span>
+                {hasNote && <div style={{ width: 4, height: 4, borderRadius: '50%', background: isSel ? '#fff' : '#30C85E', marginTop: 1 }} />}
+              </button>
+            );
+          })}
+        </div>
+        {/* 선택된 날짜 미리보기 */}
+        {previewDate && previewNote && (previewNote.plan || previewNote.review) && (
+          <div style={{ marginTop: 14, background: 'var(--bg-secondary)', borderRadius: 12, padding: '12px 14px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{previewDate}</div>
+            {previewNote.plan && <div style={{ fontSize: 12, marginBottom: 4 }}><span style={{ color: '#30C85E', fontWeight: 700 }}>계획 </span>{previewNote.plan}</div>}
+            {previewNote.review && <div style={{ fontSize: 12 }}><span style={{ color: '#3182F6', fontWeight: 700 }}>마무리 </span>{previewNote.review}</div>}
+          </div>
+        )}
+        {previewDate && (!previewNote || (!previewNote.plan && !previewNote.review)) && (
+          <div style={{ marginTop: 14, textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', padding: '10px 0' }}>기록 없음</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DailyNoteSection({ isMobile }: { isMobile: boolean }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [viewDate, setViewDate] = useState(todayStr);
+  const [note, setNote] = useState<DailyNote>(() => loadNote(todayStr));
+  const [showCal, setShowCal] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const isToday = viewDate === todayStr;
+  const displayDate = (() => {
+    const d = new Date(viewDate + 'T12:00:00');
+    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  })();
+
+  const update = (field: 'plan' | 'review', value: string) => {
+    const next = { ...note, [field]: value };
+    setNote(next);
+    saveNote(viewDate, next);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1200);
+  };
+
+  const selectDate = (date: string) => {
+    setViewDate(date);
+    setNote(loadNote(date));
+    setShowCal(false);
+  };
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 9, background: '#EDFBF2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <MIcon name="edit_note" size={17} style={{ color: '#30C85E' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>오늘의 계획 · 마무리 기록</div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>{displayDate}</div>
+        </div>
+        <button onClick={() => setShowCal(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: '#fff', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
+          <MIcon name="calendar_month" size={13} />달력
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#30C85E', marginBottom: 5 }}>오늘의 계획 (아침)</div>
+        <textarea value={note.plan} onChange={e => update('plan', e.target.value)}
+          placeholder='"오늘은 매수하지 않는다" / "○○ 종목 흐름 관찰만 한다"'
+          rows={2}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-primary)', fontSize: 13, fontFamily: 'inherit', color: 'var(--text-primary)', background: 'var(--bg-secondary)', resize: 'vertical', boxSizing: 'border-box', outline: 'none', lineHeight: 1.6 }} />
+      </div>
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#3182F6', marginBottom: 5 }}>마무리 기록 (저녁)</div>
+        <textarea value={note.review} onChange={e => update('review', e.target.value)}
+          placeholder='"오늘 잘 참았다" / "감정이 흔들렸다" — 매매 이유와 감정도 기록하세요'
+          rows={2}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-primary)', fontSize: 13, fontFamily: 'inherit', color: 'var(--text-primary)', background: 'var(--bg-secondary)', resize: 'vertical', boxSizing: 'border-box', outline: 'none', lineHeight: 1.6 }} />
+      </div>
+
+      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: saved ? '#30C85E' : 'var(--text-tertiary)' }}>
+        <MIcon name={saved ? 'check_circle' : 'save'} size={12} style={{ opacity: 0.7 }} />
+        {saved ? '저장됨' : `자동 저장 · ${isToday ? '오늘' : viewDate}`}
+      </div>
+
+      {showCal && <NotesCalendarModal selectedDate={viewDate} onSelectDate={selectDate} onClose={() => setShowCal(false)} />}
+    </div>
+  );
+}
 
 // ── 아침 시황 위젯 ──
 interface BriefItem { price: number; change?: number; changePct: number; }
@@ -19,6 +267,7 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
   const [data, setData] = useState<MorningData | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchedAt, setFetchedAt] = useState('');
+  const [chartModal, setChartModal] = useState<ChartConfig | null>(null);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -54,8 +303,9 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
     </div>
   );
 
-  const StockChip = ({ label, price, changePct, prefix = '' }: { label: string; price: number; changePct: number; prefix?: string }) => (
-    <div style={{ flexShrink: 0, background: 'var(--bg-secondary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 72 }}>
+  const StockChip = ({ label, price, changePct, prefix = '', symbol }: { label: string; price: number; changePct: number; prefix?: string; symbol?: string }) => (
+    <div onClick={symbol ? () => window.open(getStockUrl(symbol), '_blank') : undefined}
+      style={{ flexShrink: 0, background: 'var(--bg-secondary)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 72, cursor: symbol ? 'pointer' : 'default' }}>
       <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 700, marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{prefix}{numFmt(price, price < 100 ? 2 : 0)}</div>
       <div style={{ fontSize: 10, color: pColor(changePct), fontWeight: 600 }}>{pStr(changePct)}</div>
@@ -99,14 +349,16 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
           {/* 환율 · 금리 */}
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em' }}>환율 · 금리</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
-            <div style={{ flex: 1, background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div onClick={() => setChartModal({ title: '달러/원 환율', endpoint: 'chart/usdkrw', color: '#3182F6', unit: '원', decimals: 1 })}
+              style={{ flex: 1, background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>달러 / 원</span>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{numFmt(data.usdKrw.price, 1)}원</div>
                 <div style={{ fontSize: 11, color: pColor(data.usdKrw.changePct) }}>{data.usdKrw.change !== undefined ? `${data.usdKrw.change > 0 ? '+' : ''}${data.usdKrw.change.toFixed(1)}원` : ''} ({pStr(data.usdKrw.changePct)})</div>
               </div>
             </div>
-            <div style={{ flex: 1, background: data.tnx ? (data.tnx.changePct > 0 ? '#FFF4E5' : '#EDF3FF') : 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div onClick={() => setChartModal({ title: '미 10년물 국채 금리', endpoint: 'chart/tnx', color: '#FF9500', unit: '%', decimals: 3 })}
+              style={{ flex: 1, background: data.tnx ? (data.tnx.changePct > 0 ? '#FFF4E5' : '#EDF3FF') : 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>미 10년물 금리</div>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{data.tnx ? (data.tnx.changePct > 0 ? '주가 하락 압력 ↑' : '주식 매력 상승 ↑') : ''}</div>
@@ -125,19 +377,33 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
           {/* 주요 종목 — 가로 스크롤 */}
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em' }}>주요 종목</div>
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-            {data.usStocks['NVDA'] && <StockChip label="NVDA" prefix="$" price={data.usStocks['NVDA']!.price} changePct={data.usStocks['NVDA']!.changePct} />}
-            {data.usStocks['AAPL'] && <StockChip label="AAPL" prefix="$" price={data.usStocks['AAPL']!.price} changePct={data.usStocks['AAPL']!.changePct} />}
-            {data.usStocks['MSFT'] && <StockChip label="MSFT" prefix="$" price={data.usStocks['MSFT']!.price} changePct={data.usStocks['MSFT']!.changePct} />}
-            {data.usStocks['AMZN'] && <StockChip label="AMZN" prefix="$" price={data.usStocks['AMZN']!.price} changePct={data.usStocks['AMZN']!.changePct} />}
-            {data.usStocks['GOOGL'] && <StockChip label="GOOGL" prefix="$" price={data.usStocks['GOOGL']!.price} changePct={data.usStocks['GOOGL']!.changePct} />}
-            {data.usStocks['TSLA'] && <StockChip label="TSLA" prefix="$" price={data.usStocks['TSLA']!.price} changePct={data.usStocks['TSLA']!.changePct} />}
-            {data.usStocks['JPM'] && <StockChip label="JPM" prefix="$" price={data.usStocks['JPM']!.price} changePct={data.usStocks['JPM']!.changePct} />}
-            {data.usStocks['WMT'] && <StockChip label="WMT" prefix="$" price={data.usStocks['WMT']!.price} changePct={data.usStocks['WMT']!.changePct} />}
-            {data.krStocks['005930'] && <StockChip label="삼성" price={data.krStocks['005930']!.price} changePct={data.krStocks['005930']!.changePct} />}
-            {data.krStocks['000660'] && <StockChip label="SK하이닉" price={data.krStocks['000660']!.price} changePct={data.krStocks['000660']!.changePct} />}
+            {data.usStocks['NVDA'] && <StockChip label="NVDA" prefix="$" price={data.usStocks['NVDA']!.price} changePct={data.usStocks['NVDA']!.changePct} symbol="NVDA" />}
+            {data.usStocks['AAPL'] && <StockChip label="AAPL" prefix="$" price={data.usStocks['AAPL']!.price} changePct={data.usStocks['AAPL']!.changePct} symbol="AAPL" />}
+            {data.usStocks['MSFT'] && <StockChip label="MSFT" prefix="$" price={data.usStocks['MSFT']!.price} changePct={data.usStocks['MSFT']!.changePct} symbol="MSFT" />}
+            {data.usStocks['AMZN'] && <StockChip label="AMZN" prefix="$" price={data.usStocks['AMZN']!.price} changePct={data.usStocks['AMZN']!.changePct} symbol="AMZN" />}
+            {data.usStocks['GOOGL'] && <StockChip label="GOOGL" prefix="$" price={data.usStocks['GOOGL']!.price} changePct={data.usStocks['GOOGL']!.changePct} symbol="GOOGL" />}
+            {data.usStocks['TSLA'] && <StockChip label="TSLA" prefix="$" price={data.usStocks['TSLA']!.price} changePct={data.usStocks['TSLA']!.changePct} symbol="TSLA" />}
+            {data.usStocks['JPM'] && <StockChip label="JPM" prefix="$" price={data.usStocks['JPM']!.price} changePct={data.usStocks['JPM']!.changePct} symbol="JPM" />}
+            {data.usStocks['WMT'] && <StockChip label="WMT" prefix="$" price={data.usStocks['WMT']!.price} changePct={data.usStocks['WMT']!.changePct} symbol="WMT" />}
+            {data.krStocks['005930'] && <StockChip label="삼성" price={data.krStocks['005930']!.price} changePct={data.krStocks['005930']!.changePct} symbol="005930" />}
+            {data.krStocks['000660'] && <StockChip label="SK하이닉" price={data.krStocks['000660']!.price} changePct={data.krStocks['000660']!.changePct} symbol="000660" />}
+          </div>
+
+          {/* 뉴스 링크 */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em', marginTop: 12 }}>뉴스</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {NEWS_LINKS.map(link => (
+              <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: '#fff', textDecoration: 'none', fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                <MIcon name={link.icon} size={13} />
+                {link.label}
+              </a>
+            ))}
           </div>
         </>
       )}
+
+      {chartModal && <ChartModal config={chartModal} onClose={() => setChartModal(null)} />}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -195,18 +461,6 @@ const DAILY_SECTIONS = [
       '변동폭이 컸던 종목 이유 한 줄 파악',
     ],
   },
-  {
-    icon: 'edit_note',
-    color: '#30C85E',
-    bg: '#EDFBF2',
-    title: '오늘의 계획 · 마무리 기록',
-    subtitle: '짧은 한 줄이 하루를, 하루가 돈을 지킨다',
-    items: [
-      '오늘의 계획 한 줄 기록 ("오늘은 매수하지 않는다" / "○○ 종목 흐름 관찰")',
-      '장 마감 후 — "오늘 잘 참았다" 또는 "감정이 흔들렸다" 기록',
-      '실제 매매가 있었다면 이유와 감정 상태 메모',
-    ],
-  },
 ];
 
 // ── 날짜별 체크 상태 관리 ──
@@ -259,6 +513,9 @@ function DailyTab({ isMobile }: { isMobile: boolean }) {
           </div>
         )}
       </div>
+
+      {/* 오늘의 계획 · 마무리 기록 */}
+      <DailyNoteSection isMobile={isMobile} />
 
       {/* 섹션별 카드 */}
       {DAILY_SECTIONS.map((section, si) => (
