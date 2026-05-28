@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../App';
 import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
+import { kvGet, kvSet } from '../api';
 import { MIcon } from './MIcon';
 import type { Holding, Account } from '../types';
 
@@ -9,7 +10,15 @@ interface TrailingEntry {
   peakPrice: number; // 추적 고점
 }
 
+interface CustomStock {
+  id: string;
+  ticker: string;
+  name: string;
+  avgPrice: number;
+}
+
 const LS_KEY = 'trailing_stops_v1';
+const CUSTOM_KEY = 'trailing_custom_stocks_v1';
 
 function load(): Record<string, TrailingEntry> {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
@@ -17,6 +26,15 @@ function load(): Record<string, TrailingEntry> {
 }
 function save(e: Record<string, TrailingEntry>) {
   localStorage.setItem(LS_KEY, JSON.stringify(e));
+  kvSet(LS_KEY, e).catch(() => {});
+}
+function loadCustom(): CustomStock[] {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveCustom(s: CustomStock[]) {
+  localStorage.setItem(CUSTOM_KEY, JSON.stringify(s));
+  kvSet(CUSTOM_KEY, s).catch(() => {});
 }
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
 function fmtPct(n: number, digits = 1) {
@@ -174,19 +192,36 @@ export function TrailingStopLoss() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const [customStocks, setCustomStocks] = useState<CustomStock[]>(loadCustom);
+  const [addTicker, setAddTicker] = useState('');
+  const [addPrice, setAddPrice] = useState('');
+  const [addLoading, setAddLoading] = useState(false);
+
+  const isCustomView = selectedAccountId === 'custom';
 
   // 펀드·현금 제외, ticker 있는 종목만 + 계좌 필터
   const accountHoldings = accounts
-    .filter(acc => selectedAccountId === 'all' || acc.id === selectedAccountId)
+    .filter(acc => !isCustomView && (selectedAccountId === 'all' || acc.id === selectedAccountId))
     .map(acc => ({
       account: acc,
       holdings: acc.holdings.filter(h => !h.isFund && h.ticker && h.quantity > 0),
     }))
     .filter(a => a.holdings.length > 0);
 
-  const tickers = [...new Set(
-    accountHoldings.flatMap(a => a.holdings.map(h => h.ticker))
-  )];
+  // 개별종목을 가상 account로 변환
+  const customAccount: Account = {
+    id: 'custom', owner: 'wife', ownerName: '개별종목',
+    institution: '', accountType: '', alias: '',
+    holdings: customStocks.map(s => ({
+      id: s.id, name: s.name, ticker: s.ticker,
+      market: 'KR' as const, avgPrice: s.avgPrice, quantity: 1,
+    })),
+  };
+
+  const tickers = [...new Set([
+    ...accountHoldings.flatMap(a => a.holdings.map(h => h.ticker)),
+    ...customStocks.map(s => s.ticker),
+  ])];
 
   const fetchPrices = useCallback(async () => {
     if (tickers.length === 0) return;
@@ -204,10 +239,9 @@ export function TrailingStopLoss() {
           const p = data[ticker]?.price;
           if (!p) continue;
           if (!next[ticker]) {
-            // 첫 등록 시 현재가 기준 고점 설정
-            const avgPrice = accountHoldings
-              .flatMap(a => a.holdings)
-              .find(h => h.ticker === ticker)?.avgPrice ?? p;
+            const avgPrice =
+              accountHoldings.flatMap(a => a.holdings).find(h => h.ticker === ticker)?.avgPrice ??
+              customStocks.find(s => s.ticker === ticker)?.avgPrice ?? p;
             next[ticker] = { pct: 10, peakPrice: Math.max(p, avgPrice) };
             changed = true;
           } else if (p > next[ticker].peakPrice) {
@@ -223,6 +257,22 @@ export function TrailingStopLoss() {
     }
   }, [tickers.join(',')]);
 
+  // KV에서 데이터 로드 (마운트 시 1회 — localStorage보다 최신이면 덮어씀)
+  useEffect(() => {
+    kvGet<Record<string, TrailingEntry>>(LS_KEY).then(remote => {
+      if (remote && Object.keys(remote).length > 0) {
+        setEntries(remote);
+        localStorage.setItem(LS_KEY, JSON.stringify(remote));
+      }
+    }).catch(() => {});
+    kvGet<CustomStock[]>(CUSTOM_KEY).then(remote => {
+      if (remote && remote.length > 0) {
+        setCustomStocks(remote);
+        localStorage.setItem(CUSTOM_KEY, JSON.stringify(remote));
+      }
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => { fetchPrices(); }, []);
 
   const updatePct = (ticker: string, pct: number) => {
@@ -234,6 +284,32 @@ export function TrailingStopLoss() {
       save(next);
       return next;
     });
+  };
+
+  const addCustomStock = async () => {
+    const ticker = addTicker.trim().toUpperCase();
+    const price = parseFloat(addPrice.replace(/,/g, ''));
+    if (!ticker || !price || price <= 0) return;
+    if (customStocks.find(s => s.ticker === ticker)) return;
+    setAddLoading(true);
+    let name = ticker;
+    try {
+      const r = await fetch(`/naver-stock/${ticker}/basic`);
+      if (r.ok) { const d = await r.json(); name = d.stockName || ticker; }
+    } catch { /* 이름 조회 실패 시 ticker 사용 */ }
+    const newStock: CustomStock = { id: `${ticker}-${Date.now()}`, ticker, name, avgPrice: price };
+    const next = [...customStocks, newStock];
+    setCustomStocks(next);
+    saveCustom(next);
+    setAddTicker('');
+    setAddPrice('');
+    setAddLoading(false);
+  };
+
+  const removeCustomStock = (id: string) => {
+    const next = customStocks.filter(s => s.id !== id);
+    setCustomStocks(next);
+    saveCustom(next);
   };
 
   const resetPeak = (ticker: string) => {
@@ -302,6 +378,7 @@ export function TrailingStopLoss() {
                   {triggeredAccountIds.has(acc.id) ? '[!] ' : ''}{acc.ownerName} {acc.institution} {acc.accountType}{acc.alias ? ` (${acc.alias})` : ''}
                 </option>
               ))}
+              <option value="custom">── 개별종목 ({customStocks.length})</option>
             </select>
             <button onClick={fetchPrices} disabled={loading}
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.65 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
@@ -357,13 +434,76 @@ export function TrailingStopLoss() {
           </div>
         </div>
 
+        {/* 개별종목 뷰 */}
+        {isCustomView && (
+          <div style={{ marginBottom: 28 }}>
+            {/* 추가 폼 */}
+            <div style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>종목 추가</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  value={addTicker}
+                  onChange={e => setAddTicker(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === 'Enter' && addCustomStock()}
+                  placeholder="티커 (예: 005930)"
+                  style={{ flex: '1 1 100px', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+                />
+                <input
+                  value={addPrice}
+                  onChange={e => setAddPrice(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCustomStock()}
+                  placeholder="매수가 (원)"
+                  type="number"
+                  style={{ flex: '1 1 100px', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+                />
+                <button onClick={addCustomStock} disabled={addLoading || !addTicker || !addPrice}
+                  style={{ padding: '8px 16px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: addLoading || !addTicker || !addPrice ? 'default' : 'pointer', opacity: addLoading || !addTicker || !addPrice ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+                  {addLoading ? '조회 중...' : '추가'}
+                </button>
+              </div>
+            </div>
+
+            {/* 개별종목 목록 */}
+            {customStocks.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-tertiary)' }}>
+                <MIcon name="add_circle" size={36} style={{ opacity: 0.25, display: 'block', margin: '0 auto 10px' }} />
+                <p style={{ fontSize: 13 }}>티커와 매수가를 입력해 종목을 추가하세요</p>
+              </div>
+            ) : (
+              customStocks.map(cs => {
+                const pd = priceData[cs.ticker];
+                const entry = entries[cs.ticker] ?? { pct: 10, peakPrice: pd?.price ?? cs.avgPrice };
+                const fakeHolding: Holding = { id: cs.id, name: cs.name, ticker: cs.ticker, market: 'KR', avgPrice: cs.avgPrice, quantity: 1 };
+                return (
+                  <div key={cs.id} style={{ position: 'relative' }}>
+                    <HoldingRow
+                      holding={fakeHolding}
+                      account={customAccount}
+                      currentPrice={pd?.price}
+                      changeRate={pd?.changeRate}
+                      entry={entry}
+                      onPctChange={p => updatePct(cs.ticker, p)}
+                      onResetPeak={() => resetPeak(cs.ticker)}
+                    />
+                    <button onClick={() => removeCustomStock(cs.id)}
+                      title="삭제"
+                      style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, display: 'flex', alignItems: 'center' }}>
+                      <MIcon name="close" size={16} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
         {/* 계좌별 종목 목록 */}
-        {accountHoldings.length === 0 ? (
+        {!isCustomView && accountHoldings.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-tertiary)' }}>
             <MIcon name="inventory_2" size={40} style={{ opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
             <p>등록된 보유종목이 없습니다</p>
           </div>
-        ) : (
+        ) : !isCustomView ? (
           accountHoldings.map(({ account, holdings }) => {
             const getStatus = (ticker: string) => {
               const e = entries[ticker];
@@ -438,7 +578,7 @@ export function TrailingStopLoss() {
               </div>
             );
           })
-        )}
+        ) : null}
       </div>
     </div>
   );
