@@ -1226,6 +1226,34 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       } catch (e) { return json({ error: String(e) }, 500); }
     }
 
+    // GET /daily-note/:date — 일일 노트 조회
+    if (request.method === 'GET' && /^\/daily-note\/\d{4}-\d{2}-\d{2}$/.test(url.pathname)) {
+      const date = url.pathname.slice('/daily-note/'.length);
+      const val = await env.KV.get(`daily_note_${date}`);
+      if (!val) return json({ plan: '', review: '' });
+      return json(JSON.parse(val));
+    }
+
+    // PUT /daily-note/:date — 일일 노트 저장
+    if (request.method === 'PUT' && /^\/daily-note\/\d{4}-\d{2}-\d{2}$/.test(url.pathname)) {
+      const date = url.pathname.slice('/daily-note/'.length);
+      const body = await request.json() as { plan: string; review: string };
+      const isEmpty = !body.plan && !body.review;
+      if (isEmpty) {
+        await env.KV.delete(`daily_note_${date}`);
+      } else {
+        await env.KV.put(`daily_note_${date}`, JSON.stringify(body));
+      }
+      return json({ ok: true });
+    }
+
+    // GET /daily-notes/list — 노트가 있는 날짜 목록
+    if (request.method === 'GET' && url.pathname === '/daily-notes/list') {
+      const list = await env.KV.list({ prefix: 'daily_note_' });
+      const dates = list.keys.map(k => k.name.slice('daily_note_'.length));
+      return json(dates);
+    }
+
     // GET /morning-brief — 아침 시황 위젯 (지수·환율·금리·주요 종목)
     if (request.method === 'GET' && url.pathname === '/morning-brief') {
       try {

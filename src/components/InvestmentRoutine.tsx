@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { MIcon } from './MIcon';
 import { useAppContext } from '../App';
@@ -119,7 +119,14 @@ function NotesCalendarModal({ selectedDate, onSelectDate, onClose }: {
   const [year, setYear] = useState(() => parseInt(selectedDate.slice(0, 4)));
   const [month, setMonth] = useState(() => parseInt(selectedDate.slice(5, 7)) - 1);
   const [previewDate, setPreviewDate] = useState<string | null>(null);
-  const noteDates = new Set(getAllNoteDates());
+  const [noteDates, setNoteDates] = useState<Set<string>>(() => new Set(getAllNoteDates()));
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/daily-notes/list`)
+      .then(r => r.json())
+      .then((dates: string[]) => setNoteDates(new Set([...getAllNoteDates(), ...dates])))
+      .catch(() => {});
+  }, []);
   const today = new Date().toISOString().slice(0, 10);
   const { firstDay, daysInMonth } = getCalGrid(year, month);
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -189,6 +196,20 @@ function DailyNoteSection({ isMobile }: { isMobile: boolean }) {
   const [note, setNote] = useState<DailyNote>(() => loadNote(todayStr));
   const [showCal, setShowCal] = useState(false);
   const [saved, setSaved] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setNote(loadNote(viewDate));
+    fetch(`${WORKER_URL}/daily-note/${viewDate}`)
+      .then(r => r.json())
+      .then((kv: DailyNote) => {
+        if (kv.plan || kv.review) {
+          setNote(kv);
+          saveNote(viewDate, kv);
+        }
+      })
+      .catch(() => {});
+  }, [viewDate]);
 
   const isToday = viewDate === todayStr;
   const displayDate = (() => {
@@ -200,13 +221,20 @@ function DailyNoteSection({ isMobile }: { isMobile: boolean }) {
     const next = { ...note, [field]: value };
     setNote(next);
     saveNote(viewDate, next);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1200);
+    setSaved(false);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(`${WORKER_URL}/daily-note/${viewDate}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 1200); })
+        .catch(() => {});
+    }, 800);
   };
 
   const selectDate = (date: string) => {
     setViewDate(date);
-    setNote(loadNote(date));
     setShowCal(false);
   };
 
@@ -243,8 +271,8 @@ function DailyNoteSection({ isMobile }: { isMobile: boolean }) {
       </div>
 
       <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: saved ? '#30C85E' : 'var(--text-tertiary)' }}>
-        <MIcon name={saved ? 'check_circle' : 'save'} size={12} style={{ opacity: 0.7 }} />
-        {saved ? '저장됨' : `자동 저장 · ${isToday ? '오늘' : viewDate}`}
+        <MIcon name={saved ? 'cloud_done' : 'cloud_upload'} size={12} style={{ opacity: 0.7 }} />
+        {saved ? '클라우드 저장됨' : `입력 후 자동 저장 · ${isToday ? '오늘' : viewDate}`}
       </div>
 
       {showCal && <NotesCalendarModal selectedDate={viewDate} onSelectDate={selectDate} onClose={() => setShowCal(false)} />}
