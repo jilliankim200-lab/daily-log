@@ -1254,6 +1254,43 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json(dates);
     }
 
+    // GET /naver-finance-news — 네이버 금융 주요 뉴스 파싱
+    if (request.method === 'GET' && url.pathname === '/naver-finance-news') {
+      try {
+        const res = await fetch('https://finance.naver.com/news/mainnews.naver', {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Referer': 'https://finance.naver.com/',
+          }
+        });
+        if (!res.ok) return json({ error: 'fetch failed' }, 500);
+        const buf = await res.arrayBuffer();
+        const html = new TextDecoder('euc-kr').decode(buf);
+        const items: { title: string; url: string }[] = [];
+        const seen = new Set<string>();
+        const cleanTitle = (s: string) => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"').replace(/&hellip;/g, '…').replace(/&lsquo;|&rsquo;/g, "'")
+          .replace(/&ldquo;|&rdquo;/g, '"').replace(/&#\d+;/g, '').replace(/[\s·.]+$/, '').trim();
+
+        // mode=mainnews 링크만 추출 — 썸네일 <a>는 innerText가 없어서 자동 필터됨
+        const re = /<a\b[^>]*href="(\/news\/news_read\.naver\?[^"]*mode=mainnews[^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
+        for (const m of html.matchAll(re)) {
+          const href = m[1].replace(/&amp;/g, '&');
+          const title = cleanTitle(m[2]);
+          const fullUrl = `https://finance.naver.com${href}`;
+          if (!seen.has(fullUrl) && title.length >= 5) {
+            seen.add(fullUrl);
+            items.push({ title, url: fullUrl });
+            if (items.length >= 10) break;
+          }
+        }
+        return json(items);
+      } catch (e) { return json({ error: String(e) }, 500); }
+    }
+
     // GET /morning-brief — 아침 시황 위젯 (지수·환율·금리·주요 종목)
     if (request.method === 'GET' && url.pathname === '/morning-brief') {
       try {

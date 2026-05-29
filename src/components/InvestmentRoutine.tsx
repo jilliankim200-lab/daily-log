@@ -296,6 +296,7 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
   const [loading, setLoading] = useState(false);
   const [fetchedAt, setFetchedAt] = useState('');
   const [chartModal, setChartModal] = useState<ChartConfig | null>(null);
+  const [news, setNews] = useState<{ title: string; url: string }[]>([]);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -309,7 +310,13 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetch_(); }, [fetch_]);
+  useEffect(() => {
+    fetch_();
+    fetch(`${WORKER_URL}/naver-finance-news`)
+      .then(r => r.json())
+      .then(d => Array.isArray(d) && setNews(d))
+      .catch(() => {});
+  }, [fetch_]);
 
   const upColor = '#F04452';   // 한국 증시 관행: 상승=빨강
   const dnColor = '#3182F6';   // 하락=파랑
@@ -417,17 +424,20 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
             {data.krStocks['000660'] && <StockChip label="SK하이닉" price={data.krStocks['000660']!.price} changePct={data.krStocks['000660']!.changePct} symbol="000660" />}
           </div>
 
-          {/* 뉴스 링크 */}
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em', marginTop: 12 }}>뉴스</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {NEWS_LINKS.map(link => (
-              <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: '#fff', textDecoration: 'none', fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                <MIcon name={link.icon} size={13} />
-                {link.label}
-              </a>
-            ))}
-          </div>
+          {/* 뉴스 */}
+          {news.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 6, letterSpacing: '0.05em', marginTop: 12 }}>뉴스</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {news.map((item, i) => (
+                  <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'block', padding: '6px 8px', borderRadius: 8, fontSize: 12, color: 'var(--text-primary)', textDecoration: 'none', lineHeight: 1.5, background: 'var(--bg-secondary)' }}>
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -516,11 +526,11 @@ const DAILY_SECTIONS = [
     title: '주요 기업 주가 체크',
     subtitle: '대표주의 흐름이 오늘 시장의 신호',
     items: [
-      'NVDA — AI 시대 온도계, 기술주 흐름의 출발점',
-      'AAPL · MSFT · AMZN · GOOGL · TSLA — 빅테크 5총사',
-      'JPM (금융/금리 민감도) · WMT (소비 흐름)',
-      '삼성전자 · SK하이닉스 — 코스피의 핵심 축',
-      '변동폭이 컸던 종목 이유 한 줄 파악',
+      'NVDA',
+      'AAPL · MSFT · AMZN · GOOGL · TSLA',
+      'JPM · WMT',
+      '삼성전자 · SK하이닉스',
+      '변동폭 큰 종목 이유 파악',
     ],
     searchLinks: [
       'NVDA 엔비디아 주가',
