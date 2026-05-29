@@ -509,11 +509,12 @@ function SectionCard({ section, si, checked, onToggle, isMobile }: {
 }
 
 const TABS = [
-  { id: 'daily',     label: '매일',  icon: 'today' },
-  { id: 'weekly',    label: '매주',  icon: 'date_range' },
-  { id: 'monthly',   label: '매월',  icon: 'calendar_month' },
-  { id: 'quarterly', label: '매분기', icon: 'event_note' },
-  { id: 'yearly',    label: '매년',  icon: 'emoji_events' },
+  { id: 'daily',      label: '매일',      icon: 'today' },
+  { id: 'weekly',     label: '매주',      icon: 'date_range' },
+  { id: 'monthly',    label: '매월',      icon: 'calendar_month' },
+  { id: 'quarterly',  label: '매분기',    icon: 'event_note' },
+  { id: 'yearly',     label: '매년',      icon: 'emoji_events' },
+  { id: 'stockcheck', label: '신규종목체크', icon: 'manage_search' },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -526,16 +527,16 @@ const DAILY_SECTIONS = [
     title: '주요 기업 주가 체크',
     subtitle: '대표주의 흐름이 오늘 시장의 신호',
     items: [
-      'NVDA',
-      'AAPL · MSFT · AMZN · GOOGL · TSLA',
-      'JPM · WMT',
+      '엔비디아',
+      '애플 · 마이크로소프트 · 아마존 · 구글 · 테슬라',
+      'JP모건 · 월마트',
       '삼성전자 · SK하이닉스',
       '변동폭 큰 종목 이유 파악',
     ],
     searchLinks: [
-      'NVDA 엔비디아 주가',
+      '엔비디아 주가',
       '빅테크 주가 오늘',
-      'JPM WMT 주가',
+      'JP모건 월마트 주가',
       '삼성전자 SK하이닉스 주가',
       '오늘 주가 급등 급락 이유',
     ],
@@ -1098,6 +1099,388 @@ function YearlyTab({ isMobile }: { isMobile: boolean }) {
   );
 }
 
+// ── 신규 종목 체크 ──
+interface StockCheckResult {
+  ticker: string; name: string; sector: string; industry: string; currency: string;
+  price: number; marketCap: number;
+  technical: {
+    ma30w: number | null; maAbove: boolean | null; maTrending: boolean | null;
+    rsi: number | null; volumeRatio: number | null;
+    week52High: number; week52Low: number; week52Pct: number; nearHigh: boolean;
+  };
+  fundamentals: {
+    per: number | null; pbr: number | null; roe: number | null;
+    debtToEquity: number | null; industryBenchmark: number;
+  };
+  epsHistory: { year: string; eps: number }[];
+  checks: {
+    maAbove: boolean | null; maTrending: boolean | null; rsiOk: boolean | null;
+    nearHigh: boolean | null; epsGrowth3y: boolean | null;
+    debtOk: boolean | null; roeOk: boolean | null; newsClean: boolean | null;
+  };
+  news: { items: { title: string; url: string; flagged: boolean }[]; redFlagCount: number; signal: string };
+}
+
+interface SavedStock {
+  ticker: string; name: string; price: number; currency: string;
+  date: string; passCount: number; totalCount: number;
+}
+
+function SignalBadge({ value, good, warn, na = '—' }: { value: boolean | null; good: string; warn: string; na?: string }) {
+  if (value === null) return <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{na}</span>;
+  return (
+    <span style={{ fontSize: 12, fontWeight: 600, color: value ? '#00875A' : '#E2483D' }}>
+      {value ? '● ' : '● '}{value ? good : warn}
+    </span>
+  );
+}
+
+function MetricBox({ label, value, unit = '', highlight }: { label: string; value: number | null; unit?: string; highlight?: boolean }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 14px', background: highlight ? 'color-mix(in srgb, #6366F1 8%, transparent)' : 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border-primary)', minWidth: 70 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: highlight ? '#6366F1' : 'var(--text-primary)' }}>
+        {value != null ? `${value}${unit}` : '—'}
+      </div>
+    </div>
+  );
+}
+
+function StockCheckTab({ isMobile }: { isMobile: boolean }) {
+  const [ticker, setTicker] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<StockCheckResult | null>(null);
+  const [error, setError] = useState('');
+  const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
+  const [savedStocks, setSavedStocks] = useState<SavedStock[]>(() => {
+    try { return JSON.parse(localStorage.getItem('sc_saved') || '[]'); } catch { return []; }
+  });
+
+  const runCheck = async () => {
+    const t = ticker.trim().toUpperCase();
+    if (!t) return;
+    setLoading(true); setError(''); setResult(null); setManualChecks({});
+    try {
+      const res = await fetch(`${WORKER_URL}/stock-check?ticker=${encodeURIComponent(t)}`);
+      const data = await res.json() as any;
+      if (data.error) { setError(data.error); } else { setResult(data); }
+    } catch { setError('네트워크 오류. 잠시 후 다시 시도해주세요.'); }
+    finally { setLoading(false); }
+  };
+
+  const autoPassCount = (r: StockCheckResult) =>
+    Object.values(r.checks).filter(v => v === true).length;
+  const autoTotalCount = (r: StockCheckResult) =>
+    Object.values(r.checks).filter(v => v !== null).length;
+
+  const saveStock = () => {
+    if (!result) return;
+    const entry: SavedStock = {
+      ticker: result.ticker, name: result.name,
+      price: result.price, currency: result.currency,
+      date: new Date().toISOString().slice(0, 10),
+      passCount: autoPassCount(result) + Object.values(manualChecks).filter(Boolean).length,
+      totalCount: autoTotalCount(result) + Object.keys(manualChecks).length,
+    };
+    const updated = [entry, ...savedStocks.filter(s => s.ticker !== result.ticker)].slice(0, 20);
+    setSavedStocks(updated);
+    localStorage.setItem('sc_saved', JSON.stringify(updated));
+  };
+
+  const removeSaved = (t: string) => {
+    const updated = savedStocks.filter(s => s.ticker !== t);
+    setSavedStocks(updated);
+    localStorage.setItem('sc_saved', JSON.stringify(updated));
+  };
+
+  const fmtPrice = (p: number, currency: string) =>
+    currency === 'USD' ? `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${p.toLocaleString('ko-KR')}원`;
+
+  const fmtCap = (cap: number) => {
+    if (cap >= 1e12) return `$${(cap / 1e12).toFixed(1)}T`;
+    if (cap >= 1e9) return `$${(cap / 1e9).toFixed(1)}B`;
+    return `$${(cap / 1e6).toFixed(0)}M`;
+  };
+
+  const rsiColor = (v: number | null) => {
+    if (v == null) return 'var(--text-tertiary)';
+    if (v >= 70) return '#E2483D';
+    if (v <= 30) return '#3182F6';
+    return '#00875A';
+  };
+
+  const rsiLabel = (v: number | null) => {
+    if (v == null) return '—';
+    if (v >= 70) return `${v} 과열`;
+    if (v <= 30) return `${v} 과매도`;
+    return `${v} 중립`;
+  };
+
+  const MANUAL_ITEMS = [
+    { id: 'understand', label: '이 기업의 사업 내용을 이해하는가?' },
+    { id: 'earnings',   label: '최근 분기 실적이 컨센서스를 충족했는가?' },
+    { id: 'stoploss',   label: '매수 후 손절가를 미리 정해두었는가?' },
+  ];
+
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--bg-card, #fff)',
+    borderRadius: 14,
+    border: '1px solid var(--border-primary)',
+    padding: '16px 18px',
+    marginBottom: 12,
+  };
+
+  return (
+    <div>
+      {/* 검색 */}
+      <div style={{ ...cardStyle, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <MIcon name="manage_search" size={20} style={{ color: '#6366F1', flexShrink: 0 }} />
+        <input
+          value={ticker}
+          onChange={e => setTicker(e.target.value.toUpperCase())}
+          onKeyDown={e => e.key === 'Enter' && runCheck()}
+          placeholder="티커 입력 (예: NVDA, AAPL, 005930.KS)"
+          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', background: 'transparent', color: 'var(--text-primary)' }}
+        />
+        <button
+          onClick={runCheck}
+          disabled={loading || !ticker.trim()}
+          style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: '#6366F1', color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: loading ? 'wait' : 'pointer', opacity: (!ticker.trim()) ? 0.5 : 1 }}
+        >
+          {loading ? '조회 중...' : '조회'}
+        </button>
+      </div>
+
+      {/* 에러 */}
+      {error && (
+        <div style={{ ...cardStyle, background: 'color-mix(in srgb, #E2483D 8%, transparent)', color: '#E2483D', fontWeight: 600, fontSize: 14 }}>
+          <MIcon name="error_outline" size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />{error}
+        </div>
+      )}
+
+      {/* 결과 */}
+      {result && (
+        <>
+          {/* 종목 헤더 */}
+          <div style={{ ...cardStyle, background: '#191F28', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800 }}>{result.name}</div>
+                <div style={{ fontSize: 13, opacity: 0.6, marginTop: 2 }}>{result.ticker} · {result.sector}{result.industry ? ` · ${result.industry}` : ''}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 22, fontWeight: 800 }}>{fmtPrice(result.price, result.currency)}</div>
+                <div style={{ fontSize: 12, opacity: 0.5, marginTop: 2 }}>시가총액 {fmtCap(result.marketCap)}</div>
+              </div>
+            </div>
+            {/* 패스율 */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12, opacity: 0.7 }}>
+                <span>자동 체크 통과</span>
+                <span>{autoPassCount(result)} / {autoTotalCount(result)}</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${autoTotalCount(result) > 0 ? (autoPassCount(result) / autoTotalCount(result)) * 100 : 0}%`, background: autoPassCount(result) / (autoTotalCount(result) || 1) >= 0.7 ? '#30C85E' : '#F59E0B', borderRadius: 99, transition: 'width 0.4s' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* 기술적 신호 */}
+          <div style={cardStyle}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>기술적 신호</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* 30주 이평선 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>30주 이동평균선</div>
+                <div style={{ textAlign: 'right' }}>
+                  <SignalBadge value={result.technical.maAbove} good={`${result.technical.ma30w?.toFixed(2)} 위`} warn={`${result.technical.ma30w?.toFixed(2)} 아래`} />
+                  {result.technical.maTrending != null && (
+                    <span style={{ fontSize: 11, color: result.technical.maTrending ? '#00875A' : '#E2483D', marginLeft: 8 }}>
+                      {result.technical.maTrending ? '▲ 우상향' : '▼ 하락'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* RSI */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>RSI (14일)</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: rsiColor(result.technical.rsi) }}>
+                  {rsiLabel(result.technical.rsi)}
+                </div>
+              </div>
+              {/* 거래량 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>거래량 (5일 / 20일 평균)</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: result.technical.volumeRatio != null && result.technical.volumeRatio >= 1.2 ? '#00875A' : 'var(--text-secondary)' }}>
+                  {result.technical.volumeRatio != null ? `${result.technical.volumeRatio}x` : '—'}
+                </div>
+              </div>
+              {/* 52주 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>52주 고점 대비</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 80, height: 6, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${result.technical.week52Pct}%`, background: result.technical.nearHigh ? '#30C85E' : '#F59E0B', borderRadius: 99 }} />
+                  </div>
+                  <span style={{ fontSize: 12, color: result.technical.nearHigh ? '#00875A' : 'var(--text-tertiary)', fontWeight: 600 }}>
+                    {result.technical.week52Pct}%
+                    {result.technical.nearHigh ? ' ✓ 고점 근접' : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 재무 지표 */}
+          <div style={cardStyle}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>재무 지표</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              <MetricBox label="PER" value={result.fundamentals.per} />
+              <MetricBox label="PBR" value={result.fundamentals.pbr} />
+              <MetricBox label="ROE" value={result.fundamentals.roe} unit="%" highlight={result.fundamentals.roe != null && result.fundamentals.roe >= 15} />
+            </div>
+            {result.fundamentals.debtToEquity != null && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                  <span>부채비율</span>
+                  <span>{result.fundamentals.debtToEquity}% <span style={{ opacity: 0.6 }}>/ 업종 평균 {result.fundamentals.industryBenchmark}%</span></span>
+                </div>
+                <div style={{ height: 6, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, (result.fundamentals.debtToEquity / (result.fundamentals.industryBenchmark * 1.5)) * 100)}%`, background: result.fundamentals.debtToEquity < result.fundamentals.industryBenchmark ? '#30C85E' : '#E2483D', borderRadius: 99 }} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* EPS 히스토리 */}
+          {result.epsHistory.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>EPS 연도별 추이</div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                {[...result.epsHistory].reverse().map((e, i, arr) => {
+                  const prev = arr[i - 1];
+                  const isUp = prev ? e.eps > prev.eps : true;
+                  const maxEps = Math.max(...arr.map(x => Math.abs(x.eps)));
+                  const barH = maxEps > 0 ? Math.max(8, Math.round((Math.abs(e.eps) / maxEps) * 60)) : 8;
+                  return (
+                    <div key={e.year} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: isUp && i > 0 ? '#00875A' : i > 0 ? '#E2483D' : 'var(--text-secondary)' }}>
+                        {e.eps > 0 ? `$${e.eps.toFixed(2)}` : `-$${Math.abs(e.eps).toFixed(2)}`}
+                      </div>
+                      <div style={{ width: '100%', height: barH, borderRadius: 4, background: e.eps >= 0 ? (isUp && i > 0 ? '#30C85E' : '#6366F1') : '#E2483D' }} />
+                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{e.year}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <SignalBadge value={result.checks.epsGrowth3y} good="3년 연속 성장" warn="3년 연속 성장 미충족" />
+              </div>
+            </div>
+          )}
+
+          {/* 자동 체크리스트 */}
+          <div style={cardStyle}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>자동 체크리스트</div>
+            {[
+              { key: 'maAbove',     label: '주가가 30주 이평선 위에 있다' },
+              { key: 'maTrending',  label: '30주 이평선이 우상향 중' },
+              { key: 'rsiOk',       label: 'RSI 70 미만 (과열 아님)' },
+              { key: 'nearHigh',    label: '52주 고점의 75% 이상 수준' },
+              { key: 'epsGrowth3y', label: 'EPS 3년 연속 성장' },
+              { key: 'roeOk',       label: 'ROE 15% 이상' },
+              { key: 'debtOk',      label: '부채비율 업종 평균 이하' },
+              { key: 'newsClean',   label: '뉴스 키워드 이상 없음' },
+            ].map(item => {
+              const val = result.checks[item.key as keyof typeof result.checks];
+              if (val === null) return null;
+              return (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-primary)' }}>
+                  <MIcon name={val ? 'check_circle' : 'cancel'} size={16} style={{ color: val ? '#30C85E' : '#E2483D', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 수동 체크리스트 */}
+          <div style={cardStyle}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>수동 체크리스트</div>
+            {MANUAL_ITEMS.map(item => (
+              <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', borderBottom: '1px solid var(--border-primary)' }}>
+                <div
+                  onClick={() => setManualChecks(p => ({ ...p, [item.id]: !p[item.id] }))}
+                  style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${manualChecks[item.id] ? '#6366F1' : 'var(--border-primary)'}`, background: manualChecks[item.id] ? '#6366F1' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
+                  {manualChecks[item.id] && <MIcon name="check" size={13} style={{ color: '#fff' }} />}
+                </div>
+                <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.label}</span>
+              </label>
+            ))}
+          </div>
+
+          {/* 뉴스 */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>최근 뉴스</div>
+              {result.news.signal !== 'clean' && (
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: result.news.signal === 'danger' ? 'color-mix(in srgb, #E2483D 15%, transparent)' : 'color-mix(in srgb, #F59E0B 15%, transparent)', color: result.news.signal === 'danger' ? '#E2483D' : '#D97706' }}>
+                  <MIcon name="warning" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                  키워드 {result.news.redFlagCount}건 감지
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {result.news.items.map((n, i) => (
+                <a key={i} href={n.url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'block', padding: '6px 10px', borderRadius: 8, fontSize: 12, color: n.flagged ? '#E2483D' : 'var(--text-primary)', textDecoration: 'none', background: n.flagged ? 'color-mix(in srgb, #E2483D 6%, transparent)' : 'var(--bg-secondary)', lineHeight: 1.5, border: n.flagged ? '1px solid color-mix(in srgb, #E2483D 20%, transparent)' : '1px solid transparent' }}>
+                  {n.flagged && <MIcon name="flag" size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />}
+                  {n.title}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* 저장 버튼 */}
+          <button
+            onClick={saveStock}
+            style={{ width: '100%', padding: '14px', borderRadius: 12, border: 'none', background: '#191F28', color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+            <MIcon name="bookmark_add" size={18} style={{ color: '#fff' }} />
+            이 종목 저장
+          </button>
+        </>
+      )}
+
+      {/* 저장된 종목 */}
+      {savedStocks.length > 0 && (
+        <div style={cardStyle}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>저장된 종목</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {savedStocks.map(s => (
+              <div key={s.ticker} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: 14, marginRight: 8 }}>{s.ticker}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{s.name.length > 20 ? s.name.slice(0, 20) + '…' : s.name}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{s.date}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: s.passCount / (s.totalCount || 1) >= 0.7 ? '#00875A' : '#F59E0B' }}>
+                    {s.passCount}/{s.totalCount}
+                  </span>
+                  <button
+                    onClick={() => { setSavedStocks(p => { const n = p.filter(x => x.ticker !== s.ticker); localStorage.setItem('sc_saved', JSON.stringify(n)); return n; }); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
+                    <MIcon name="close" size={14} style={{ color: 'var(--text-tertiary)' }} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function InvestmentRoutine() {
   const { isMobile } = useAppContext();
   const [activeTab, setActiveTab] = useState<TabId>('daily');
@@ -1134,6 +1517,7 @@ export function InvestmentRoutine() {
         {activeTab === 'monthly' && <MonthlyTab isMobile={isMobile} />}
         {activeTab === 'quarterly' && <QuarterlyTab isMobile={isMobile} />}
         {activeTab === 'yearly' && <YearlyTab isMobile={isMobile} />}
+        {activeTab === 'stockcheck' && <StockCheckTab isMobile={isMobile} />}
 
       </div>
     </div>

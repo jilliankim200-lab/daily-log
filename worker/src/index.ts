@@ -1254,6 +1254,163 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json(dates);
     }
 
+    // GET /stock-check?ticker=NVDA — 신규 종목 조건 검사
+    if (request.method === 'GET' && url.pathname === '/stock-check') {
+      const ticker = (url.searchParams.get('ticker') || '').toUpperCase().trim();
+      if (!ticker) return json({ error: 'ticker required' }, 400);
+
+      const SECTOR_DEBT_BENCHMARKS: Record<string, number> = {
+        'Technology': 80, 'Healthcare': 120, 'Financial Services': 400,
+        'Consumer Cyclical': 180, 'Consumer Defensive': 150, 'Energy': 200,
+        'Industrials': 160, 'Basic Materials': 150, 'Real Estate': 300,
+        'Utilities': 350, 'Communication Services': 150,
+      };
+
+      function calcRSI(closes: number[], period = 14): number {
+        if (closes.length < period + 1) return 50;
+        const changes = closes.slice(1).map((c, i) => c - closes[i]);
+        const recent = changes.slice(-period);
+        const gains = recent.filter(c => c > 0).reduce((a, b) => a + b, 0) / period;
+        const losses = Math.abs(recent.filter(c => c < 0).reduce((a, b) => a + b, 0)) / period;
+        if (losses === 0) return 100;
+        return Math.round(100 - (100 / (1 + gains / losses)));
+      }
+
+      function lastVal(arr: any[]): number | null {
+        if (!Array.isArray(arr) || arr.length === 0) return null;
+        const v = arr[arr.length - 1];
+        return v?.reportedValue?.raw ?? null;
+      }
+
+      try {
+        const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+        const p1 = '1451606400', p2 = '1893456000';
+        const [chartWeeklyRes, chartDailyRes, searchRes, tsRes, newsRes] = await Promise.all([
+          fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1wk&range=2y`, { headers: { 'User-Agent': ua } }),
+          fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=3mo`, { headers: { 'User-Agent': ua } }),
+          fetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}&quotesCount=1&newsCount=0`, { headers: { 'User-Agent': ua } }),
+          fetch(`https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(ticker)}?type=annualDilutedEPS,annualTotalDebt,annualStockholdersEquity,annualNetIncome,annualPriceToBook&period1=${p1}&period2=${p2}`, { headers: { 'User-Agent': ua } }),
+          fetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}&newsCount=20&quotesCount=0`, { headers: { 'User-Agent': ua } }),
+        ]);
+
+        if (!chartDailyRes.ok) return json({ error: `종목을 찾을 수 없습니다: ${ticker}` }, 404);
+
+        const [chartWeekly, chartDaily, searchJson, tsJson, newsJson] = await Promise.all([
+          chartWeeklyRes.json() as Promise<any>,
+          chartDailyRes.json() as Promise<any>,
+          searchRes.json() as Promise<any>,
+          tsRes.json() as Promise<any>,
+          newsRes.json() as Promise<any>,
+        ]);
+
+        // 기본 정보 (v8 chart meta + search)
+        const meta = chartDaily.chart?.result?.[0]?.meta || {};
+        if (!meta.symbol) return json({ error: `데이터 없음: ${ticker}` }, 404);
+
+        const searchQuote = (searchJson.quotes || []).find((q: any) => q.symbol?.toUpperCase() === ticker) || searchJson.quotes?.[0] || {};
+        const name = meta.longName || meta.shortName || searchQuote.longname || searchQuote.shortname || ticker;
+        const sector = searchQuote.sector || 'Unknown';
+        const industry = searchQuote.industry || '';
+        const currency = meta.currency || 'USD';
+        const currentPrice = meta.regularMarketPrice || 0;
+        const marketCap = meta.marketCap || 0;
+
+        // 52주
+        const week52High = meta.fiftyTwoWeekHigh || 0;
+        const week52Low = meta.fiftyTwoWeekLow || 0;
+        const week52Pct = week52High > week52Low
+          ? Math.round(((currentPrice - week52Low) / (week52High - week52Low)) * 100)
+          : 0;
+        const nearHigh = week52High > 0 && ((week52High - currentPrice) / week52High) <= 0.25;
+
+        // 펀더멘털 (timeseries)
+        const tsResult: any[] = tsJson.timeseries?.result || [];
+        const tsMap: Record<string, any[]> = {};
+        for (const t of tsResult) {
+          for (const key of ['annualDilutedEPS','annualTotalDebt','annualStockholdersEquity','annualNetIncome','annualPriceToBook']) {
+            if (Array.isArray(t[key])) tsMap[key] = t[key];
+          }
+        }
+
+        const epsArr = (tsMap['annualDilutedEPS'] || []).slice(-4);
+        const epsHistory = epsArr.map((v: any) => ({ year: (v.asOfDate || '').slice(0, 4), eps: v.reportedValue?.raw ?? null })).filter((e: any) => e.eps != null);
+        const epsGrowth3y = epsHistory.length >= 3
+          ? epsHistory[epsHistory.length-1].eps > epsHistory[epsHistory.length-2].eps && epsHistory[epsHistory.length-2].eps > epsHistory[epsHistory.length-3].eps
+          : null;
+
+        const latestDebt = lastVal(tsMap['annualTotalDebt'] || []);
+        const latestEquity = lastVal(tsMap['annualStockholdersEquity'] || []);
+        const latestNetIncome = lastVal(tsMap['annualNetIncome'] || []);
+        const latestPbr = lastVal(tsMap['annualPriceToBook'] || []);
+
+        const debtToEquity = latestDebt != null && latestEquity != null && latestEquity > 0
+          ? Math.round((latestDebt / latestEquity) * 1000) / 10
+          : null;
+        const roe = latestNetIncome != null && latestEquity != null && latestEquity > 0
+          ? Math.round((latestNetIncome / latestEquity) * 1000) / 10
+          : null;
+        const pbr = latestPbr != null ? Math.round(latestPbr * 10) / 10 : null;
+
+        const latestEps = epsHistory.length > 0 ? epsHistory[epsHistory.length-1].eps : null;
+        const per = latestEps != null && latestEps > 0 && currentPrice > 0
+          ? Math.round((currentPrice / latestEps) * 10) / 10
+          : null;
+
+        const industryBenchmark = SECTOR_DEBT_BENCHMARKS[sector] ?? 150;
+        const debtOk = debtToEquity != null ? debtToEquity < industryBenchmark : null;
+
+        // 30주 이평선
+        const weeklyQ = chartWeekly.chart?.result?.[0]?.indicators?.quote?.[0];
+        const weeklyCloses = ((weeklyQ?.close || []) as (number | null)[]).filter((c): c is number => c != null);
+        const ma30w = weeklyCloses.length >= 30 ? weeklyCloses.slice(-30).reduce((a, b) => a + b, 0) / 30 : null;
+        const ma30wPrev = weeklyCloses.length >= 34 ? weeklyCloses.slice(-34, -4).reduce((a, b) => a + b, 0) / 30 : null;
+        const maAbove = ma30w != null ? currentPrice > ma30w : null;
+        const maTrending = ma30w != null && ma30wPrev != null ? ma30w > ma30wPrev : null;
+
+        // RSI (14일)
+        const dailyQ = chartDaily.chart?.result?.[0]?.indicators?.quote?.[0];
+        const dailyCloses = ((dailyQ?.close || []) as (number | null)[]).filter((c): c is number => c != null);
+        const rsi = dailyCloses.length >= 15 ? calcRSI(dailyCloses) : null;
+
+        // 거래량 비율 (5일 / 20일 평균)
+        const dailyVols = ((dailyQ?.volume || []) as (number | null)[]).filter((v): v is number => v != null && v > 0);
+        const vol20 = dailyVols.length >= 20 ? dailyVols.slice(-20).reduce((a, b) => a + b, 0) / 20 : null;
+        const vol5 = dailyVols.length >= 5 ? dailyVols.slice(-5).reduce((a, b) => a + b, 0) / 5 : null;
+        const volumeRatio = vol20 && vol5 ? Math.round((vol5 / vol20) * 100) / 100 : null;
+
+        // 뉴스 키워드 스캔
+        const RED_KEYWORDS = ['특징주', '급등', '대박', '역대급', '테마주', 'unusual', 'skyrocket', 'surging', 'meme'];
+        const newsItems = ((newsJson.news || []) as any[]).slice(0, 20).map(n => {
+          const title = n.title || '';
+          return { title, url: n.link || '', flagged: RED_KEYWORDS.some(kw => title.toLowerCase().includes(kw.toLowerCase())) };
+        });
+        const redFlagCount = newsItems.filter(n => n.flagged).length;
+        const newsSignal = redFlagCount >= 3 ? 'danger' : redFlagCount >= 1 ? 'caution' : 'clean';
+
+        return json({
+          ticker, name, sector, industry, currency,
+          price: currentPrice, marketCap,
+          technical: {
+            ma30w: ma30w != null ? Math.round(ma30w * 100) / 100 : null,
+            maAbove, maTrending, rsi, volumeRatio,
+            week52High, week52Low, week52Pct, nearHigh,
+          },
+          fundamentals: { per, pbr, roe, debtToEquity, industryBenchmark },
+          epsHistory,
+          checks: {
+            maAbove, maTrending,
+            rsiOk: rsi != null ? rsi < 70 : null,
+            nearHigh,
+            epsGrowth3y,
+            roeOk: roe != null ? roe >= 15 : null,
+            debtOk,
+            newsClean: newsSignal === 'clean',
+          },
+          news: { items: newsItems.slice(0, 10), redFlagCount, signal: newsSignal },
+        });
+      } catch (e) { return json({ error: String(e) }, 500); }
+    }
+
     // GET /naver-finance-news — 네이버 금융 주요 뉴스 파싱
     if (request.method === 'GET' && url.pathname === '/naver-finance-news') {
       try {
