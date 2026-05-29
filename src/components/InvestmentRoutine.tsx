@@ -1152,9 +1152,14 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
   const [result, setResult] = useState<StockCheckResult | null>(null);
   const [error, setError] = useState('');
   const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
-  const [savedStocks, setSavedStocks] = useState<SavedStock[]>(() => {
-    try { return JSON.parse(localStorage.getItem('sc_saved') || '[]'); } catch { return []; }
-  });
+  const [savedStocks, setSavedStocks] = useState<SavedStock[]>([]);
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/stock-watchlist`)
+      .then(r => r.json())
+      .then((data: SavedStock[]) => setSavedStocks(data))
+      .catch(() => {});
+  }, []);
 
   const runCheck = async () => {
     const t = ticker.trim().toUpperCase();
@@ -1173,7 +1178,14 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
   const autoTotalCount = (r: StockCheckResult) =>
     Object.values(r.checks).filter(v => v !== null).length;
 
-  const saveStock = () => {
+  const MUST_KEYS: (keyof StockCheckResult['checks'])[] = ['maAbove', 'maTrending', 'debtOk'];
+  const getVerdict = (r: StockCheckResult) => {
+    if (MUST_KEYS.some(k => r.checks[k] === false)) return 'danger' as const;
+    if (Object.values(r.checks).some(v => v === false)) return 'caution' as const;
+    return 'safe' as const;
+  };
+
+  const saveStock = async () => {
     if (!result) return;
     const entry: SavedStock = {
       ticker: result.ticker, name: result.name,
@@ -1182,21 +1194,32 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
       passCount: autoPassCount(result) + Object.values(manualChecks).filter(Boolean).length,
       totalCount: autoTotalCount(result) + Object.keys(manualChecks).length,
     };
-    const updated = [entry, ...savedStocks.filter(s => s.ticker !== result.ticker)].slice(0, 20);
-    setSavedStocks(updated);
-    localStorage.setItem('sc_saved', JSON.stringify(updated));
+    await fetch(`${WORKER_URL}/stock-watchlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+    setSavedStocks(p => [entry, ...p.filter(s => s.ticker !== entry.ticker)].slice(0, 50));
   };
 
-  const removeSaved = (t: string) => {
-    const updated = savedStocks.filter(s => s.ticker !== t);
-    setSavedStocks(updated);
-    localStorage.setItem('sc_saved', JSON.stringify(updated));
+  const removeSaved = async (t: string) => {
+    await fetch(`${WORKER_URL}/stock-watchlist`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker: t }),
+    });
+    setSavedStocks(p => p.filter(s => s.ticker !== t));
   };
 
   const fmtPrice = (p: number, currency: string) =>
     currency === 'USD' ? `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${p.toLocaleString('ko-KR')}원`;
 
-  const fmtCap = (cap: number) => {
+  const fmtCap = (cap: number, currency: string) => {
+    if (!cap) return null;
+    if (currency === 'KRW') {
+      const uk = Math.round(cap / 1e8);
+      return uk >= 10000 ? `${(uk / 10000).toFixed(1)}조원` : `${uk.toLocaleString('ko-KR')}억원`;
+    }
     if (cap >= 1e12) return `$${(cap / 1e12).toFixed(1)}T`;
     if (cap >= 1e9) return `$${(cap / 1e9).toFixed(1)}B`;
     return `$${(cap / 1e6).toFixed(0)}M`;
@@ -1211,9 +1234,12 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
 
   const rsiLabel = (v: number | null) => {
     if (v == null) return '—';
-    if (v >= 70) return `${v} 과열`;
-    if (v <= 30) return `${v} 과매도`;
-    return `${v} 중립`;
+    if (v >= 80) return `${v} 극과열 — 매도 적극 고려`;
+    if (v >= 70) return `${v} 과열 — 추격 매수 금지`;
+    if (v <= 20) return `${v} 극과매도 — 반등 가능성 높음`;
+    if (v <= 30) return `${v} 과매도 — 단기 반등 고려 가능`;
+    if (v >= 50) return `${v} 중립 (강세)`;
+    return `${v} 중립 (약세)`;
   };
 
   const MANUAL_ITEMS = [
@@ -1270,102 +1296,232 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 22, fontWeight: 800 }}>{fmtPrice(result.price, result.currency)}</div>
-                <div style={{ fontSize: 12, opacity: 0.5, marginTop: 2 }}>시가총액 {fmtCap(result.marketCap)}</div>
+                {fmtCap(result.marketCap, result.currency) && (
+                  <div style={{ fontSize: 14, opacity: 0.5, marginTop: 2 }}>시가총액 {fmtCap(result.marketCap, result.currency)}</div>
+                )}
               </div>
             </div>
             {/* 패스율 */}
             <div style={{ marginTop: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12, opacity: 0.7 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 14, opacity: 0.7 }}>
                 <span>자동 체크 통과</span>
                 <span>{autoPassCount(result)} / {autoTotalCount(result)}</span>
               </div>
               <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${autoTotalCount(result) > 0 ? (autoPassCount(result) / autoTotalCount(result)) * 100 : 0}%`, background: autoPassCount(result) / (autoTotalCount(result) || 1) >= 0.7 ? '#30C85E' : '#F59E0B', borderRadius: 99, transition: 'width 0.4s' }} />
+                <div style={{ height: '100%', width: `${autoTotalCount(result) > 0 ? (autoPassCount(result) / autoTotalCount(result)) * 100 : 0}%`, background: getVerdict(result) === 'danger' ? '#E2483D' : getVerdict(result) === 'caution' ? '#F59E0B' : '#30C85E', borderRadius: 99, transition: 'width 0.4s' }} />
               </div>
             </div>
           </div>
 
-          {/* 기술적 신호 */}
-          <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>기술적 신호</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* 30주 이평선 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>30주 이동평균선</div>
-                <div style={{ textAlign: 'right' }}>
-                  <SignalBadge value={result.technical.maAbove} good={`${result.technical.ma30w?.toFixed(2)} 위`} warn={`${result.technical.ma30w?.toFixed(2)} 아래`} />
-                  {result.technical.maTrending != null && (
-                    <span style={{ fontSize: 11, color: result.technical.maTrending ? '#00875A' : '#E2483D', marginLeft: 8 }}>
-                      {result.technical.maTrending ? '▲ 우상향' : '▼ 하락'}
-                    </span>
+          {/* 종합 판정 */}
+          {(() => {
+            const verdict = getVerdict(result);
+            const mustFailLabels: Record<string, string> = { maAbove: '30주 이평선 아래', maTrending: '30주 이평선 하락', debtOk: '부채비율 초과' };
+            const mustFails = MUST_KEYS.filter(k => result.checks[k] === false);
+            const bg = verdict === 'danger' ? 'color-mix(in srgb, #E2483D 10%, transparent)' : verdict === 'caution' ? 'color-mix(in srgb, #F59E0B 10%, transparent)' : 'color-mix(in srgb, #30C85E 10%, transparent)';
+            const bd = verdict === 'danger' ? 'color-mix(in srgb, #E2483D 35%, transparent)' : verdict === 'caution' ? 'color-mix(in srgb, #F59E0B 35%, transparent)' : 'color-mix(in srgb, #30C85E 35%, transparent)';
+            const mc = verdict === 'danger' ? '#E2483D' : verdict === 'caution' ? '#D97706' : '#00875A';
+            return (
+              <div style={{ ...cardStyle, background: bg, border: `1px solid ${bd}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <MIcon name={verdict === 'danger' ? 'block' : verdict === 'caution' ? 'pause_circle' : 'check_circle'} size={26} style={{ color: mc, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: mc, lineHeight: 1 }}>
+                      {verdict === 'danger' ? '매수 금지' : verdict === 'caution' ? '매수 대기' : '매수 가능'}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 3 }}>
+                      {autoPassCount(result)} / {autoTotalCount(result)} 항목 통과
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  {verdict === 'danger' ? (
+                    <>필수 조건 실패 — <strong style={{ color: '#E2483D' }}>{mustFails.map(k => mustFailLabels[k]).join(' · ')}</strong><br />
+                    이 조건이 깨진 종목은 다른 지표가 아무리 좋아도 매수 대상에서 제외해야 합니다. 추세가 돌아올 때까지 관심 목록에만 담아두세요.</>
+                  ) : verdict === 'caution' ? (
+                    <>필수 조건(이평선·부채비율)은 통과했으나 일부 참고 지표가 미충족입니다.<br />
+                    RSI·52주 위치 등 타이밍 지표를 고려해 비중을 줄이거나 진입 시점을 조율하세요.</>
+                  ) : (
+                    <>8개 항목 모두 통과. 현재 매수 기준을 충족한 종목입니다.<br />
+                    손절가를 미리 설정하고, 분할 매수로 리스크를 분산하세요.</>
                   )}
                 </div>
               </div>
-              {/* RSI */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>RSI (14일)</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: rsiColor(result.technical.rsi) }}>
-                  {rsiLabel(result.technical.rsi)}
-                </div>
-              </div>
-              {/* 거래량 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>거래량 (5일 / 20일 평균)</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: result.technical.volumeRatio != null && result.technical.volumeRatio >= 1.2 ? '#00875A' : 'var(--text-secondary)' }}>
-                  {result.technical.volumeRatio != null ? `${result.technical.volumeRatio}x` : '—'}
-                </div>
-              </div>
-              {/* 52주 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>52주 고점 대비</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 80, height: 6, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${result.technical.week52Pct}%`, background: result.technical.nearHigh ? '#30C85E' : '#F59E0B', borderRadius: 99 }} />
+            );
+          })()}
+
+          {/* 기술적 신호 */}
+          <div style={cardStyle}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 14, letterSpacing: '0.05em' }}>기술적 신호</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {/* 30주 이평선 */}
+              {(() => {
+                const { ma30w, maAbove, maTrending } = result.technical;
+                const distPct = ma30w && result.price ? ((result.price - ma30w) / ma30w * 100) : null;
+                const reason = maAbove && maTrending
+                  ? `MA 대비 +${distPct?.toFixed(1)}% 위치 · 선 우상향 → 추세 유효, 매수 구간`
+                  : !maAbove && maTrending
+                  ? `MA 대비 ${distPct?.toFixed(1)}% 아래 · 선은 우상향 → 눌림목 구간, 반등 주시`
+                  : maAbove && !maTrending
+                  ? `MA 위이나 선이 꺾임 → 추세 전환 경고, 비중 축소 고려`
+                  : `MA 아래 + 선 하락 → 하락 추세, 매수 금지`;
+                return (
+                  <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border-primary)', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>30주 이동평균선</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <SignalBadge
+                          value={maAbove}
+                          good={`현재가 이평선(${ma30w?.toFixed(0)}) 위 +${distPct?.toFixed(1)}%`}
+                          warn={`현재가 이평선(${ma30w?.toFixed(0)}) 아래 ${distPct?.toFixed(1)}%`}
+                        />
+                        {maTrending != null && <span style={{ fontSize: 13, color: maTrending ? '#00875A' : '#E2483D', marginLeft: 6 }}>· 이평선 {maTrending ? '▲ 상승 중' : '▼ 하락 중'}</span>}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>6개월 추세 기준선.</span> 주가가 위에 있고 선이 우상향일 때만 매수.<br />
+                      <span style={{ color: maAbove && maTrending ? '#00875A' : '#E2483D', fontWeight: 600 }}>→ {reason}</span>
+                    </div>
                   </div>
-                  <span style={{ fontSize: 12, color: result.technical.nearHigh ? '#00875A' : 'var(--text-tertiary)', fontWeight: 600 }}>
-                    {result.technical.week52Pct}%
-                    {result.technical.nearHigh ? ' ✓ 고점 근접' : ''}
-                  </span>
-                </div>
-              </div>
+                );
+              })()}
+              {/* RSI */}
+              {(() => {
+                const v = result.technical.rsi;
+                const reason = v == null ? '' : v >= 70 ? '과열 구간 — 추격 매수 금지. 기존 보유자는 익절 고려'
+                  : v <= 30 ? '과매도 구간 — 단기 반등 가능성. 단, 하락 추세 지속 여부 추가 확인 필요'
+                  : v >= 50 ? '중립~강세 구간 — 정상 상승 중, 추격보다 눌림목 대기'
+                  : '중립~약세 구간 — 모멘텀 약함, 매수 서두르지 말 것';
+                return (
+                  <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border-primary)', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>RSI (14일)</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: rsiColor(v) }}>{rsiLabel(v)}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>14일 상대강도지수.</span> 70 이상 과열 · 30 이하 과매도 · 50 중립.<br />
+                      {reason && <span style={{ color: v != null && (v >= 70 || v <= 30) ? (v >= 70 ? '#E2483D' : '#3182F6') : 'var(--text-secondary)', fontWeight: 600 }}>→ {reason}</span>}
+                    </div>
+                  </div>
+                );
+              })()}
+              {/* 거래량 */}
+              {(() => {
+                const vr = result.technical.volumeRatio;
+                const reason = vr == null ? '' : vr >= 1.5 ? '거래량 급증 — 강한 매수세 확인. 추세 신뢰도 높음'
+                  : vr >= 1.2 ? '평균 이상 거래량 — 추세를 뒷받침하는 건전한 거래량'
+                  : vr >= 0.8 ? '평균 수준 거래량 — 특이사항 없음'
+                  : '거래량 부족 — 상승해도 신뢰도 낮음, 세력 없는 움직임 주의';
+                return (
+                  <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border-primary)', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>거래량 비율</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: vr != null && vr >= 1.2 ? '#00875A' : 'var(--text-secondary)' }}>{vr != null ? `${vr}x` : '—'} <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-tertiary)' }}>(5일/20일 평균)</span></span>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>최근 5일 평균 거래량 ÷ 20일 평균.</span> 1.2배 이상이면 거래량 동반 상승.<br />
+                      {reason && <span style={{ color: vr != null && vr >= 1.2 ? '#00875A' : 'var(--text-secondary)', fontWeight: 600 }}>→ {reason}</span>}
+                    </div>
+                  </div>
+                );
+              })()}
+              {/* 52주 */}
+              {(() => {
+                const { week52Pct, week52High, week52Low, nearHigh } = result.technical;
+                const reason = week52Pct >= 75 ? '고점 근접 — 상대강도 강함. 신고가 돌파 시 강력 매수 신호'
+                  : week52Pct >= 50 ? '중간 구간 — 회복 중. 고점 돌파 전까지는 관망'
+                  : week52Pct >= 25 ? '하단 구간 — 하락세 지속 중. 바닥 확인 후 접근'
+                  : '52주 최저가 근처 — 강한 하락 추세, 매수 금지';
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>52주 고점 대비 위치</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 72, height: 6, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${week52Pct}%`, background: nearHigh ? '#30C85E' : '#F59E0B', borderRadius: 99 }} />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: nearHigh ? '#00875A' : 'var(--text-secondary)' }}>{week52Pct}%{nearHigh ? ' ✓' : ''}</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>52주 범위 내 현재 위치 (저가={fmtPrice(week52Low, result.currency)} / 고가={fmtPrice(week52High, result.currency)}).</span> 75% 이상이면 상대강도 강한 종목.<br />
+                      <span style={{ color: nearHigh ? '#00875A' : 'var(--text-secondary)', fontWeight: 600 }}>→ {reason}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
           {/* 재무 지표 */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>재무 지표</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              <MetricBox label="PER" value={result.fundamentals.per} />
-              <MetricBox label="PBR" value={result.fundamentals.pbr} />
-              <MetricBox label="ROE" value={result.fundamentals.roe} unit="%" highlight={result.fundamentals.roe != null && result.fundamentals.roe >= 15} />
-            </div>
-            {result.fundamentals.debtToEquity != null && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 4 }}>
-                  <span>부채비율</span>
-                  <span>{result.fundamentals.debtToEquity}% <span style={{ opacity: 0.6 }}>/ 업종 평균 {result.fundamentals.industryBenchmark}%</span></span>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 14, letterSpacing: '0.05em' }}>재무 지표</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {/* PER / PBR / ROE */}
+              <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border-primary)', marginBottom: 12 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <MetricBox label="PER" value={result.fundamentals.per} />
+                  <MetricBox label="PBR" value={result.fundamentals.pbr} />
+                  <MetricBox label="ROE" value={result.fundamentals.roe} unit="%" highlight={result.fundamentals.roe != null && result.fundamentals.roe >= 15} />
                 </div>
-                <div style={{ height: 6, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.min(100, (result.fundamentals.debtToEquity / (result.fundamentals.industryBenchmark * 1.5)) * 100)}%`, background: result.fundamentals.debtToEquity < result.fundamentals.industryBenchmark ? '#30C85E' : '#E2483D', borderRadius: 99 }} />
+                <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
+                  <b style={{ color: 'var(--text-secondary)' }}>PER</b> 주가÷주당순이익. 낮을수록 저평가이나 성장주는 높게 형성됨. 업종 평균과 비교 필요.<br />
+                  <b style={{ color: 'var(--text-secondary)' }}>PBR</b> 주가÷순자산. 1 미만이면 청산가치 이하 (저평가 신호).<br />
+                  <b style={{ color: 'var(--text-secondary)' }}>ROE</b> 자기자본이익률. <span style={{ color: result.fundamentals.roe != null && result.fundamentals.roe >= 15 ? '#00875A' : result.fundamentals.roe != null ? '#E2483D' : 'inherit', fontWeight: 600 }}>
+                    {result.fundamentals.roe != null ? (result.fundamentals.roe >= 15 ? `${result.fundamentals.roe}% → 15% 이상 우량 기준 충족` : `${result.fundamentals.roe}% → 15% 미만 (기준 미달)`) : '데이터 없음'}
+                  </span>
                 </div>
               </div>
-            )}
+              {/* 부채비율 */}
+              {result.fundamentals.debtToEquity != null && (() => {
+                const { debtToEquity, industryBenchmark } = result.fundamentals;
+                const ok = debtToEquity < industryBenchmark;
+                const reason = ok
+                  ? `업종 평균(${industryBenchmark}%) 대비 낮음 → 재무 건전, 위기 시 생존력 양호`
+                  : `업종 평균(${industryBenchmark}%) 초과 → 부채 부담 있음, 급락장 취약`;
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                      <span>부채비율</span>
+                      <span style={{ color: ok ? '#00875A' : '#E2483D' }}>{debtToEquity}% <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-tertiary)' }}>/ 업종 평균 {industryBenchmark}%</span></span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 99, background: 'var(--border-primary)', overflow: 'hidden', marginBottom: 6 }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, (debtToEquity / (industryBenchmark * 1.5)) * 100)}%`, background: ok ? '#30C85E' : '#E2483D', borderRadius: 99 }} />
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                      총부채 ÷ 자기자본. 업종 평균 이하이면 재무 건전 기준 통과.<br />
+                      <span style={{ color: ok ? '#00875A' : '#E2483D', fontWeight: 600 }}>→ {reason}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
           {/* EPS 히스토리 */}
           {result.epsHistory.length > 0 && (
             <div style={cardStyle}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>EPS 연도별 추이</div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4, letterSpacing: '0.05em' }}>EPS (주당순이익) 연도별 추이</div>
+              <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 12, lineHeight: 1.5 }}>
+                기업이 1주당 벌어들인 순이익. 3~5년 연속 우상향이면 성장성 입증.
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 10 }}>
                 {[...result.epsHistory].reverse().map((e, i, arr) => {
                   const prev = arr[i - 1];
                   const isUp = prev ? e.eps > prev.eps : true;
+                  const growthPct = prev && prev.eps > 0 ? ((e.eps - prev.eps) / Math.abs(prev.eps) * 100) : null;
                   const maxEps = Math.max(...arr.map(x => Math.abs(x.eps)));
                   const barH = maxEps > 0 ? Math.max(8, Math.round((Math.abs(e.eps) / maxEps) * 60)) : 8;
+                  const sym = result.currency === 'KRW' ? '' : '$';
                   return (
-                    <div key={e.year} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: isUp && i > 0 ? '#00875A' : i > 0 ? '#E2483D' : 'var(--text-secondary)' }}>
-                        {e.eps > 0 ? `$${e.eps.toFixed(2)}` : `-$${Math.abs(e.eps).toFixed(2)}`}
+                    <div key={e.year} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      {growthPct != null && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: isUp ? '#00875A' : '#E2483D' }}>
+                          {isUp ? '▲' : '▼'}{Math.abs(growthPct).toFixed(0)}%
+                        </div>
+                      )}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: isUp && i > 0 ? '#00875A' : i > 0 ? '#E2483D' : 'var(--text-secondary)' }}>
+                        {e.eps > 0 ? `${sym}${e.eps.toFixed(2)}` : `-${sym}${Math.abs(e.eps).toFixed(2)}`}
                       </div>
                       <div style={{ width: '100%', height: barH, borderRadius: 4, background: e.eps >= 0 ? (isUp && i > 0 ? '#30C85E' : '#6366F1') : '#E2483D' }} />
                       <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{e.year}</div>
@@ -1373,31 +1529,65 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
                   );
                 })}
               </div>
-              <div style={{ marginTop: 8 }}>
-                <SignalBadge value={result.checks.epsGrowth3y} good="3년 연속 성장" warn="3년 연속 성장 미충족" />
+              <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                <SignalBadge value={result.checks.epsGrowth3y} good="3년 연속 성장 확인 → 펀더멘털 핵심 기준 통과" warn="3년 연속 성장 미충족 → 이익 방어력 불확실, 진입 신중" />
               </div>
             </div>
           )}
 
           {/* 자동 체크리스트 */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>자동 체크리스트</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.05em' }}>자동 체크리스트</div>
+            <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: 16, padding: '10px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
+              이 목록은 수익을 보장하는 조건이 아니라, <strong style={{ color: 'var(--text-primary)' }}>급락·작전주·기업 부실 같은 최악의 상황을 피하기 위한 안전장치</strong>입니다.<br />
+              붉은 ✗가 하나라도 떠 있으면 매수하지 않는 것이 원칙입니다.
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#E2483D', letterSpacing: '0.07em', marginBottom: 8 }}>
+              <MIcon name="block" size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />필수 조건 — 하나라도 실패하면 매수 금지 (타협 불가)
+            </div>
             {[
-              { key: 'maAbove',     label: '주가가 30주 이평선 위에 있다' },
-              { key: 'maTrending',  label: '30주 이평선이 우상향 중' },
-              { key: 'rsiOk',       label: 'RSI 70 미만 (과열 아님)' },
-              { key: 'nearHigh',    label: '52주 고점의 75% 이상 수준' },
-              { key: 'epsGrowth3y', label: 'EPS 3년 연속 성장' },
-              { key: 'roeOk',       label: 'ROE 15% 이상' },
-              { key: 'debtOk',      label: '부채비율 업종 평균 이하' },
-              { key: 'newsClean',   label: '뉴스 키워드 이상 없음' },
+              { key: 'maAbove',    label: '30주 이평선 위',          passReason: '6개월 추세가 살아있음. 하락장 진입 방지 핵심 필터', failReason: '현재 하락 추세. 이 기준 하나만으로도 매수 금지 조건' },
+              { key: 'maTrending', label: '30주 이평선 우상향',      passReason: '추세선 자체가 상승 중. 주가가 일시 조정받아도 방향성 유효', failReason: '추세선 꺾임. 상승 동력 소진 신호, 기존 보유자도 주의' },
+              { key: 'debtOk',     label: '부채비율 업종 평균 이하', passReason: '재무 건전. 급락장에서도 생존 가능성 높은 기업 구조', failReason: '부채 과다. 금리 인상·경기 침체 시 취약, 진입 전 부채 내용 확인' },
             ].map(item => {
               const val = result.checks[item.key as keyof typeof result.checks];
               if (val === null) return null;
               return (
-                <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-primary)' }}>
-                  <MIcon name={val ? 'check_circle' : 'cancel'} size={16} style={{ color: val ? '#30C85E' : '#E2483D', flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.label}</span>
+                <div key={item.key} style={{ padding: '10px 0', borderBottom: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <MIcon name={val ? 'check_circle' : 'cancel'} size={16} style={{ color: val ? '#30C85E' : '#E2483D', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{item.label}</span>
+                    {!val && <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: '#E2483D', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>매수 금지</span>}
+                  </div>
+                  <div style={{ fontSize: 13, color: val ? '#00875A' : '#E2483D', marginLeft: 24, lineHeight: 1.5 }}>
+                    {val ? item.passReason : item.failReason}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B', letterSpacing: '0.07em', marginTop: 18, marginBottom: 8 }}>
+              <MIcon name="tune" size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />참고 지표 — 타이밍·비중 조절 도구 (상황에 따라 유연하게)
+            </div>
+            {[
+              { key: 'rsiOk',       label: 'RSI 70 미만',           passReason: '과열 없음. 추격 매수 리스크 없이 진입 가능한 구간', failReason: 'RSI 과열. 단기 조정 가능성 높음, 진입 서두르지 말 것' },
+              { key: 'nearHigh',    label: '52주 고점 75% 이상',    passReason: '상대강도 강한 종목. 신고가 돌파 시 추가 상승 여력 있음', failReason: '고점에서 크게 하락. 반등인지 추세 전환인지 확인 필요' },
+              { key: 'epsGrowth3y', label: 'EPS 3년 연속 성장',     passReason: '이익 창출 능력이 꾸준히 개선됨. 성장 기업 핵심 조건', failReason: '이익 성장세 꺾임. 기업 실적 방어력 불확실' },
+              { key: 'roeOk',       label: 'ROE 15% 이상',          passReason: '자본 효율성 우수. 경영진이 주주 자본을 잘 활용하는 기업', failReason: 'ROE 낮음. 자본 대비 수익성 미흡, 동종업체와 비교 필요' },
+              { key: 'newsClean',   label: '특징주·급등 뉴스 없음', passReason: '인위적 주가 부양 징후 없음. 정상적인 시장 가격 형성 중', failReason: '급등·특징주 뉴스 감지. 세력의 물량 떠넘기기 가능성 확인 필요' },
+            ].map(item => {
+              const val = result.checks[item.key as keyof typeof result.checks];
+              if (val === null) return null;
+              return (
+                <div key={item.key} style={{ padding: '10px 0', borderBottom: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <MIcon name={val ? 'check_circle' : 'cancel'} size={16} style={{ color: val ? '#30C85E' : '#E2483D', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{item.label}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: val ? '#00875A' : '#E2483D', marginLeft: 24, lineHeight: 1.5 }}>
+                    {val ? item.passReason : item.failReason}
+                  </div>
                 </div>
               );
             })}
@@ -1405,7 +1595,7 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
 
           {/* 수동 체크리스트 */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>수동 체크리스트</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>수동 체크리스트</div>
             {MANUAL_ITEMS.map(item => (
               <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', borderBottom: '1px solid var(--border-primary)' }}>
                 <div
@@ -1421,9 +1611,9 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
           {/* 뉴스 */}
           <div style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>최근 뉴스</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>최근 뉴스</div>
               {result.news.signal !== 'clean' && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: result.news.signal === 'danger' ? 'color-mix(in srgb, #E2483D 15%, transparent)' : 'color-mix(in srgb, #F59E0B 15%, transparent)', color: result.news.signal === 'danger' ? '#E2483D' : '#D97706' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: result.news.signal === 'danger' ? 'color-mix(in srgb, #E2483D 15%, transparent)' : 'color-mix(in srgb, #F59E0B 15%, transparent)', color: result.news.signal === 'danger' ? '#E2483D' : '#D97706' }}>
                   <MIcon name="warning" size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
                   키워드 {result.news.redFlagCount}건 감지
                 </span>
@@ -1432,7 +1622,7 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {result.news.items.map((n, i) => (
                 <a key={i} href={n.url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'block', padding: '6px 10px', borderRadius: 8, fontSize: 12, color: n.flagged ? '#E2483D' : 'var(--text-primary)', textDecoration: 'none', background: n.flagged ? 'color-mix(in srgb, #E2483D 6%, transparent)' : 'var(--bg-secondary)', lineHeight: 1.5, border: n.flagged ? '1px solid color-mix(in srgb, #E2483D 20%, transparent)' : '1px solid transparent' }}>
+                  style={{ display: 'block', padding: '6px 10px', borderRadius: 8, fontSize: 14, color: n.flagged ? '#E2483D' : 'var(--text-primary)', textDecoration: 'none', background: n.flagged ? 'color-mix(in srgb, #E2483D 6%, transparent)' : 'var(--bg-secondary)', lineHeight: 1.5, border: n.flagged ? '1px solid color-mix(in srgb, #E2483D 20%, transparent)' : '1px solid transparent' }}>
                   {n.flagged && <MIcon name="flag" size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />}
                   {n.title}
                 </a>
@@ -1453,21 +1643,21 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
       {/* 저장된 종목 */}
       {savedStocks.length > 0 && (
         <div style={cardStyle}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>저장된 종목</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 12, letterSpacing: '0.05em' }}>저장된 종목</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {savedStocks.map(s => (
               <div key={s.ticker} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
                 <div>
                   <span style={{ fontWeight: 700, fontSize: 14, marginRight: 8 }}>{s.ticker}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{s.name.length > 20 ? s.name.slice(0, 20) + '…' : s.name}</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{s.name.length > 20 ? s.name.slice(0, 20) + '…' : s.name}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{s.date}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: s.passCount / (s.totalCount || 1) >= 0.7 ? '#00875A' : '#F59E0B' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{s.date}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: s.passCount / (s.totalCount || 1) >= 0.7 ? '#00875A' : '#F59E0B' }}>
                     {s.passCount}/{s.totalCount}
                   </span>
                   <button
-                    onClick={() => { setSavedStocks(p => { const n = p.filter(x => x.ticker !== s.ticker); localStorage.setItem('sc_saved', JSON.stringify(n)); return n; }); }}
+                    onClick={() => removeSaved(s.ticker)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
                     <MIcon name="close" size={14} style={{ color: 'var(--text-tertiary)' }} />
                   </button>
@@ -1519,6 +1709,26 @@ export function InvestmentRoutine() {
         {activeTab === 'yearly' && <YearlyTab isMobile={isMobile} />}
         {activeTab === 'stockcheck' && <StockCheckTab isMobile={isMobile} />}
 
+      </div>
+    </div>
+  );
+}
+
+export function StockCheckPage() {
+  const { isMobile } = useAppContext();
+  return (
+    <div style={{ minHeight: '100%', background: 'var(--bg-page)' }}>
+      <div style={{ maxWidth: 780, margin: '0 auto', padding: isMobile ? '20px 14px 40px' : '28px 24px 56px' }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MIcon name="manage_search" size={20} style={{ color: '#fff' }} />
+            </div>
+            <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: 'var(--text-primary)' }}>신규 종목 체크</h1>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginLeft: 46 }}>나만의 필터를 통과한 종목만 남기는 제거 과정</p>
+        </div>
+        <StockCheckTab isMobile={isMobile} />
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ import { DataReports } from "./components/DataReports";
 import { StopLoss } from "./components/StopLoss";
 import { TrailingStopLoss } from "./components/TrailingStopLoss";
 import { PsychologyCheck } from "./components/PsychologyCheck";
-import { InvestmentRoutine } from "./components/InvestmentRoutine";
+import { InvestmentRoutine, StockCheckPage } from "./components/InvestmentRoutine";
 import { PasswordModal } from "./components/PasswordModal";
 import { RightSidebar } from "./components/RightSidebar";
 import { ChatPanel } from "./components/ChatPanel";
@@ -69,6 +69,7 @@ const MENU_ITEMS = [
   { id: "trailing-stop", label: "추적손절매", materialIcon: "track_changes", updatedAt: "2026-05-27" },
   { id: "psychology-check", label: "심리점검", materialIcon: "self_improvement", updatedAt: "2026-05-28" },
   { id: "investment-routine", label: "투자루틴", materialIcon: "checklist", updatedAt: "2026-05-28" },
+  { id: "stock-check", label: "신규종목체크", materialIcon: "manage_search", updatedAt: "2026-05-29" },
   { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-27" },
   { id: "dividend", label: "배당", materialIcon: "paid", updatedAt: "2026-05-09" },
   { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
@@ -279,6 +280,7 @@ export default function App() {
       case "trailing-stop": return <TrailingStopLoss />;
       case "psychology-check": return <PsychologyCheck />;
       case "investment-routine": return <InvestmentRoutine />;
+      case "stock-check": return <StockCheckPage />;
     }
   };
 

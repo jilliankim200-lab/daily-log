@@ -7,7 +7,7 @@ interface Env {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -1256,8 +1256,30 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
 
     // GET /stock-check?ticker=NVDA — 신규 종목 조건 검사
     if (request.method === 'GET' && url.pathname === '/stock-check') {
-      const ticker = (url.searchParams.get('ticker') || '').toUpperCase().trim();
-      if (!ticker) return json({ error: 'ticker required' }, 400);
+      const raw = (url.searchParams.get('ticker') || '').toUpperCase().trim();
+      if (!raw) return json({ error: 'ticker required' }, 400);
+
+      // 6자리 숫자 = 한국 종목 → 검색 API로 올바른 시장(.KS/.KQ) 자동 감지
+      let ticker = raw;
+      let krName = '';
+      if (/^\d{6}$/.test(raw)) {
+        const ua2 = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+        const [krSearchRes, krNameRes] = await Promise.all([
+          fetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${raw}&quotesCount=5&newsCount=0`, { headers: { 'User-Agent': ua2 } }),
+          fetch(`https://m.stock.naver.com/api/stock/${raw}/basic`, { headers: { 'User-Agent': ua2 } }),
+        ]);
+        const krSearchData: any = await krSearchRes.json();
+        const krQuote = (krSearchData.quotes || []).find((q: any) => q.symbol?.startsWith(raw));
+        if (krQuote?.symbol) {
+          ticker = krQuote.symbol;
+        } else {
+          ticker = `${raw}.KS`;
+        }
+        try {
+          const krBasic: any = await krNameRes.json();
+          krName = krBasic.stockName || '';
+        } catch { /* 영문명 폴백 */ }
+      }
 
       const SECTOR_DEBT_BENCHMARKS: Record<string, number> = {
         'Technology': 80, 'Healthcare': 120, 'Financial Services': 400,
@@ -1308,7 +1330,9 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         if (!meta.symbol) return json({ error: `데이터 없음: ${ticker}` }, 404);
 
         const searchQuote = (searchJson.quotes || []).find((q: any) => q.symbol?.toUpperCase() === ticker) || searchJson.quotes?.[0] || {};
-        const name = meta.longName || meta.shortName || searchQuote.longname || searchQuote.shortname || ticker;
+        const rawName = meta.longName || meta.shortName || '';
+        const cleanedMetaName = rawName.includes(',') ? '' : rawName;
+        const name = krName || cleanedMetaName || searchQuote.longname || searchQuote.shortname || ticker;
         const sector = searchQuote.sector || 'Unknown';
         const industry = searchQuote.industry || '';
         const currency = meta.currency || 'USD';
@@ -1378,12 +1402,40 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
         const vol5 = dailyVols.length >= 5 ? dailyVols.slice(-5).reduce((a, b) => a + b, 0) / 5 : null;
         const volumeRatio = vol20 && vol5 ? Math.round((vol5 / vol20) * 100) / 100 : null;
 
-        // 뉴스 키워드 스캔
+        // 뉴스 — 한국 종목은 네이버 금융 종목뉴스, 해외 종목은 Yahoo Finance
         const RED_KEYWORDS = ['특징주', '급등', '대박', '역대급', '테마주', 'unusual', 'skyrocket', 'surging', 'meme'];
-        const newsItems = ((newsJson.news || []) as any[]).slice(0, 20).map(n => {
-          const title = n.title || '';
-          return { title, url: n.link || '', flagged: RED_KEYWORDS.some(kw => title.toLowerCase().includes(kw.toLowerCase())) };
-        });
+        const isKrStock = ticker.endsWith('.KS') || ticker.endsWith('.KQ');
+        const krCode = isKrStock ? ticker.replace(/\.(KS|KQ)$/, '') : '';
+        let newsItems: { title: string; url: string; flagged: boolean }[] = [];
+
+        if (isKrStock && krCode) {
+          try {
+            const naverNewsRes = await fetch(
+              `https://finance.naver.com/item/news_news.naver?code=${krCode}`,
+              { headers: { 'User-Agent': ua, 'Referer': 'https://finance.naver.com/' } }
+            );
+            const buf = await naverNewsRes.arrayBuffer();
+            const html = new TextDecoder('euc-kr').decode(buf);
+            const cleanHtml = (s: string) => s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;|&#\d+;/g, ' ').replace(/\s+/g, ' ').trim();
+            const titRe = /<a[^>]+href="(\/item\/news_read\.naver\?[^"]+)"[^>]*class="tit"[^>]*>([\s\S]*?)<\/a>|<a[^>]*class="tit"[^>]+href="(\/item\/news_read\.naver\?[^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
+            for (const m of html.matchAll(titRe)) {
+              const href = (m[1] || m[3] || '').replace(/&amp;/g, '&');
+              const raw = m[2] || m[4] || '';
+              const title = cleanHtml(raw);
+              if (title.length >= 4) {
+                const fullUrl = `https://finance.naver.com${href}`;
+                newsItems.push({ title, url: fullUrl, flagged: RED_KEYWORDS.some(kw => title.includes(kw)) });
+              }
+              if (newsItems.length >= 10) break;
+            }
+          } catch { /* 뉴스 없어도 계속 */ }
+        } else {
+          newsItems = ((newsJson.news || []) as any[]).slice(0, 10).map(n => {
+            const title = n.title || '';
+            return { title, url: n.link || '', flagged: RED_KEYWORDS.some(kw => title.toLowerCase().includes(kw.toLowerCase())) };
+          });
+        }
+
         const redFlagCount = newsItems.filter(n => n.flagged).length;
         const newsSignal = redFlagCount >= 3 ? 'danger' : redFlagCount >= 1 ? 'caution' : 'clean';
 
@@ -1547,6 +1599,33 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
     if (request.method === 'POST' && url.pathname === '/worldcup/update') {
       const body = await request.text();
       await env.KV.put('worldcup_data', body);
+      return json({ ok: true });
+    }
+
+    // GET /stock-watchlist
+    if (request.method === 'GET' && url.pathname === '/stock-watchlist') {
+      const raw = await env.KV.get('stock_watchlist');
+      return json(JSON.parse(raw || '[]'));
+    }
+
+    // POST /stock-watchlist — upsert
+    if (request.method === 'POST' && url.pathname === '/stock-watchlist') {
+      const item = await request.json() as any;
+      if (!item?.ticker) return json({ error: 'ticker required' }, 400);
+      const raw = await env.KV.get('stock_watchlist');
+      const list: any[] = JSON.parse(raw || '[]');
+      const updated = [item, ...list.filter((s: any) => s.ticker !== item.ticker)].slice(0, 50);
+      await env.KV.put('stock_watchlist', JSON.stringify(updated));
+      return json({ ok: true });
+    }
+
+    // DELETE /stock-watchlist — remove one
+    if (request.method === 'DELETE' && url.pathname === '/stock-watchlist') {
+      const { ticker } = await request.json() as any;
+      if (!ticker) return json({ error: 'ticker required' }, 400);
+      const raw = await env.KV.get('stock_watchlist');
+      const list: any[] = JSON.parse(raw || '[]');
+      await env.KV.put('stock_watchlist', JSON.stringify(list.filter((s: any) => s.ticker !== ticker)));
       return json({ ok: true });
     }
 
