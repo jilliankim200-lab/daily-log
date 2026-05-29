@@ -1161,10 +1161,12 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
       .catch(() => {});
   }, []);
 
-  const runCheck = async () => {
-    const t = ticker.trim().toUpperCase();
+  const runCheck = async (overrideTicker?: string) => {
+    const t = (overrideTicker || ticker).trim().toUpperCase();
     if (!t) return;
+    if (overrideTicker) setTicker(overrideTicker);
     setLoading(true); setError(''); setResult(null); setManualChecks({});
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
       const res = await fetch(`${WORKER_URL}/stock-check?ticker=${encodeURIComponent(t)}`);
       const data = await res.json() as any;
@@ -1647,11 +1649,14 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {savedStocks.map(s => (
               <div key={s.ticker} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
-                <div>
-                  <span style={{ fontWeight: 700, fontSize: 14, marginRight: 8 }}>{s.ticker}</span>
-                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{s.name.length > 20 ? s.name.slice(0, 20) + '…' : s.name}</span>
+                <div
+                  onClick={() => runCheck(s.ticker)}
+                  style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <MIcon name="refresh" size={14} style={{ color: '#6366F1', flexShrink: 0 }} />
+                  <span style={{ fontWeight: 700, fontSize: 14 }}>{s.ticker}</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name.length > 20 ? s.name.slice(0, 20) + '…' : s.name}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                   <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{s.date}</span>
                   <span style={{ fontSize: 14, fontWeight: 700, color: s.passCount / (s.totalCount || 1) >= 0.7 ? '#00875A' : '#F59E0B' }}>
                     {s.passCount}/{s.totalCount}
