@@ -391,7 +391,7 @@ export function TrailingStopLoss() {
             <select
               value={selectedAccountId}
               onChange={e => setSelectedAccountId(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--border-primary)', background: '#fff', fontSize: 13, color: selectedAccountId !== 'all' && triggeredAccountIds.has(selectedAccountId) ? '#F04452' : 'var(--text-primary)', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', maxWidth: isMobile ? 110 : 160 }}>
+              style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--border-primary)', background: '#fff', fontSize: 13, color: selectedAccountId !== 'all' && triggeredAccountIds.has(selectedAccountId) ? '#F04452' : 'var(--text-primary)', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', minWidth: isMobile ? 140 : 200, maxWidth: isMobile ? 180 : 260 }}>
               <option value="all">전체 계좌</option>
               {accounts.map(acc => (
                 <option key={acc.id} value={acc.id}

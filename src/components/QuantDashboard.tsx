@@ -659,52 +659,6 @@ export function QuantDashboard() {
         })}
       </div>
 
-      {/* ── 누적 수익률 ── */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={panelStyle}>
-          <div style={panelTitleStyle}>전략별 누적 수익률</div>
-          <div style={panelSubStyle}>초기 자산 100 기준, 월간 리밸런싱</div>
-          <div ref={refNav} style={{ width: "100%", height: 320 }} />
-        </div>
-      </div>
-
-      {/* ── ETF 모멘텀 ── */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={panelStyle}>
-          <div style={panelTitleStyle}>포트폴리오 ETF 모멘텀 (3개월 수익률 기준)</div>
-          <div style={panelSubStyle}>보유 43개 종목 정렬 — 초록: 상승모멘텀 / 빨강: 하락모멘텀</div>
-          <div ref={refMom} style={{ width: "100%", height: 480 }} />
-        </div>
-      </div>
-
-      {/* ── 리스크/리턴 + 연도별 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <div style={panelStyle}>
-          <div style={panelTitleStyle}>리스크/리턴 비교 (연복리 vs 최대낙폭)</div>
-          <div style={panelSubStyle}>버블 크기 = 샤프지수</div>
-          <div ref={refRR} style={{ width: "100%", height: 300 }} />
-        </div>
-        <div style={panelStyle}>
-          <div style={panelTitleStyle}>연도별 수익률 비교</div>
-          <div style={panelSubStyle}>전략별 연간 퍼포먼스</div>
-          <div ref={refAnn} style={{ width: "100%", height: 300 }} />
-        </div>
-      </div>
-
-      {/* ── 보유 타임라인 + 도넛 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <div style={panelStyle}>
-          <div style={panelTitleStyle}>듀얼 모멘텀 — 월별 보유 자산</div>
-          <div style={panelSubStyle}>매월 초 시그널 기준 보유 자산 전환</div>
-          <div ref={refHold} style={{ width: "100%", height: 300 }} />
-        </div>
-        <div style={panelStyle}>
-          <div style={panelTitleStyle}>포트폴리오 구성 (평가금액 기준)</div>
-          <div style={panelSubStyle}>카테고리별 비중</div>
-          <div ref={refDonut} style={{ width: "100%", height: 300 }} />
-        </div>
-      </div>
-
       {/* ── 모멘텀 크래시 감지 ── */}
       <div style={{ ...panelStyle, marginBottom: 16 }}>
         <div style={panelTitleStyle}>
@@ -783,6 +737,84 @@ export function QuantDashboard() {
             })}
           </div>
         </div>
+
+        {/* 필터별 인라인 대응 가이드 */}
+        {crashFilter !== 'all' && (() => {
+          const guides: Record<string, {
+            color: string; bg: string; border: string;
+            title: string; subtitle: string;
+            items: [string, string, string][];
+            extra?: React.ReactNode;
+          }> = {
+            red: {
+              color: '#f87171', bg: 'rgba(248,113,113,.05)', border: 'rgba(248,113,113,.25)',
+              title: '🔴 위험 — 즉시 대응',
+              subtitle: '모멘텀이 실질적으로 붕괴된 상태입니다. 다음 리밸런싱을 기다리지 말고 즉시 대응하세요.',
+              items: [
+                ['1', '즉시 비중 50% 이상 축소', '다음 리밸런싱 주기 무시'],
+                ['2', '전량 청산 기준', '3M < -10% 이하면 지체 없이 손절'],
+                ['3', '안전자산 이동', 'KOFR ETF · 국고채 단기물로 이동'],
+                ['4', '재진입 금지', '3M AND 6M 모두 플러스 복귀 전까지 진입 금지'],
+                ['5', '포트폴리오 전체 점검', '하나가 위험이면 연동 하락 종목 동시 확인'],
+              ],
+            },
+            yellow: {
+              color: '#b45309', bg: 'rgba(251,191,36,.05)', border: 'rgba(251,191,36,.25)',
+              title: '🟡 경고 — 점진적 위험 축소',
+              subtitle: '청산 신호가 아닌 신규 베팅 중단 + 점진적 위험 축소 신호입니다.',
+              items: [
+                ['1', '신규 매수 즉시 중단', '경고 종목에 추가 자금 투입 금지'],
+                ['2', '비중 10~20% 점진 축소', '즉각 청산 아닌 다음 월 리밸런싱 시 실행'],
+                ['3', '트리거 재확인', '다음 리뷰 시 6M 마이너스 전환 여부 체크'],
+                ['4', '안전자산 대기', '축소분은 MMF · 단기채로 이동, 반등 시 재진입 대기'],
+              ],
+            },
+            green: {
+              color: '#34d399', bg: 'rgba(52,211,153,.05)', border: 'rgba(52,211,153,.25)',
+              title: '🟢 상승 유지 — 보유 원칙',
+              subtitle: '신호가 바뀔 때까지 보유가 모멘텀 전략의 핵심 규칙입니다. 3M > 0% AND 6M > 0%인 한 계속 보유합니다.',
+              items: [
+                ['1', '매월 리뷰 후 보유 유지', '신호 변화 없으면 리밸런싱 불필요'],
+                ['2', '추가 매수 가능', '모멘텀 강도가 높을수록 비중 유지 또는 소폭 증가'],
+                ['3', 'yellow 전환 시 즉시 주의', '한 달 만에 green → yellow 전환되면 경고 가이드 적용'],
+                ['4', '과도한 집중 주의', '단일 종목 비중이 30% 초과 시 분산 검토'],
+              ],
+              extra: (
+                <div style={{ marginTop: 12, background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8 }}>리밸런싱 주기별 특성</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '5px 16px', fontSize: 12 }}>
+                    {([['월 1회 (표준)', '#34d399', '거래비용 최소, 과최적화 방지'], ['격주', '#b45309', '빠른 대응이나 신호 노이즈 증가'], ['매주', '#f87171', '과매매 위험, 비용 구조 악화']] as const).map(([p, c, d]) => (
+                      <React.Fragment key={p}>
+                        <span style={{ color: c, fontWeight: 700 }}>{p}</span>
+                        <span style={{ color: 'var(--text-tertiary)' }}>{d}</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              ),
+            },
+          };
+          const g = guides[crashFilter];
+          if (!g) return null;
+          return (
+            <div style={{ marginBottom: 14, background: g.bg, border: `1px solid ${g.border}`, borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: g.color, marginBottom: 5 }}>{g.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 10 }}>{g.subtitle}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {g.items.map(([n, title, desc]) => (
+                  <div key={n} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: g.color, background: `${g.color}20`, borderRadius: 4, padding: '1px 7px', flexShrink: 0, marginTop: 1 }}>{n}</span>
+                    <div style={{ fontSize: 12 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
+                      <span style={{ color: 'var(--text-tertiary)' }}> — {desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {g.extra}
+            </div>
+          );
+        })()}
 
         {/* 대응 가이드 아코디언 */}
         <div style={{ marginBottom: 16 }}>
@@ -942,6 +974,52 @@ export function QuantDashboard() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── 누적 수익률 ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={panelStyle}>
+          <div style={panelTitleStyle}>전략별 누적 수익률</div>
+          <div style={panelSubStyle}>초기 자산 100 기준, 월간 리밸런싱</div>
+          <div ref={refNav} style={{ width: "100%", height: 320 }} />
+        </div>
+      </div>
+
+      {/* ── ETF 모멘텀 ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={panelStyle}>
+          <div style={panelTitleStyle}>포트폴리오 ETF 모멘텀 (3개월 수익률 기준)</div>
+          <div style={panelSubStyle}>보유 43개 종목 정렬 — 초록: 상승모멘텀 / 빨강: 하락모멘텀</div>
+          <div ref={refMom} style={{ width: "100%", height: 480 }} />
+        </div>
+      </div>
+
+      {/* ── 리스크/리턴 + 연도별 ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div style={panelStyle}>
+          <div style={panelTitleStyle}>리스크/리턴 비교 (연복리 vs 최대낙폭)</div>
+          <div style={panelSubStyle}>버블 크기 = 샤프지수</div>
+          <div ref={refRR} style={{ width: "100%", height: 300 }} />
+        </div>
+        <div style={panelStyle}>
+          <div style={panelTitleStyle}>연도별 수익률 비교</div>
+          <div style={panelSubStyle}>전략별 연간 퍼포먼스</div>
+          <div ref={refAnn} style={{ width: "100%", height: 300 }} />
+        </div>
+      </div>
+
+      {/* ── 보유 타임라인 + 도넛 ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div style={panelStyle}>
+          <div style={panelTitleStyle}>듀얼 모멘텀 — 월별 보유 자산</div>
+          <div style={panelSubStyle}>매월 초 시그널 기준 보유 자산 전환</div>
+          <div ref={refHold} style={{ width: "100%", height: 300 }} />
+        </div>
+        <div style={panelStyle}>
+          <div style={panelTitleStyle}>포트폴리오 구성 (평가금액 기준)</div>
+          <div style={panelSubStyle}>카테고리별 비중</div>
+          <div ref={refDonut} style={{ width: "100%", height: 300 }} />
         </div>
       </div>
 

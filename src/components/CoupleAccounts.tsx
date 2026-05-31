@@ -301,11 +301,13 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
 
 /* ── 계좌 카드 ── */
 function AccountCard({
-  account, onUpdate, onDelete, isAmountHidden, prices, isMobile,
+  account, onUpdate, onDelete, isAmountHidden, prices, isMobile, highlightTicker, navigateTo,
 }: {
   account: Account; onUpdate: (a: Account) => void; onDelete: () => void; isAmountHidden: boolean; prices: Record<string, number>; isMobile?: boolean;
+  highlightTicker?: string | null; navigateTo?: (page: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const hasHighlight = highlightTicker && account.holdings.some(h => h.ticker === highlightTicker);
+  const [expanded, setExpanded] = useState(() => !!hasHighlight);
   const [editing, setEditing] = useState(false);
   const [editAlias, setEditAlias] = useState(account.alias);
   const [editInst, setEditInst] = useState(account.institution);
@@ -319,6 +321,7 @@ function AccountCard({
   const [showCalc, setShowCalc] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [returnSort, setReturnSort] = useState<'none' | 'asc' | 'desc'>('none');
 
   const handleDragStart = (e: React.DragEvent, idx: number) => {
     setDragIdx(idx);
@@ -603,7 +606,15 @@ function AccountCard({
               <thead>
                 <tr>
                   <th>종목명</th>
-                  <th style={{ textAlign: 'right' }}>수익률</th>
+                  <th
+                    style={{ textAlign: 'right', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                    onClick={() => setReturnSort(s => s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none')}
+                  >
+                    수익률{' '}
+                    <span style={{ fontSize: 10, opacity: returnSort === 'none' ? 0.35 : 1 }}>
+                      {returnSort === 'desc' ? '▼' : returnSort === 'asc' ? '▲' : '⇅'}
+                    </span>
+                  </th>
                   <th style={{ textAlign: 'right' }}>평단가</th>
                   <th style={{ textAlign: 'right' }}>현재가</th>
                   <th style={{ textAlign: 'right' }}>수량</th>
@@ -614,7 +625,15 @@ function AccountCard({
                 </tr>
               </thead>
               <tbody>
-                {account.holdings.map((h, holdingIdx) => {
+                {(returnSort === 'none' ? account.holdings : [...account.holdings].sort((a, b) => {
+                  const cpA = prices[a.ticker]; const cpB = prices[b.ticker];
+                  const rA = cpA && a.avgPrice > 0 ? (cpA - a.avgPrice) / a.avgPrice : null;
+                  const rB = cpB && b.avgPrice > 0 ? (cpB - b.avgPrice) / b.avgPrice : null;
+                  if (rA === null && rB === null) return 0;
+                  if (rA === null) return 1;
+                  if (rB === null) return -1;
+                  return returnSort === 'desc' ? rB - rA : rA - rB;
+                })).map((h, holdingIdx) => {
                   if (editingHoldingId === h.id) {
                     return h.isFund ? (
                       <tr key={h.id}>
@@ -633,12 +652,13 @@ function AccountCard({
 
                   const isDragging = dragIdx === holdingIdx;
                   const isDragOver = dragOverIdx === holdingIdx && dragIdx !== null && dragIdx !== holdingIdx;
+                  const isHighlighted = !h.isFund && highlightTicker && h.ticker === highlightTicker;
                   const rowStyle: React.CSSProperties = {
                     opacity: isDragging ? 0.4 : 1,
-                    background: isDragOver ? 'var(--accent-blue-bg)' : undefined,
-                    outline: isDragOver ? '1px solid var(--accent-blue)' : undefined,
+                    background: isHighlighted ? 'rgba(99,102,241,0.1)' : isDragOver ? 'var(--accent-blue-bg)' : undefined,
+                    outline: isHighlighted ? '1.5px solid #6366f1' : isDragOver ? '1px solid var(--accent-blue)' : undefined,
                     cursor: 'grab',
-                    transition: 'background 0.1s',
+                    transition: 'background 0.4s, outline 0.4s',
                   };
 
                   if (h.isFund) {
@@ -704,7 +724,18 @@ function AccountCard({
                       <td style={{ fontWeight: 'var(--font-medium)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <MIcon name="drag_indicator" size={14} style={{ color: 'var(--text-quaternary)', flexShrink: 0 }} />
-                          {h.name}
+                          {h.ticker && navigateTo ? (
+                            <span
+                              onClick={() => {
+                                sessionStorage.setItem('chart_nav_ticker', h.ticker!);
+                                sessionStorage.setItem('chart_nav_from', 'couple-accounts');
+                                navigateTo('chart');
+                              }}
+                              style={{ cursor: 'pointer', color: 'var(--text-primary)', textDecoration: 'underline', textDecorationColor: 'var(--border-primary)', textUnderlineOffset: 3 }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#6366f1'; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+                            >{h.name}</span>
+                          ) : h.name}
                         </div>
                       </td>
                       {/* 수익률 — 2번째 열 */}
@@ -852,11 +883,12 @@ function AddAccountForm({
 
 /* ── 소유자 섹션 ── */
 function OwnerSection({
-  owner, ownerName, accounts, onUpdateAccount, onDeleteAccount, onAddAccount, isAmountHidden, prices,
+  owner, ownerName, accounts, onUpdateAccount, onDeleteAccount, onAddAccount, isAmountHidden, prices, highlightTicker, navigateTo,
 }: {
   owner: 'wife' | 'husband'; ownerName: string; accounts: Account[];
   onUpdateAccount: (a: Account) => void; onDeleteAccount: (id: string) => void; onAddAccount: (a: Account) => void;
   isAmountHidden: boolean; prices: Record<string, number>;
+  highlightTicker?: string | null; navigateTo?: (page: string) => void;
 }) {
   const { isMobile } = useAppContext();
   const [adding, setAdding] = useState(false);
@@ -877,7 +909,7 @@ function OwnerSection({
       </div>
 
       {accounts.map(acc => (
-        <AccountCard key={acc.id} account={acc} onUpdate={onUpdateAccount} onDelete={() => onDeleteAccount(acc.id)} isAmountHidden={isAmountHidden} prices={prices} isMobile={isMobile} />
+        <AccountCard key={acc.id} account={acc} onUpdate={onUpdateAccount} onDelete={() => onDeleteAccount(acc.id)} isAmountHidden={isAmountHidden} prices={prices} isMobile={isMobile} highlightTicker={highlightTicker} navigateTo={navigateTo} />
       ))}
 
       {adding ? (
@@ -899,10 +931,25 @@ function OwnerSection({
 
 /* ── 메인 페이지 ── */
 export function CoupleAccounts() {
-  const { accounts, setAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices: contextLoadPrices, isMobile } = useAppContext();
+  const { accounts, setAccounts, isAmountHidden, otherAssets, setOtherAssets, prices, loadPrices: contextLoadPrices, isMobile, navigateTo } = useAppContext();
   const [activeTab, setActiveTab] = useState<'wife' | 'husband' | 'other'>('wife');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [priceLoading, setPriceLoading] = useState(false);
+  const [highlightTicker, setHighlightTicker] = useState<string | null>(null);
+
+  // 차트 페이지에서 돌아왔을 때 해당 종목 하이라이트
+  useEffect(() => {
+    const returnTicker = sessionStorage.getItem('chart_return_ticker');
+    if (returnTicker) {
+      sessionStorage.removeItem('chart_return_ticker');
+      // 해당 종목이 있는 탭으로 전환
+      const ownerOfTicker = accounts.find(a => a.holdings.some(h => h.ticker === returnTicker))?.owner;
+      if (ownerOfTicker === 'husband') setActiveTab('husband');
+      else if (ownerOfTicker === 'wife') setActiveTab('wife');
+      setHighlightTicker(returnTicker);
+      setTimeout(() => setHighlightTicker(null), 2500);
+    }
+  }, [accounts]);
 
   const wifeAccounts = accounts.filter(a => a.owner === 'wife');
   const husbandAccounts = accounts.filter(a => a.owner === 'husband');
@@ -1020,11 +1067,13 @@ export function CoupleAccounts() {
       {/* 계좌 목록 */}
       {activeTab === 'wife' && (
         <OwnerSection owner="wife" ownerName="지윤" accounts={wifeAccounts}
-          onUpdateAccount={update} onDeleteAccount={del} onAddAccount={add} isAmountHidden={isAmountHidden} prices={prices} />
+          onUpdateAccount={update} onDeleteAccount={del} onAddAccount={add} isAmountHidden={isAmountHidden} prices={prices}
+          highlightTicker={highlightTicker} navigateTo={navigateTo} />
       )}
       {activeTab === 'husband' && (
         <OwnerSection owner="husband" ownerName="오빠" accounts={husbandAccounts}
-          onUpdateAccount={update} onDeleteAccount={del} onAddAccount={add} isAmountHidden={isAmountHidden} prices={prices} />
+          onUpdateAccount={update} onDeleteAccount={del} onAddAccount={add} isAmountHidden={isAmountHidden} prices={prices}
+          highlightTicker={highlightTicker} navigateTo={navigateTo} />
       )}
       {activeTab === 'other' && (
         <OtherAssetsSection assets={otherAssets} onUpdate={setOtherAssets} isAmountHidden={isAmountHidden} />

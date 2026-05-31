@@ -12,6 +12,7 @@ import { OptimalGuide } from "./components/OptimalGuide";
 import { ChartPage } from "./components/ChartPage";
 import { AccountReturn } from "./components/AccountReturn";
 import { MonthlyStrategy } from "./components/MonthlyStrategy";
+import { MonthlyStrategyJun } from "./components/MonthlyStrategyJun";
 import { CalcChecklist } from "./components/CalcChecklist";
 import { NationalGrowthFund } from "./components/NationalGrowthFund";
 import { MacroSectorViz } from "./components/MacroSectorViz";
@@ -67,10 +68,10 @@ const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드", materialIcon: "dashboard" },
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
   { id: "trailing-stop", label: "추적손절매", materialIcon: "track_changes", updatedAt: "2026-05-27" },
-  { id: "psychology-check", label: "심리점검", materialIcon: "self_improvement", updatedAt: "2026-05-28" },
   { id: "investment-routine", label: "투자루틴", materialIcon: "checklist", updatedAt: "2026-05-28" },
   { id: "stock-check", label: "신규종목체크", materialIcon: "manage_search", updatedAt: "2026-05-29" },
   { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-27" },
+  { id: "monthly-strategy-jun", label: "2026년6월", materialIcon: "calendar_month", updatedAt: "2026-05-31" },
   { id: "dividend", label: "배당", materialIcon: "paid", updatedAt: "2026-05-09" },
   { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
   { id: "rebalancing", label: "리밸런싱", materialIcon: "tune" },
@@ -93,7 +94,7 @@ function isRecentlyUpdated(dateStr?: string): boolean {
 }
 
 const FONT_SCALE = 1.15;
-const INDICATOR_IDS = ['macro-sector', 'deep-research', 'financial-scoring', 'quant-dashboard', 'quant-basics'] as const;
+const INDICATOR_IDS = ['macro-sector', 'deep-research', 'financial-scoring', 'quant-dashboard', 'quant-basics', 'psychology-check'] as const;
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -268,6 +269,7 @@ export default function App() {
       case "chart": return <ChartPage />;
       case "account-return": return <AccountReturn />;
       case "monthly-strategy": return <MonthlyStrategy />;
+      case "monthly-strategy-jun": return <MonthlyStrategyJun />;
       case "calc-checklist": return <CalcChecklist />;
       case "macro-sector": return <MacroSectorViz />;
       case "deep-research": return <DeepResearchViz />;
@@ -430,6 +432,7 @@ export default function App() {
                   { id: 'financial-scoring',icon: 'query_stats',    label: '재무 스코어링' },
                   { id: 'quant-dashboard',  icon: 'insights',       label: '퀀트 대시보드' },
                   { id: 'quant-basics',     icon: 'school',         label: '퀀트투자 기본' },
+                  { id: 'psychology-check', icon: 'self_improvement', label: '심리점검' },
                   { id: 'calc-checklist',   icon: 'fact_check',     label: '계산식 검증' },
                 ] as const).map(({ id, icon, label }) => {
                   const active = currentPage === id;

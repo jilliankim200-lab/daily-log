@@ -1256,8 +1256,37 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
 
     // GET /stock-check?ticker=NVDA — 신규 종목 조건 검사
     if (request.method === 'GET' && url.pathname === '/stock-check') {
-      const raw = (url.searchParams.get('ticker') || '').toUpperCase().trim();
-      if (!raw) return json({ error: 'ticker required' }, 400);
+      const rawParam = (url.searchParams.get('ticker') || '').trim();
+      if (!rawParam) return json({ error: 'ticker required' }, 400);
+
+      // 종목명 입력 감지: 한글 등 비ASCII 포함 → Naver/Yahoo 검색으로 티커 해석
+      let raw = rawParam.toUpperCase();
+      if (/[^\x00-\x7F]/.test(rawParam)) {
+        const ua2 = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+        let resolved = '';
+        try {
+          const naverRes = await fetch(
+            `https://ac.stock.naver.com/ac?q=${encodeURIComponent(rawParam)}&target=stock`,
+            { headers: { 'User-Agent': ua2, 'Referer': 'https://finance.naver.com/' } }
+          );
+          const naverData: any = await naverRes.json();
+          const first = naverData?.items?.[0]?.[0]; // [code, name, market, type]
+          if (first?.[0]) resolved = first[0];
+        } catch {}
+        if (!resolved) {
+          try {
+            const yahooRes = await fetch(
+              `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(rawParam)}&quotesCount=1&newsCount=0`,
+              { headers: { 'User-Agent': ua2 } }
+            );
+            const yahooData: any = await yahooRes.json();
+            const first = yahooData?.quotes?.[0];
+            if (first?.symbol) resolved = first.symbol;
+          } catch {}
+        }
+        if (!resolved) return json({ error: `종목을 찾을 수 없습니다: ${rawParam}` }, 404);
+        raw = resolved.toUpperCase();
+      }
 
       // 6자리 숫자 = 한국 종목 → 검색 API로 올바른 시장(.KS/.KQ) 자동 감지
       let ticker = raw;

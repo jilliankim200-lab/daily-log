@@ -1351,7 +1351,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
             <div style={{ paddingLeft: 14, color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', lineHeight: 1.8 }}>IRP &gt; 퇴직연금 &gt; 연금저축 &gt; ISA &gt; 일반/CMA</div>
             <div>② 매도 현금은 <span style={{ color: 'var(--color-profit)', fontWeight: 600 }}>같은 계좌 유지 종목에 목표 비중 기반 재배분</span> (계좌 간 이동 없음)</div>
             <div>③ <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>★ 수익률 40%↑</span> 종목은 중복이어도 매도하지 않음 (세금/수수료 고려)<br />
-              <span style={{ paddingLeft: 14, color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', lineHeight: 1.8, display: 'block' }}>단, <b>MA60 이탈</b> 시에는 예외 — 추세 붕괴 가능성으로 매도 권유로 전환</span></div>
+              <span style={{ paddingLeft: 14, color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', lineHeight: 1.8, display: 'block' }}>단, <b>MA20 이탈</b> 시에는 예외 — 추세 붕괴 가능성으로 매도 권유로 전환</span></div>
             <div>④ 퇴직/IRP는 매도 후 안전자산(채권+금) 비율이 <span style={{ fontWeight: 600 }}>30~35%</span> 유지되는지 별도 체크</div>
           </div>
 
@@ -1827,16 +1827,16 @@ export function OptimalGuide() {
         return [{ ...s, reasonDetail: `타이밍 신호: ${decision.reason}` }];
       });
 
-      // ★유지(40%↑ 보호) 종목 중 MA60 이탈 시 → 예외의 예외: sells로 이동
+      // ★유지(40%↑ 보호) 종목 중 MA20 이탈 시 → 예외의 예외: sells로 이동
       const ma60BreakSells: SellItem[] = [];
       const safeKeeps = plan.keeps.filter(k => {
         if (!k.isHighReturn || !k.h.ticker) return true;
         const sig = signals[k.h.ticker];
-        if (!sig || sig.currentPrice >= sig.ma60) return true;
+        if (!sig || sig.currentPrice >= sig.ma20) return true;
         ma60BreakSells.push({
           h: k.h, val: k.val, cls: k.cls, ret: k.ret,
-          reason: 'MA60 이탈 — 40%↑ 보호 예외',
-          reasonDetail: `수익률 +${k.ret?.toFixed(1)}%이나 현재가(${sig.currentPrice.toLocaleString()})가 MA60(${sig.ma60.toLocaleString()}) 이탈 → 추세 붕괴 가능성, 매도 검토`,
+          reason: 'MA20 이탈 — 40%↑ 보호 예외',
+          reasonDetail: `수익률 +${k.ret?.toFixed(1)}%이나 현재가(${sig.currentPrice.toLocaleString()})가 MA20(${sig.ma20.toLocaleString()}) 이탈 → 추세 붕괴 가능성, 매도 검토`,
         });
         return false;
       });

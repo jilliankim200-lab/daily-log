@@ -1162,7 +1162,8 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
   }, []);
 
   const runCheck = async (overrideTicker?: string) => {
-    const t = (overrideTicker || ticker).trim().toUpperCase();
+    const raw2 = (overrideTicker || ticker).trim();
+    const t = /[^\x00-\x7F]/.test(raw2) ? raw2 : raw2.toUpperCase();
     if (!t) return;
     if (overrideTicker) setTicker(overrideTicker);
     setLoading(true); setError(''); setResult(null); setManualChecks({});
@@ -1265,9 +1266,12 @@ function StockCheckTab({ isMobile }: { isMobile: boolean }) {
         <MIcon name="manage_search" size={20} style={{ color: '#6366F1', flexShrink: 0 }} />
         <input
           value={ticker}
-          onChange={e => setTicker(e.target.value.toUpperCase())}
+          onChange={e => {
+            const v = e.target.value;
+            setTicker(/[^\x00-\x7F]/.test(v) ? v : v.toUpperCase());
+          }}
           onKeyDown={e => e.key === 'Enter' && runCheck()}
-          placeholder="티커 입력 (예: NVDA, AAPL, 005930.KS)"
+          placeholder="티커 또는 종목명 (예: NVDA, SK하이닉스, 005930.KS)"
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', background: 'transparent', color: 'var(--text-primary)' }}
         />
         <button
