@@ -169,10 +169,10 @@ function TimingBadge({ timing, noTooltip }: { timing: { label: string; color: st
 }
 
 // ── 행 컴포넌트 ───────────────────────────────────────────────
-function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badgeTip, ticker, onNameClick }: {
+function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badgeTip, ticker, onNameClick, isAmountHidden }: {
   badge: string; badgeColor: string; name: string; cls?: AssetClass;
   ret?: number | null; amount?: number; note?: string; dim?: boolean; extra?: React.ReactNode; badgeTip?: string;
-  ticker?: string; onNameClick?: (ticker: string, name: string) => void;
+  ticker?: string; onNameClick?: (ticker: string, name: string) => void; isAmountHidden?: boolean;
 }) {
   const [showTip, setShowTip] = useState(false);
   const [tipLeft, setTipLeft] = useState(0);
@@ -236,7 +236,7 @@ function Row({ badge, badgeColor, name, cls, ret, amount, note, dim, extra, badg
               </span>
             )}
             {amount != null && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{fmtKrw(amount)}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{isAmountHidden ? '••••' : fmtKrw(amount)}</span>
             )}
             {note && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{note}</span>}
           </div>
@@ -264,6 +264,8 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
   accounts: Account[]; prices: Record<string, number>;
   plans: AccountPlan[]; targets: TargetAllocation;
 }) {
+  const { isAmountHidden } = useAppContext();
+  const hide = (v: string) => isAmountHidden ? '••••' : v;
   type BacktestItem = { name: string; ticker: string; cls: AssetClass; weight: number; ret: number };
   const [backtest, setBacktest] = useState<{
     loading: boolean;
@@ -517,7 +519,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
           <span style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: m.taxSavings > 0 ? 'var(--color-profit)' : 'var(--text-secondary)' }}>
-            {m.taxSavings > 0 ? `연 ${fmtKrw(Math.round(m.taxSavings))}` : '절세 대상 없음'}
+            {m.taxSavings > 0 ? `연 ${hide(fmtKrw(Math.round(m.taxSavings)))}` : '절세 대상 없음'}
           </span>
           {m.taxSavings > 0 && (
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>절감 (세율 차이 × 중복 매도 금액)</span>
@@ -607,13 +609,13 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ flex: 1, textAlign: 'center', background: 'var(--bg-primary)', borderRadius: 8, padding: '8px 6px' }}>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3 }}>현재</div>
-                <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-secondary)' }}>{fmtKrw(currentTotalDiv)}</div>
+                <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-secondary)' }}>{hide(fmtKrw(currentTotalDiv))}</div>
               </div>
               <div style={{ color: 'var(--text-tertiary)', fontSize: 16 }}>→</div>
               <div style={{ flex: 1, textAlign: 'center', background: 'var(--bg-primary)', borderRadius: 8, padding: '8px 6px' }}>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3 }}>실행 후</div>
                 <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: afterExecutionDiv >= currentTotalDiv ? 'var(--color-profit)' : 'var(--color-loss)' }}>
-                  {fmtKrw(afterExecutionDiv)}
+                  {hide(fmtKrw(afterExecutionDiv))}
                 </div>
               </div>
               {afterExecutionDiv !== currentTotalDiv && (
@@ -621,7 +623,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3 }}>증감</div>
                   <div style={{ fontSize: 'var(--text-base)', fontWeight: 700,
                     color: afterExecutionDiv >= currentTotalDiv ? 'var(--color-profit)' : 'var(--color-loss)' }}>
-                    {afterExecutionDiv >= currentTotalDiv ? '+' : ''}{fmtKrw(afterExecutionDiv - currentTotalDiv)}
+                    {afterExecutionDiv >= currentTotalDiv ? '+' : ''}{hide(fmtKrw(afterExecutionDiv - currentTotalDiv))}
                   </div>
                 </div>
               )}
@@ -669,7 +671,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
                   {backtest.currentRet >= 0 ? '+' : ''}{backtest.currentRet}%
                 </div>
                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 2 }}>
-                  {backtest.currentAmount >= 0 ? '+' : ''}{fmtKrw(backtest.currentAmount)}
+                  {backtest.currentAmount >= 0 ? '+' : ''}{hide(fmtKrw(backtest.currentAmount))}
                 </div>
               </div>
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', fontWeight: 600 }}>vs</span>
@@ -679,7 +681,7 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
                   {backtest.targetRet >= 0 ? '+' : ''}{backtest.targetRet}%
                 </div>
                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 2 }}>
-                  {backtest.targetAmount >= 0 ? '+' : ''}{fmtKrw(backtest.targetAmount)}
+                  {backtest.targetAmount >= 0 ? '+' : ''}{hide(fmtKrw(backtest.targetAmount))}
                 </div>
               </div>
             </div>
@@ -693,9 +695,9 @@ function ComparisonPanel({ accounts, prices, plans, targets }: {
                 <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 'var(--text-sm)', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
                   {diff !== 0 ? (
                     <>
-                      1년 전에 총 자산 <strong>{fmtKrw(backtest.totalAssets)}</strong>을{' '}
+                      1년 전에 총 자산 <strong>{hide(fmtKrw(backtest.totalAssets))}</strong>을{' '}
                       <strong style={{ color: diff > 0 ? 'var(--color-profit)' : 'var(--text-primary)' }}>{better}</strong>으로 투자했다면,{' '}
-                      <strong style={{ color: 'var(--color-profit)' }}>{fmtKrw(absDiff)}</strong> 더 벌었을 것입니다.
+                      <strong style={{ color: 'var(--color-profit)' }}>{hide(fmtKrw(absDiff))}</strong> 더 벌었을 것입니다.
                     </>
                   ) : (
                     <>두 전략의 1년 수익이 동일합니다.</>
@@ -748,6 +750,8 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
   onSellDone?: (accId: string, holdingId: string, isPartial: boolean) => void;
 }) {
   const [collapsed, setCollapsed] = useState(true);
+  const { isAmountHidden } = useAppContext();
+  const hide = (v: string) => isAmountHidden ? '••••' : v;
   const { acc, sells, keeps, buys, freedCash, projectedSafePct, safeStatus, totalVal, safeAdjust } = plan;
 
   useEffect(() => {
@@ -781,7 +785,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
     <div style={{ padding: '10px 14px', opacity: signalFilter.size > 0 && ![...signalFilter].some(k => k.startsWith('sell:')) ? 0.25 : 1, transition: 'opacity 0.15s',
       background: 'var(--bg-primary)' }}>
       <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-loss)', marginBottom: 10, letterSpacing: '0.03em' }}>
-        매도 · 총 {fmtKrw(sells.reduce((s, r) => s + r.val * (r.partialRatio ?? 1), 0))} 현금화
+        매도 · 총 {hide(fmtKrw(sells.reduce((s, r) => s + r.val * (r.partialRatio ?? 1), 0)))} 현금화
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
         {sells.map((s) => {
@@ -1018,8 +1022,8 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
     <div style={{ padding: '10px 14px', opacity: signalFilter.size > 0 && ![...signalFilter].some(k => k.startsWith('buy:')) ? 0.25 : 1, transition: 'opacity 0.15s',
       background: 'var(--bg-primary)' }}>
       <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-profit)', marginBottom: 8, letterSpacing: '0.03em' }}>
-        재매수 · 가용현금 {fmtKrw(freedCash)}
-        {acc.cash ? <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}> (현금 {fmtKrw(acc.cash)} 포함)</span> : null}
+        재매수 · 가용현금 {hide(fmtKrw(freedCash))}
+        {acc.cash ? <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}> (현금 {hide(fmtKrw(acc.cash))} 포함)</span> : null}
       </div>
       {noKeeps ? (
         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-warning)', lineHeight: 1.7,
@@ -1028,7 +1032,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
           <div style={{ color: 'var(--text-secondary)' }}>모든 종목이 다른 계좌에도 보유 중입니다.</div>
           <div style={{ marginTop: 4, color: 'var(--text-tertiary)' }}>
             A. 매도하지 않고 중복 유지<br />
-            B. {fmtKrw(freedCash)}로 새 종목 직접 선택
+            B. {hide(fmtKrw(freedCash))}로 새 종목 직접 선택
           </div>
         </div>
       ) : (
@@ -1235,7 +1239,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
           </span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtKrw(totalVal)}</span>
+          <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-secondary)' }}>{hide(fmtKrw(totalVal))}</span>
           <MIcon name={collapsed ? 'expand_more' : 'expand_less'} size={18} style={{ color: 'var(--text-tertiary)' }} />
         </div>
       </div>
@@ -1257,7 +1261,7 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
               </div>
               {safeAdjust && (
                 <span style={{ fontSize: 'var(--text-xs)', color: safeStatus === 'under' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
-                  {safeAdjust.action} {fmtKrw(safeAdjust.amount)} 필요
+                  {safeAdjust.action} {hide(fmtKrw(safeAdjust.amount))} 필요
                 </span>
               )}
             </div>
@@ -1284,11 +1288,11 @@ function AccountCard({ plan, isMobile, signals, changeRates, signalFilter, execM
                       opacity: signalFilter.size > 0 && [...signalFilter].some(k => k.startsWith('buy:')) && !matched ? 0.25 : 1, transition: 'opacity 0.15s' }}>
                       <Row badge={k.isHighReturn ? '★유지' : '유지'} badgeColor={k.isHighReturn ? 'var(--color-gold)' : 'var(--color-profit)'}
                         name={k.h.name} cls={k.cls} ticker={k.h.ticker} onNameClick={onNameClick}
-                        ret={k.ret} amount={k.val} badgeTip={k.keepReason || undefined} />
+                        ret={k.ret} amount={k.val} badgeTip={k.keepReason || undefined} isAmountHidden={isAmountHidden} />
                     </div>
                   );
                 })}
-                {acc.cash && acc.cash > 0 && <Row badge={buysCol ? "매수 재원" : "유지"} badgeColor="var(--color-profit)" name="현금" amount={acc.cash} />}
+                {acc.cash && acc.cash > 0 && <Row badge={buysCol ? "매수 재원" : "유지"} badgeColor="var(--color-profit)" name="현금" amount={acc.cash} isAmountHidden={isAmountHidden} />}
               </div>
               {buysCol}
             </div>
@@ -1663,7 +1667,8 @@ function loadTargetsFromStorage(): TargetAllocation {
 
 
 export function OptimalGuide() {
-  const { accounts, prices, isMobile, navigateTo, reloadAccounts } = useAppContext();
+  const { accounts, prices, isMobile, navigateTo, reloadAccounts, isAmountHidden } = useAppContext();
+  const hide = (v: string) => isAmountHidden ? '••••' : v;
   const [signals, setSignals] = useState<Record<string, StockSignal>>({});
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [changeRates, setChangeRates] = useState<Record<string, number>>({});
@@ -2330,7 +2335,7 @@ export function OptimalGuide() {
                 <span style={valStyle(totalSells > 0 ? 'var(--color-loss)' : 'var(--color-profit)')}>{totalSells}개</span>
                 {totalSells > 0 && (
                   <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)' }}>
-                    {accsWithSell}개 계좌 · {fmtKrw(totalSellVal)} 현금화
+                    {accsWithSell}개 계좌 · {hide(fmtKrw(totalSellVal))} 현금화
                   </span>
                 )}
               </div>
@@ -2361,7 +2366,7 @@ export function OptimalGuide() {
                         )}
                         {/* 금액 + 수익률 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)' }}>{fmtKrw(item.val)}</span>
+                          <span style={{ fontSize: 'var(--text-base)', color: 'var(--text-tertiary)' }}>{hide(fmtKrw(item.val))}</span>
                           {item.ret != null && (
                             <span style={{ fontSize: 'var(--text-base)', fontWeight: 700,
                               color: item.ret >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
@@ -2579,16 +2584,16 @@ export function OptimalGuide() {
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.accLabel}</div>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.4,
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{row.name}</div>
-                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 2 }}>{fmtKrw(row.before)} → {fmtKrw(row.after)}</div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 2 }}>{hide(fmtKrw(row.before))} → {hide(fmtKrw(row.after))}</div>
                     <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: isIncrease ? 'var(--color-profit)' : 'var(--color-loss)' }}>
-                      {isIncrease ? '+' : ''}{fmtKrw(diff)}
+                      {isIncrease ? '+' : ''}{hide(fmtKrw(diff))}
                     </div>
                   </div>
                 );
               })}
             </div>
             <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-              목표 비중 기준 월 배당 예상: <span style={{ fontWeight: 700, color: 'var(--asset-covered)' }}>{fmtKrw(coveredCallMonthlyDiv)}</span>
+              목표 비중 기준 월 배당 예상: <span style={{ fontWeight: 700, color: 'var(--asset-covered)' }}>{hide(fmtKrw(coveredCallMonthlyDiv))}</span>
             </div>
           </div>
         </div>

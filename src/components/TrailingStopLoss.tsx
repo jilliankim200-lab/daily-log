@@ -58,9 +58,10 @@ interface RowProps {
   currency: 'KRW' | 'USD';
   onPctChange: (pct: number) => void;
   onResetPeak: () => void;
+  isAmountHidden: boolean;
 }
 
-function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak }: RowProps) {
+function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, isAmountHidden }: RowProps) {
   const { peakPrice, pct } = entry;
   const stopPrice = peakPrice * (1 - pct / 100);
   const hasPrice = currentPrice != null && currentPrice > 0;
@@ -109,7 +110,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
         <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500 }}>현재가</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {hasPrice ? fmtPrice(currentPrice!, currency) : '—'}
+            {hasPrice ? (isAmountHidden ? '••••' : fmtPrice(currentPrice!, currency)) : '—'}
           </div>
           {changeRate != null && (
             <div style={{ fontSize: 11, color: changeRate >= 0 ? '#F04452' : '#3182F6', fontWeight: 600, marginTop: 2 }}>
@@ -128,7 +129,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
             </button>
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent-blue)' }}>
-            {fmtPrice(peakPrice, currency)}
+            {isAmountHidden ? '••••' : fmtPrice(peakPrice, currency)}
           </div>
           {hasPrice && currentPrice! < peakPrice && (
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
@@ -147,7 +148,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
         }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500 }}>손절가</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: statusColor }}>
-            {fmtPrice(stopPrice, currency)}
+            {isAmountHidden ? '••••' : fmtPrice(stopPrice, currency)}
           </div>
           {distPct != null && (
             <div style={{ fontSize: 11, color: statusColor, fontWeight: 600, marginTop: 2 }}>
@@ -163,11 +164,11 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         {/* 매입가·수익률 */}
         <div style={{ display: 'flex', gap: 16, flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
-          <span>매입가 <b style={{ color: 'var(--text-primary)' }}>{fmtPrice(holding.avgPrice, currency)}</b></span>
+          <span>매입가 <b style={{ color: 'var(--text-primary)' }}>{isAmountHidden ? '••••' : fmtPrice(holding.avgPrice, currency)}</b></span>
           {returnPct != null && (
-            <span>수익률 <b style={{ color: returnPct >= 0 ? '#F04452' : '#3182F6' }}>{fmtPct(returnPct)}</b></span>
+            <span>수익률 <b style={{ color: returnPct >= 0 ? '#F04452' : '#3182F6' }}>{isAmountHidden ? '••••' : fmtPct(returnPct)}</b></span>
           )}
-          <span style={{ color: 'var(--text-tertiary)' }}>{holding.quantity.toLocaleString()}주</span>
+          <span style={{ color: 'var(--text-tertiary)' }}>{isAmountHidden ? '••••' : holding.quantity.toLocaleString()}주</span>
         </div>
 
         {/* 손절률 조절 */}
@@ -194,7 +195,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
 type FilterType = 'all' | 'triggered' | 'warning' | 'safe';
 
 export function TrailingStopLoss() {
-  const { accounts, isMobile } = useAppContext();
+  const { accounts, isMobile, isAmountHidden } = useAppContext();
   const [priceData, setPriceData] = useState<Record<string, { price: number; changeRate: number }>>({});
   const [entries, setEntries] = useState<Record<string, TrailingEntry>>(load);
   const [loading, setLoading] = useState(false);
@@ -557,6 +558,7 @@ export function TrailingStopLoss() {
                       currency={cs.currency ?? detectCurrency(cs.ticker)}
                       onPctChange={p => updatePct(cs.ticker, p)}
                       onResetPeak={() => resetPeak(cs.ticker)}
+                      isAmountHidden={isAmountHidden}
                     />
                     <button onClick={() => removeCustomStock(cs.id)}
                       title="삭제"
@@ -646,6 +648,7 @@ export function TrailingStopLoss() {
                       currency={h.market === 'US' ? 'USD' : 'KRW'}
                       onPctChange={(p) => updatePct(h.ticker, p)}
                       onResetPeak={() => resetPeak(h.ticker)}
+                      isAmountHidden={isAmountHidden}
                     />
                   );
                 })}

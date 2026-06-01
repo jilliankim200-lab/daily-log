@@ -93,16 +93,18 @@ const SECTION_CONFIG: Record<ItemType, { label: string; icon: string; accentColo
 
 // ── 섹션별 테이블 ──────────────────────────────────────────────
 function BudgetSection({
-  type, items, isMobile, onEdit, onDelete, onAdd,
+  type, items, isMobile, isAmountHidden, onEdit, onDelete, onAdd,
 }: {
   type: ItemType;
   items: BudgetItem[];
   isMobile: boolean;
+  isAmountHidden: boolean;
   onEdit: (item: BudgetItem) => void;
   onDelete: (id: string) => void;
   onAdd: (type: ItemType) => void;
 }) {
   const cfg = SECTION_CONFIG[type];
+  const hide = (v: string) => isAmountHidden ? '••••' : v;
   const isIncome = type === 'income';
 
   const totalBudget = items.reduce((s, i) => s + (i.budget ?? 0), 0);
@@ -151,14 +153,14 @@ function BudgetSection({
             <div style={{ display: 'flex', gap: isMobile ? 6 : 16, fontSize: 'var(--text-xs)', alignItems: 'center' }}>
               {!isIncome && (
                 <span style={{ color: 'var(--text-tertiary)' }}>
-                  예산 <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{fmtKrw(totalBudget)}</span>
+                  예산 <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{hide(fmtKrw(totalBudget))}</span>
                 </span>
               )}
               <span style={{ color: 'var(--text-tertiary)' }}>
-                {isIncome ? '수입' : '지출'} <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{fmtKrw(totalActual)}</span>
+                {isIncome ? '수입' : '지출'} <span className="toss-number" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{hide(fmtKrw(totalActual))}</span>
               </span>
               {items.some(i => i.actual !== null) && (
-                <span className="toss-number" style={{ color: diffColor(diff), fontWeight: 700 }}>{fmtDiff(diff)}</span>
+                <span className="toss-number" style={{ color: diffColor(diff), fontWeight: 700 }}>{hide(fmtDiff(diff))}</span>
               )}
             </div>
           )}
@@ -204,17 +206,17 @@ function BudgetSection({
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ ...td, textAlign: 'left', fontWeight: 500 }}>{item.name}</td>
-                    {!isIncome && <td style={td} className="toss-number">{fmtKrw(item.budget)}</td>}
+                    {!isIncome && <td style={td} className="toss-number">{hide(fmtKrw(item.budget))}</td>}
                     <td style={{
                       ...td,
                       color: isIncome && item.actual ? 'var(--color-profit)' : undefined,
                       fontWeight: isIncome && item.actual ? 600 : 400,
                     }} className="toss-number">
-                      {fmtKrw(item.actual)}
+                      {hide(fmtKrw(item.actual))}
                     </td>
                     {!isIncome && (
                       <td style={{ ...td, color: diffColor(diff), fontWeight: diff !== null && diff !== 0 ? 600 : 400 }} className="toss-number">
-                        {diff !== null ? fmtDiff(diff) : '—'}
+                        {diff !== null ? hide(fmtDiff(diff)) : '—'}
                       </td>
                     )}
                     <td style={{ ...td, padding: '8px 6px', textAlign: 'center' }}>
@@ -235,9 +237,9 @@ function BudgetSection({
             <tfoot>
               <tr style={{ background: 'var(--bg-secondary)' }}>
                 <td style={{ ...td, textAlign: 'left', fontWeight: 700, color: 'var(--text-primary)', borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }}>소계</td>
-                {!isIncome && <td style={{ ...td, fontWeight: 700, borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }} className="toss-number">{fmtKrw(totalBudget)}</td>}
-                <td style={{ ...td, fontWeight: 700, color: isIncome ? 'var(--color-profit)' : undefined, borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }} className="toss-number">{fmtKrw(totalActual)}</td>
-                {!isIncome && <td style={{ ...td, fontWeight: 700, color: diffColor(diff), borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }} className="toss-number">{fmtDiff(diff)}</td>}
+                {!isIncome && <td style={{ ...td, fontWeight: 700, borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }} className="toss-number">{hide(fmtKrw(totalBudget))}</td>}
+                <td style={{ ...td, fontWeight: 700, color: isIncome ? 'var(--color-profit)' : undefined, borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }} className="toss-number">{hide(fmtKrw(totalActual))}</td>
+                {!isIncome && <td style={{ ...td, fontWeight: 700, color: diffColor(diff), borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }} className="toss-number">{hide(fmtDiff(diff))}</td>}
                 <td style={{ ...td, borderTop: '1px solid var(--border-primary)', borderBottom: 'none' }}></td>
               </tr>
             </tfoot>
@@ -250,7 +252,8 @@ function BudgetSection({
 
 // ── 메인 컴포넌트 ────────────────────────────────────────────
 export function HouseholdBudget() {
-  const { isMobile } = useAppContext();
+  const { isMobile, isAmountHidden } = useAppContext();
+  const hide = (v: string) => isAmountHidden ? '••••' : v;
 
   const todayYM = (() => {
     const d = new Date();
@@ -400,10 +403,10 @@ export function HouseholdBudget() {
       {!loading && items.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
           {[
-            { label: '총 수입',    value: fmtKrw(totalIncome || null),   color: 'var(--color-profit)',  icon: 'payments',              sub: undefined },
-            { label: '고정 지출',  value: fmtKrw(totalFixed || null),    color: 'var(--accent-blue)',   icon: 'lock',                  sub: `예산 ${fmtKrw(totalFixedBudget)}` },
-            { label: '변동 지출',  value: fmtKrw(totalVariable || null), color: 'var(--color-warning)', icon: 'swap_vert',             sub: `예산 ${fmtKrw(totalVariableBudget)}` },
-            { label: '잔액',       value: totalIncome ? fmtDiff(balance) : '—', color: diffColor(balance), icon: 'account_balance_wallet', sub: undefined },
+            { label: '총 수입',    value: hide(fmtKrw(totalIncome || null)),   color: 'var(--color-profit)',  icon: 'payments',              sub: undefined },
+            { label: '고정 지출',  value: hide(fmtKrw(totalFixed || null)),    color: 'var(--accent-blue)',   icon: 'lock',                  sub: `예산 ${hide(fmtKrw(totalFixedBudget))}` },
+            { label: '변동 지출',  value: hide(fmtKrw(totalVariable || null)), color: 'var(--color-warning)', icon: 'swap_vert',             sub: `예산 ${hide(fmtKrw(totalVariableBudget))}` },
+            { label: '잔액',       value: totalIncome ? hide(fmtDiff(balance)) : '—', color: diffColor(balance), icon: 'account_balance_wallet', sub: undefined },
           ].map(card => (
             <div key={card.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border-primary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
@@ -428,6 +431,7 @@ export function HouseholdBudget() {
               type={type}
               items={items.filter(i => i.type === type)}
               isMobile={isMobile}
+              isAmountHidden={isAmountHidden}
               onEdit={openEdit}
               onDelete={id => setDeleteId(id)}
               onAdd={openAdd}

@@ -26,6 +26,7 @@ import { TrailingStopLoss } from "./components/TrailingStopLoss";
 import { PsychologyCheck } from "./components/PsychologyCheck";
 import { InvestmentRoutine, StockCheckPage } from "./components/InvestmentRoutine";
 import { PasswordModal } from "./components/PasswordModal";
+import { PageLock } from "./components/PageLock";
 import { RightSidebar } from "./components/RightSidebar";
 import { ChatPanel } from "./components/ChatPanel";
 import { MarketIndices } from "./components/MarketIndices";
@@ -46,6 +47,7 @@ interface AppContextType {
   setAccounts: (a: Account[]) => void;
   reloadAccounts: () => Promise<void>;
   isAmountHidden: boolean;
+  openPasswordModal: () => void;
   otherAssets: OtherAsset[];
   setOtherAssets: (a: OtherAsset[]) => void;
   prices: Record<string, number>;
@@ -56,6 +58,7 @@ interface AppContextType {
 }
 export const AppContext = createContext<AppContextType>({
   accounts: [], setAccounts: () => {}, reloadAccounts: async () => {}, isAmountHidden: true,
+  openPasswordModal: () => {},
   otherAssets: [], setOtherAssets: () => {},
   prices: {}, loadPrices: async () => {},
   navigateTo: () => {},
@@ -256,33 +259,33 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case "couple-accounts": return <CoupleAccounts />;
-      case "holdings": return <Holdings />;
+      case "couple-accounts": return <PageLock><CoupleAccounts /></PageLock>;
+      case "holdings": return <PageLock><Holdings /></PageLock>;
       case "dashboard": return <NewDashboard />;
-      case "asset-change": return <AssetChange />;
-      case "rebalancing": return <Rebalancing />;
-      case "dividend": return <Dividend />;
-      case "contribution": return <Contribution />;
-      case "financial-review": return <FinancialReview />;
-      case "household-budget": return <HouseholdBudget />;
-      case "optimal-guide": return <OptimalGuide />;
-      case "chart": return <ChartPage />;
-      case "account-return": return <AccountReturn />;
-      case "monthly-strategy": return <MonthlyStrategy />;
-      case "monthly-strategy-jun": return <MonthlyStrategyJun />;
-      case "calc-checklist": return <CalcChecklist />;
-      case "macro-sector": return <MacroSectorViz />;
-      case "deep-research": return <DeepResearchViz />;
-      case "financial-scoring": return <FinancialScoring />;
-      case "quant-dashboard": return <QuantDashboard />;
-      case "quant-basics": return <QuantBasics />;
-      case "national-growth-fund": return <NationalGrowthFund />;
-      case "data-reports": return <DataReports />;
-      case "stop-loss": return <StopLoss />;
-      case "trailing-stop": return <TrailingStopLoss />;
-      case "psychology-check": return <PsychologyCheck />;
-      case "investment-routine": return <InvestmentRoutine />;
-      case "stock-check": return <StockCheckPage />;
+      case "asset-change": return <PageLock><AssetChange /></PageLock>;
+      case "rebalancing": return <PageLock><Rebalancing /></PageLock>;
+      case "dividend": return <PageLock><Dividend /></PageLock>;
+      case "contribution": return <PageLock><Contribution /></PageLock>;
+      case "financial-review": return <PageLock><FinancialReview /></PageLock>;
+      case "household-budget": return <PageLock><HouseholdBudget /></PageLock>;
+      case "optimal-guide": return <PageLock><OptimalGuide /></PageLock>;
+      case "chart": return <PageLock><ChartPage /></PageLock>;
+      case "account-return": return <PageLock><AccountReturn /></PageLock>;
+      case "monthly-strategy": return <PageLock><MonthlyStrategy /></PageLock>;
+      case "monthly-strategy-jun": return <PageLock><MonthlyStrategyJun /></PageLock>;
+      case "calc-checklist": return <PageLock><CalcChecklist /></PageLock>;
+      case "macro-sector": return <PageLock><MacroSectorViz /></PageLock>;
+      case "deep-research": return <PageLock><DeepResearchViz /></PageLock>;
+      case "financial-scoring": return <PageLock><FinancialScoring /></PageLock>;
+      case "quant-dashboard": return <PageLock><QuantDashboard /></PageLock>;
+      case "quant-basics": return <PageLock><QuantBasics /></PageLock>;
+      case "national-growth-fund": return <PageLock><NationalGrowthFund /></PageLock>;
+      case "data-reports": return <PageLock><DataReports /></PageLock>;
+      case "stop-loss": return <PageLock><StopLoss /></PageLock>;
+      case "trailing-stop": return <PageLock><TrailingStopLoss /></PageLock>;
+      case "psychology-check": return <PageLock><PsychologyCheck /></PageLock>;
+      case "investment-routine": return <PageLock><InvestmentRoutine /></PageLock>;
+      case "stock-check": return <PageLock><StockCheckPage /></PageLock>;
     }
   };
 
@@ -290,7 +293,7 @@ export default function App() {
   const effectiveOtherAssets = isHappyMode ? [...otherAssets, HAPPY_BONUS] : otherAssets;
 
   return (
-    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, otherAssets: effectiveOtherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile, isHappyMode }}>
+    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, openPasswordModal: () => setIsPasswordModalOpen(true), otherAssets: effectiveOtherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile, isHappyMode }}>
       <div style={{ display: 'flex', height: `${100 / FONT_SCALE}vh`, background: 'var(--bg-primary)', zoom: FONT_SCALE }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (

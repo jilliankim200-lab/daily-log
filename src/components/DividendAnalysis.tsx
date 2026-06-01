@@ -51,7 +51,7 @@ const ISSUE_COLOR: Record<string, string> = {
 };
 
 export function DividendAnalysis() {
-  const { accounts, isMobile } = useAppContext();
+  const { accounts, isMobile, isAmountHidden } = useAppContext();
   const [analysis, setAnalysis] = useState<DividendAnalysisData | null>(null);
   const [etfRanking, setEtfRanking] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,7 +151,7 @@ export function DividendAnalysis() {
           }}>
             보유 커버드콜 현황
             <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-tertiary)' }}>
-              {ccHoldings.length}종목 · 총 {totalCcQty.toLocaleString()}주
+              {ccHoldings.length}종목 · 총 {isAmountHidden ? '••••' : totalCcQty.toLocaleString()}주
             </span>
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: col(2), gap: 12 }}>
@@ -175,7 +175,7 @@ export function DividendAnalysis() {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {h.qty.toLocaleString()}주
+                        {isAmountHidden ? '••••' : h.qty.toLocaleString()}주
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{pct.toFixed(1)}%</div>
                     </div>
