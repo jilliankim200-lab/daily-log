@@ -64,13 +64,16 @@ export function NewDashboard() {
   const latestSnap = effectiveSnapshots[0];
   const prevSnap = effectiveSnapshots[1];
 
-  // 현재 총자산 vs 마지막 스냅샷 비교 (스냅샷 저장 이후 실질 변동)
-  const dailyChange = latestSnap ? totalAsset - latestSnap.totalAsset : 0;
-  const dailyRate = latestSnap && latestSnap.totalAsset > 0 ? (dailyChange / latestSnap.totalAsset) * 100 : 0;
+  // 현재 총자산 vs 마지막 스냅샷 비교
+  // 오늘 스냅샷이 이미 저장된 경우 전일 스냅샷 기준으로 비교 (당일 저장 직후 0% 버그 방지)
+  const dailyBase = latestSnap?.date === today ? prevSnap : latestSnap;
+  const dailyChange = dailyBase ? totalAsset - dailyBase.totalAsset : 0;
+  const dailyRate = dailyBase && dailyBase.totalAsset > 0 ? (dailyChange / dailyBase.totalAsset) * 100 : 0;
 
   // 월간/연간 증감
+  // 이전 달 마지막 스냅샷을 기준으로 계산 (월초 당일 0% 버그 방지)
   const thisMonth = today.slice(0, 7);
-  const monthStart = effectiveSnapshots.filter(s => s.date.startsWith(thisMonth)).pop();
+  const monthStart = effectiveSnapshots.find(s => !s.date.startsWith(thisMonth));
   const monthlyChange = monthStart ? totalAsset - monthStart.totalAsset : 0;
 
   const thisYear = today.slice(0, 4);
@@ -164,7 +167,7 @@ export function NewDashboard() {
             const pct = item.isTotal ? null
               : item.label.includes('년') && yearStart ? ((item.value / yearStart.totalAsset) * 100)
               : item.label.includes('월') && monthStart ? ((item.value / monthStart.totalAsset) * 100)
-              : prevSnap ? ((item.value / prevSnap.totalAsset) * 100)
+              : dailyBase ? ((item.value / dailyBase.totalAsset) * 100)
               : null;
             return {
               label: item.label,
