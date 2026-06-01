@@ -25,11 +25,13 @@ function setCache(prices: Record<string, number>) {
 }
 
 function isKrTicker(ticker: string): boolean {
-  return /^\d{6}$/.test(ticker);
+  // 6자리 영숫자 (0005A0, 0177N0 등 ETF 포함)
+  return /^[0-9A-Z]{6}$/i.test(ticker) && /\d/.test(ticker);
 }
 
 function isUsTicker(ticker: string): boolean {
-  return /^[A-Z]{1,6}(\.[A-Z]{1,3})?$/.test(ticker);
+  // 순수 영문자 1~6자 (숫자 없음) — TSLA, MO, IETC 등
+  return /^[A-Z]{1,6}(\.[A-Z]{1,3})?$/.test(ticker) && !/\d/.test(ticker);
 }
 
 export function detectCurrency(ticker: string): 'KRW' | 'USD' {
@@ -73,7 +75,7 @@ export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<R
 }
 
 export async function fetchCurrentPrices(tickers: string[]): Promise<Record<string, number>> {
-  const validTickers = [...new Set(tickers.filter(isValidKrTicker))];
+  const validTickers = [...new Set(tickers.filter(isKrTicker))];
   if (validTickers.length === 0) return {};
 
   // 캐시 체크
