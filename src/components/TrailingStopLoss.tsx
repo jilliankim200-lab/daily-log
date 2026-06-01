@@ -366,8 +366,12 @@ export function TrailingStopLoss() {
     });
   };
 
-  // 손절 발생/주의 종목 수 계산
-  const counts = tickers.reduce((acc, ticker) => {
+  // 현재 뷰에서 보이는 티커만 카운트 (계좌 선택 시 해당 계좌만, 개별종목 뷰면 개별종목만)
+  const visibleTickers = isCustomView
+    ? customStocks.map(s => s.ticker)
+    : accountHoldings.flatMap(a => a.holdings.map(h => h.ticker));
+
+  const counts = [...new Set(visibleTickers)].reduce((acc, ticker) => {
     const entry = entries[ticker];
     if (!entry) return acc;
     const p = priceData[ticker]?.price;
@@ -526,7 +530,19 @@ export function TrailingStopLoss() {
                 <p style={{ fontSize: 13 }}>티커와 매수가를 입력해 종목을 추가하세요</p>
               </div>
             ) : (
-              customStocks.map(cs => {
+              customStocks
+              .filter(cs => {
+                if (activeFilter === 'all') return true;
+                const e = entries[cs.ticker] ?? { pct: 10, peakPrice: cs.avgPrice };
+                const p = priceData[cs.ticker]?.price;
+                if (!p) return activeFilter === 'safe';
+                const stop = e.peakPrice * (1 - e.pct / 100);
+                const dist = (p - stop) / p * 100;
+                if (activeFilter === 'triggered') return p <= stop;
+                if (activeFilter === 'warning') return p > stop && dist < 3;
+                return p > stop && dist >= 3;
+              })
+              .map(cs => {
                 const pd = priceData[cs.ticker];
                 const entry = entries[cs.ticker] ?? { pct: 10, peakPrice: pd?.price ?? cs.avgPrice };
                 const fakeHolding: Holding = { id: cs.id, name: cs.name, ticker: cs.ticker, market: 'KR', avgPrice: cs.avgPrice, quantity: 1 };
