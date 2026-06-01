@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../App';
-import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
+import { fetchCurrentPricesWithChange, detectCurrency } from '../utils/fetchPrices';
 import { kvGet, kvSet } from '../api';
 import { MIcon } from './MIcon';
 import type { Holding, Account } from '../types';
@@ -15,6 +15,7 @@ interface CustomStock {
   ticker: string;
   name: string;
   avgPrice: number;
+  currency: 'KRW' | 'USD';
 }
 
 const LS_KEY = 'trailing_stops_v1';
@@ -29,14 +30,21 @@ function save(e: Record<string, TrailingEntry>) {
   kvSet(LS_KEY, e).catch(() => {});
 }
 function loadCustom(): CustomStock[] {
-  try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); }
-  catch { return []; }
+  try {
+    const raw: CustomStock[] = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+    return raw.map(s => ({ ...s, currency: s.currency ?? detectCurrency(s.ticker) }));
+  } catch { return []; }
 }
 function saveCustom(s: CustomStock[]) {
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(s));
   kvSet(CUSTOM_KEY, s).catch(() => {});
 }
 function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR'); }
+function fmtPrice(n: number, currency: 'KRW' | 'USD') {
+  return currency === 'USD'
+    ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `${fmt(n)}원`;
+}
 function fmtPct(n: number, digits = 1) {
   return `${n >= 0 ? '+' : ''}${n.toFixed(digits)}%`;
 }
@@ -47,11 +55,12 @@ interface RowProps {
   currentPrice?: number;
   changeRate?: number;
   entry: TrailingEntry;
+  currency: 'KRW' | 'USD';
   onPctChange: (pct: number) => void;
   onResetPeak: () => void;
 }
 
-function HoldingRow({ holding, account, currentPrice, changeRate, entry, onPctChange, onResetPeak }: RowProps) {
+function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak }: RowProps) {
   const { peakPrice, pct } = entry;
   const stopPrice = peakPrice * (1 - pct / 100);
   const hasPrice = currentPrice != null && currentPrice > 0;
@@ -100,7 +109,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, onPctCh
         <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500 }}>현재가</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {hasPrice ? `${fmt(currentPrice!)}원` : '—'}
+            {hasPrice ? fmtPrice(currentPrice!, currency) : '—'}
           </div>
           {changeRate != null && (
             <div style={{ fontSize: 11, color: changeRate >= 0 ? '#F04452' : '#3182F6', fontWeight: 600, marginTop: 2 }}>
@@ -119,7 +128,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, onPctCh
             </button>
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent-blue)' }}>
-            {fmt(peakPrice)}원
+            {fmtPrice(peakPrice, currency)}
           </div>
           {hasPrice && currentPrice! < peakPrice && (
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
@@ -138,7 +147,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, onPctCh
         }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500 }}>손절가</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: statusColor }}>
-            {fmt(stopPrice)}원
+            {fmtPrice(stopPrice, currency)}
           </div>
           {distPct != null && (
             <div style={{ fontSize: 11, color: statusColor, fontWeight: 600, marginTop: 2 }}>
@@ -154,7 +163,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, onPctCh
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         {/* 매입가·수익률 */}
         <div style={{ display: 'flex', gap: 16, flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
-          <span>매입가 <b style={{ color: 'var(--text-primary)' }}>{fmt(holding.avgPrice)}원</b></span>
+          <span>매입가 <b style={{ color: 'var(--text-primary)' }}>{fmtPrice(holding.avgPrice, currency)}</b></span>
           {returnPct != null && (
             <span>수익률 <b style={{ color: returnPct >= 0 ? '#F04452' : '#3182F6' }}>{fmtPct(returnPct)}</b></span>
           )}
@@ -195,6 +204,7 @@ export function TrailingStopLoss() {
   const [customStocks, setCustomStocks] = useState<CustomStock[]>(loadCustom);
   const [addTicker, setAddTicker] = useState('');
   const [addPrice, setAddPrice] = useState('');
+  const [addCurrency, setAddCurrency] = useState<'KRW' | 'USD'>('KRW');
   const [addLoading, setAddLoading] = useState(false);
 
   const isCustomView = selectedAccountId === 'custom';
@@ -214,7 +224,8 @@ export function TrailingStopLoss() {
     institution: '', accountType: '', alias: '',
     holdings: customStocks.map(s => ({
       id: s.id, name: s.name, ticker: s.ticker,
-      market: 'KR' as const, avgPrice: s.avgPrice, quantity: 1,
+      market: (s.currency === 'USD' ? 'US' : 'KR') as 'KR' | 'US',
+      avgPrice: s.avgPrice, quantity: 1,
     })),
   };
 
@@ -313,12 +324,23 @@ export function TrailingStopLoss() {
     if (!ticker || !price || price <= 0) return;
     if (customStocks.find(s => s.ticker === ticker)) return;
     setAddLoading(true);
+    const currency = addCurrency;
     let name = ticker;
     try {
-      const r = await fetch(`/naver-stock/${ticker}/basic`);
-      if (r.ok) { const d = await r.json(); name = d.stockName || ticker; }
+      if (currency === 'KRW') {
+        const r = await fetch(`/naver-stock/${ticker}/basic`);
+        if (r.ok) { const d = await r.json(); name = d.stockName || ticker; }
+      } else {
+        const r = await fetch(`https://asset-dashboard-api.jilliankim200.workers.dev/stock-prices-foreign?tickers=${ticker}`);
+        if (r.ok) {
+          // 이름은 Yahoo Finance search로 따로 조회할 수 없으므로 ticker 사용
+          // stock-check 엔드포인트에서 name 가져오기
+          const cr = await fetch(`https://asset-dashboard-api.jilliankim200.workers.dev/stock-check?ticker=${ticker}`);
+          if (cr.ok) { const cd = await cr.json(); if (cd.name) name = cd.name; }
+        }
+      }
     } catch { /* 이름 조회 실패 시 ticker 사용 */ }
-    const newStock: CustomStock = { id: `${ticker}-${Date.now()}`, ticker, name, avgPrice: price };
+    const newStock: CustomStock = { id: `${ticker}-${Date.now()}`, ticker, name, avgPrice: price, currency };
     const next = [...customStocks, newStock];
     setCustomStocks(next);
     saveCustom(next);
@@ -464,19 +486,32 @@ export function TrailingStopLoss() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <input
                   value={addTicker}
-                  onChange={e => setAddTicker(e.target.value.toUpperCase())}
+                  onChange={e => {
+                    const v = e.target.value.toUpperCase();
+                    setAddTicker(v);
+                    setAddCurrency(detectCurrency(v));
+                  }}
                   onKeyDown={e => e.key === 'Enter' && addCustomStock()}
-                  placeholder="티커 (예: 005930)"
+                  placeholder="티커 (예: 005930 / TSLA)"
                   style={{ flex: '1 1 100px', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
                 />
-                <input
-                  value={addPrice}
-                  onChange={e => setAddPrice(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addCustomStock()}
-                  placeholder="매수가 (원)"
-                  type="number"
-                  style={{ flex: '1 1 100px', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 120px', border: '1px solid var(--border-primary)', borderRadius: 8, overflow: 'hidden' }}>
+                  <input
+                    value={addPrice}
+                    onChange={e => setAddPrice(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addCustomStock()}
+                    placeholder={addCurrency === 'USD' ? '매수가 ($)' : '매수가 (원)'}
+                    type="number"
+                    style={{ flex: 1, padding: '8px 10px', border: 'none', fontSize: 13, fontFamily: 'inherit', outline: 'none', minWidth: 0 }}
+                  />
+                  <select
+                    value={addCurrency}
+                    onChange={e => setAddCurrency(e.target.value as 'KRW' | 'USD')}
+                    style={{ padding: '8px 6px', border: 'none', borderLeft: '1px solid var(--border-primary)', fontSize: 12, fontWeight: 700, color: addCurrency === 'USD' ? '#3182F6' : 'var(--text-secondary)', background: 'var(--bg-secondary)', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                    <option value="KRW">KRW</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
                 <button onClick={addCustomStock} disabled={addLoading || !addTicker || !addPrice}
                   style={{ padding: '8px 16px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: addLoading || !addTicker || !addPrice ? 'default' : 'pointer', opacity: addLoading || !addTicker || !addPrice ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                   {addLoading ? '조회 중...' : '추가'}
@@ -503,6 +538,7 @@ export function TrailingStopLoss() {
                       currentPrice={pd?.price}
                       changeRate={pd?.changeRate}
                       entry={entry}
+                      currency={cs.currency ?? detectCurrency(cs.ticker)}
                       onPctChange={p => updatePct(cs.ticker, p)}
                       onResetPeak={() => resetPeak(cs.ticker)}
                     />
@@ -591,6 +627,7 @@ export function TrailingStopLoss() {
                       currentPrice={pd?.price}
                       changeRate={pd?.changeRate}
                       entry={entry}
+                      currency={h.market === 'US' ? 'USD' : 'KRW'}
                       onPctChange={(p) => updatePct(h.ticker, p)}
                       onResetPeak={() => resetPeak(h.ticker)}
                     />

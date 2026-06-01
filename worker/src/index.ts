@@ -1154,6 +1154,33 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       return json(result);
     }
 
+    // GET /stock-prices-foreign?tickers=TSLA,MO,IETC — 해외 현재가 (Yahoo Finance, USD)
+    if (request.method === 'GET' && url.pathname === '/stock-prices-foreign') {
+      const raw = url.searchParams.get('tickers') || '';
+      const tickers = raw.split(',').map(t => t.trim().toUpperCase()).filter(t => /^[A-Z]{1,6}(\.[A-Z]{1,3})?$/.test(t));
+      if (tickers.length === 0) return json({});
+      const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+      const entries = await Promise.all(tickers.map(async ticker => {
+        try {
+          const res = await fetch(
+            `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`,
+            { headers: { 'User-Agent': ua } }
+          );
+          if (!res.ok) return [ticker, null] as const;
+          const data: any = await res.json();
+          const meta = data?.chart?.result?.[0]?.meta;
+          if (!meta) return [ticker, null] as const;
+          const price: number = meta.regularMarketPrice ?? meta.previousClose;
+          const prevClose: number = meta.chartPreviousClose ?? meta.previousClose;
+          const changeRate = prevClose > 0 ? Math.round(((price - prevClose) / prevClose) * 10000) / 100 : 0;
+          return [ticker, { price, changeRate }] as const;
+        } catch { return [ticker, null] as const; }
+      }));
+      const result: Record<string, { price: number; changeRate: number }> = {};
+      for (const [t, d] of entries) { if (d !== null) result[t] = d; }
+      return json(result);
+    }
+
     // GET /stock-detail/:ticker — MA20, MA60, 60일 고저점
     if (request.method === 'GET' && url.pathname.startsWith('/stock-detail/')) {
       const ticker = url.pathname.slice('/stock-detail/'.length).split('?')[0];

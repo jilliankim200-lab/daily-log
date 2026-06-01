@@ -24,24 +24,51 @@ function setCache(prices: Record<string, number>) {
   localStorage.setItem(CACHE_KEY, JSON.stringify({ prices, timestamp: Date.now() }));
 }
 
-function isValidKrTicker(ticker: string): boolean {
-  return /^[0-9A-Z]{6}$/i.test(ticker);
+function isKrTicker(ticker: string): boolean {
+  return /^\d{6}$/.test(ticker);
+}
+
+function isUsTicker(ticker: string): boolean {
+  return /^[A-Z]{1,6}(\.[A-Z]{1,3})?$/.test(ticker);
+}
+
+export function detectCurrency(ticker: string): 'KRW' | 'USD' {
+  return isKrTicker(ticker) ? 'KRW' : 'USD';
 }
 
 export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<Record<string, { price: number; changeRate: number }>> {
-  const validTickers = [...new Set(tickers.filter(isValidKrTicker))];
-  if (validTickers.length === 0) return {};
+  const krTickers = [...new Set(tickers.filter(isKrTicker))];
+  const usTickers = [...new Set(tickers.filter(isUsTicker))];
   const result: Record<string, { price: number; changeRate: number }> = {};
-  try {
-    const batchSize = 50;
-    for (let i = 0; i < validTickers.length; i += batchSize) {
-      const batch = validTickers.slice(i, i + batchSize);
-      const res = await fetch(`${WORKER_URL}/stock-prices-with-change?tickers=${batch.join(',')}`);
-      if (!res.ok) continue;
-      const data: Record<string, { price: number; changeRate: number }> = await res.json();
-      Object.assign(result, data);
-    }
-  } catch { /* skip */ }
+
+  await Promise.all([
+    // 국내 — Naver
+    (async () => {
+      if (krTickers.length === 0) return;
+      try {
+        for (let i = 0; i < krTickers.length; i += 50) {
+          const batch = krTickers.slice(i, i + 50);
+          const res = await fetch(`${WORKER_URL}/stock-prices-with-change?tickers=${batch.join(',')}`);
+          if (!res.ok) continue;
+          const data: Record<string, { price: number; changeRate: number }> = await res.json();
+          Object.assign(result, data);
+        }
+      } catch { /* skip */ }
+    })(),
+    // 해외 — Yahoo Finance (USD)
+    (async () => {
+      if (usTickers.length === 0) return;
+      try {
+        for (let i = 0; i < usTickers.length; i += 20) {
+          const batch = usTickers.slice(i, i + 20);
+          const res = await fetch(`${WORKER_URL}/stock-prices-foreign?tickers=${batch.join(',')}`);
+          if (!res.ok) continue;
+          const data: Record<string, { price: number; changeRate: number }> = await res.json();
+          Object.assign(result, data);
+        }
+      } catch { /* skip */ }
+    })(),
+  ]);
   return result;
 }
 
