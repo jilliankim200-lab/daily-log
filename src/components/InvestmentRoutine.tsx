@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { MIcon } from './MIcon';
 import { useAppContext } from '../App';
+import { fetchSnapshots } from '../api';
+import { fetchCurrentPricesWithChange } from '../utils/fetchPrices';
+import type { DailySnapshot } from '../types';
 
 const WORKER_URL = (import.meta as any).env?.VITE_WORKER_URL || 'https://asset-dashboard-api.jilliankim200.workers.dev';
 
@@ -74,6 +77,318 @@ function ChartModal({ config, onClose }: { config: ChartConfig; onClose: () => v
 }
 
 // ── 종목 링크 ──
+// ── 인사이트 팝업 ──────────────────────────────────────────────
+
+function fmtKrwInsight(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_0000_0000) return `${(n / 1_0000_0000).toFixed(1)}억`;
+  if (abs >= 10_000) return `${Math.round(n / 10_000)}만`;
+  return n.toLocaleString() + '원';
+}
+
+function hValInsight(h: { isFund?: boolean; amount?: number; ticker?: string; avgPrice: number; quantity: number }, prices: Record<string, number>, pd: Record<string, { price: number; changeRate: number }>): number {
+  if (h.isFund) return h.amount || 0;
+  const p = (h.ticker && (pd[h.ticker]?.price || prices[h.ticker])) || h.avgPrice;
+  return p * h.quantity;
+}
+
+function classifyInsight(name: string): string {
+  if (['커버드콜'].some(k => name.includes(k))) return '커버드콜';
+  if (['국채', '채권', '단기채', '액티브', '국공채'].some(k => name.includes(k))) return '채권';
+  if (['금현물', 'KRX금', '골드'].some(k => name.includes(k))) return '금';
+  return '주식';
+}
+
+function WeeklyReturnContent() {
+  const { accounts } = useAppContext();
+  const [snapshots, setSnapshots] = useState<DailySnapshot[]>([]);
+  const [pd, setPd] = useState<Record<string, { price: number; changeRate: number }>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const tickers = [...new Set(
+      accounts.flatMap(acc => acc.holdings.filter(h => !h.isFund && h.ticker).map(h => h.ticker!))
+    )];
+    Promise.all([
+      fetchSnapshots(),
+      tickers.length > 0 ? fetchCurrentPricesWithChange(tickers) : Promise.resolve({} as Record<string, { price: number; changeRate: number }>),
+    ]).then(([snaps, priceData]) => {
+      setSnapshots((snaps as DailySnapshot[]).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date)));
+      setPd(priceData);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  // 스냅샷 ↔ 스냅샷 비교 (재계산 없음)
+  const latestSnap = snapshots[0];
+  const prevSnap = snapshots[1]; // 전일
+
+  const weekAgoDate = latestSnap
+    ? new Date(new Date(latestSnap.date + 'T00:00:00').getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : '';
+  const weekAgoSnap = weekAgoDate ? snapshots.find(s => s.date <= weekAgoDate) : undefined;
+
+  const weeklyChange = latestSnap && weekAgoSnap ? latestSnap.totalAsset - weekAgoSnap.totalAsset : null;
+  const weeklyRate = weeklyChange != null && weekAgoSnap && weekAgoSnap.totalAsset > 0
+    ? (weeklyChange / weekAgoSnap.totalAsset * 100) : null;
+
+  const dailyChange = latestSnap && prevSnap ? latestSnap.totalAsset - prevSnap.totalAsset : null;
+  const dailyRate = dailyChange != null && prevSnap && prevSnap.totalAsset > 0
+    ? (dailyChange / prevSnap.totalAsset * 100) : null;
+
+  // 종목별 기여 — ticker 기준 합산 (중복 계좌 제거)
+  const tickerMap = new Map<string, { name: string; value: number; rate: number; contrib: number }>();
+  for (const acc of accounts) {
+    for (const h of acc.holdings) {
+      if (h.isFund || !h.ticker || h.quantity <= 0) continue;
+      const p = pd[h.ticker]?.price || h.avgPrice;
+      const rate = pd[h.ticker]?.changeRate ?? 0;
+      const value = p * h.quantity;
+      const contrib = value * rate / 100;
+      const existing = tickerMap.get(h.ticker);
+      if (existing) {
+        existing.value += value;
+        existing.contrib += contrib;
+      } else {
+        tickerMap.set(h.ticker, { name: h.name, value, rate, contrib });
+      }
+    }
+  }
+  const contributions = [...tickerMap.values()]
+    .sort((a, b) => Math.abs(b.contrib) - Math.abs(a.contrib));
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>데이터 불러오는 중...</div>;
+
+  return (
+    <div>
+      {/* 주간/일간 요약 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        {[
+          { label: '이번 주 수익', change: weeklyChange, rate: weeklyRate, base: weekAgoSnap?.totalAsset, sub: weekAgoSnap ? `${weekAgoSnap.date} ~ ${latestSnap?.date}` : '스냅샷 없음' },
+          { label: '전일 대비', change: dailyChange, rate: dailyRate, base: prevSnap?.totalAsset, sub: prevSnap ? `${prevSnap.date} → ${latestSnap?.date}` : '스냅샷 없음' },
+        ].map(card => (
+          <div key={card.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>{card.label}</div>
+            {card.change != null ? (
+              <>
+                <div style={{ fontSize: 20, fontWeight: 800, color: card.change >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                  {card.change >= 0 ? '+' : ''}{fmtKrwInsight(card.change)}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: card.change >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', marginTop: 2 }}>
+                  {card.rate! >= 0 ? '+' : ''}{card.rate!.toFixed(2)}%
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>데이터 없음</div>
+            )}
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>{card.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 총 자산 */}
+      {latestSnap && (
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>총 자산 ({latestSnap.date})</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{fmtKrwInsight(latestSnap.totalAsset)}</span>
+        </div>
+      )}
+
+      {/* 오늘 등락 기여 종목 */}
+      {contributions.length > 0 && (
+        <>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.04em' }}>오늘 기준 종목별 등락 기여</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {contributions.slice(0, 6).map(c => (
+              <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-secondary)', borderRadius: 10, padding: '9px 12px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>평가액 {fmtKrwInsight(c.value)}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: c.contrib >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
+                    {c.contrib >= 0 ? '+' : ''}{fmtKrwInsight(c.contrib)}
+                  </div>
+                  <div style={{ fontSize: 11, color: c.rate >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', marginTop: 1, fontWeight: 600 }}>
+                    {c.rate >= 0 ? '+' : ''}{c.rate.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 8, textAlign: 'center' }}>* 오늘 시세 기준 — 주간 개별 종목 기여도 근사치</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HoldingsWeightContent() {
+  const { accounts, prices } = useAppContext();
+
+  const holdings = accounts.flatMap(acc =>
+    acc.holdings.filter(h => h.quantity > 0 || h.isFund).map(h => ({
+      name: h.name,
+      value: hValInsight(h, prices, {}),
+      cls: classifyInsight(h.name),
+    }))
+  );
+  const cash = accounts.reduce((s, acc) => s + (acc.cash || 0), 0);
+  const total = holdings.reduce((s, h) => s + h.value, 0) + cash;
+
+  const byClass: Record<string, number> = {};
+  holdings.forEach(h => { byClass[h.cls] = (byClass[h.cls] || 0) + h.value; });
+  if (cash > 0) byClass['현금'] = cash;
+
+  const classColors: Record<string, string> = {
+    '주식': 'var(--accent-blue)', '채권': 'var(--color-profit)', '커버드콜': '#a855f7',
+    '금': '#f59e0b', '현금': 'var(--text-tertiary)',
+  };
+
+  const sortedHoldings = [...holdings].sort((a, b) => b.value - a.value);
+  const maxVal = sortedHoldings[0]?.value || 1;
+
+  return (
+    <div>
+      {/* 클래스별 비중 */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 10, letterSpacing: '0.04em' }}>자산 클래스별 비중</div>
+        {Object.entries(byClass).sort((a, b) => b[1] - a[1]).map(([cls, val]) => {
+          const pct = total > 0 ? val / total * 100 : 0;
+          const color = classColors[cls] || 'var(--text-secondary)';
+          return (
+            <div key={cls} style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color }}>{cls}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fmtKrwInsight(val)} · {pct.toFixed(1)}%</span>
+              </div>
+              <div style={{ height: 6, background: 'var(--bg-tertiary)', borderRadius: 99 }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.4s' }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 종목별 상위 */}
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, letterSpacing: '0.04em' }}>종목별 비중 (상위 8)</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {sortedHoldings.slice(0, 8).map(h => {
+          const pct = total > 0 ? h.value / total * 100 : 0;
+          const color = classColors[h.cls] || 'var(--accent-blue)';
+          return (
+            <div key={h.name} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>{h.name}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>{pct.toFixed(1)}%</span>
+              </div>
+              <div style={{ height: 4, background: 'var(--bg-tertiary)', borderRadius: 99 }}>
+                <div style={{ height: '100%', width: `${(h.value / maxVal) * 100}%`, background: color, borderRadius: 99 }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CashRatioContent() {
+  const { accounts, prices } = useAppContext();
+
+  const cash = accounts.reduce((s, acc) => s + (acc.cash || 0), 0);
+  const investmentTotal = accounts.reduce((sum, acc) =>
+    sum + acc.holdings.filter(h => h.quantity > 0 || h.isFund).reduce((s, h) => s + hValInsight(h, prices, {}), 0), 0
+  );
+  const total = cash + investmentTotal;
+  const cashPct = total > 0 ? cash / total * 100 : 0;
+  const TARGET_MIN = 5;
+  const TARGET_MAX = 15;
+  const status = cashPct < TARGET_MIN ? '부족' : cashPct > TARGET_MAX ? '과다' : '적정';
+  const statusColor = status === '적정' ? 'var(--color-profit)' : status === '부족' ? 'var(--color-loss)' : 'var(--color-warning)';
+
+  return (
+    <div>
+      {/* 현금 상태 */}
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '20px', marginBottom: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>현재 현금 비중</div>
+        <div style={{ fontSize: 40, fontWeight: 800, color: statusColor }}>{cashPct.toFixed(1)}%</div>
+        <div style={{ marginTop: 6, display: 'inline-block', padding: '3px 12px', borderRadius: 20, background: `color-mix(in srgb, ${statusColor} 15%, transparent)`, color: statusColor, fontSize: 12, fontWeight: 700 }}>
+          {status}
+        </div>
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>목표 범위: {TARGET_MIN}~{TARGET_MAX}%</div>
+      </div>
+
+      {/* 현금 vs 투자 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        {[
+          { label: '현금', value: cash, pct: cashPct, color: 'var(--text-secondary)' },
+          { label: '투자 자산', value: investmentTotal, pct: 100 - cashPct, color: 'var(--accent-blue)' },
+        ].map(c => (
+          <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 600 }}>{c.label}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: c.color }}>{fmtKrwInsight(c.value)}</div>
+            <div style={{ fontSize: 12, color: c.color, marginTop: 2 }}>{c.pct.toFixed(1)}%</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 비중 바 */}
+      <div style={{ height: 12, borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
+        <div style={{ width: `${cashPct}%`, background: 'var(--text-tertiary)', transition: 'width 0.4s' }} />
+        <div style={{ flex: 1, background: 'var(--accent-blue)' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>현금 {cashPct.toFixed(1)}%</span>
+        <span style={{ fontSize: 11, color: 'var(--accent-blue)' }}>투자 {(100 - cashPct).toFixed(1)}%</span>
+      </div>
+
+      {status !== '적정' && (
+        <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: `color-mix(in srgb, ${statusColor} 10%, transparent)`, fontSize: 12, color: statusColor, lineHeight: 1.7 }}>
+          {status === '부족'
+            ? `현금이 목표(${TARGET_MIN}%) 미달 — 추가 매수 여력이 제한됩니다. 배당 또는 매도로 현금 확보를 검토하세요.`
+            : `현금이 목표(${TARGET_MAX}%) 초과 — 분할 매수 기회를 놓치고 있을 수 있습니다. 목표 비중 대비 부족한 종목 매수를 검토하세요.`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InsightModal({ type, onClose }: { type: string; onClose: () => void }) {
+  const TITLES: Record<string, string> = {
+    'weekly-return': '이번 주 수익률',
+    'holdings-weight': '보유 종목 비중',
+    'cash-ratio': '현금 비중',
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300 }} />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        background: 'var(--bg-elevated)', borderRadius: 18, padding: '24px',
+        width: 'min(420px, calc(100vw - 32px))',
+        maxHeight: 'calc(100vh - 60px)', overflowY: 'auto',
+        boxShadow: '0 16px 60px rgba(0,0,0,0.3)', border: '1px solid var(--border-primary)',
+        zIndex: 301,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MIcon name="bar_chart" size={18} style={{ color: 'var(--accent-blue)' }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{TITLES[type] || type}</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', padding: 4, borderRadius: 6 }}>
+            <MIcon name="close" size={18} />
+          </button>
+        </div>
+        {type === 'weekly-return' && <WeeklyReturnContent />}
+        {type === 'holdings-weight' && <HoldingsWeightContent />}
+        {type === 'cash-ratio' && <CashRatioContent />}
+      </div>
+    </>
+  );
+}
+
 function getStockUrl(symbol: string): string {
   if (/^\d{6}$/.test(symbol)) return `https://finance.naver.com/item/main.nhn?code=${symbol}`;
   return `https://finance.yahoo.com/quote/${symbol}`;
@@ -454,12 +769,14 @@ interface SectionDef {
   title: string; subtitle: string;
   items: string[];
   searchLinks?: string[];
+  insightKeys?: (string | null)[];
   note?: string;
 }
 
-function SectionCard({ section, si, checked, onToggle, isMobile }: {
+function SectionCard({ section, si, checked, onToggle, isMobile, onInsight }: {
   section: SectionDef; si: number;
   checked: Set<string>; onToggle: (key: string) => void; isMobile: boolean;
+  onInsight?: (itemIndex: number, key: string) => void;
 }) {
   return (
     <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
@@ -481,7 +798,8 @@ function SectionCard({ section, si, checked, onToggle, isMobile }: {
         {section.items.map((item, ii) => {
           const key = `${si}-${ii}`;
           const done = checked.has(key);
-          const searchQ = section.searchLinks?.[ii];
+          const insightKey = section.insightKeys?.[ii];
+          const searchQ = insightKey ? null : section.searchLinks?.[ii];
           const naverUrl = searchQ ? `https://search.naver.com/search.naver?query=${encodeURIComponent(searchQ)}` : null;
           return (
             <div key={ii} style={{ display: 'flex', borderRadius: 10, overflow: 'hidden' }}>
@@ -494,6 +812,15 @@ function SectionCard({ section, si, checked, onToggle, isMobile }: {
                   {item}
                 </span>
               </button>
+              {insightKey && onInsight && (
+                <button
+                  onClick={() => onInsight(ii, insightKey)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, flexShrink: 0, background: done ? section.bg : 'var(--bg-secondary)', color: section.color, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                  title="내 데이터로 확인"
+                >
+                  <MIcon name="bar_chart" size={14} />
+                </button>
+              )}
               {naverUrl && (
                 <a href={naverUrl} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, flexShrink: 0, background: done ? section.bg : 'var(--bg-secondary)', color: 'var(--text-tertiary)', textDecoration: 'none', transition: 'background 0.15s' }}>
@@ -659,11 +986,8 @@ const WEEKLY_SECTIONS: SectionDef[] = [
       '보유 종목별 비중이 계획 대비 과도하게 쏠린 곳은 없는가',
       '현금 비중이 목표 범위 안에 있는가',
     ],
-    searchLinks: [
-      '주식 포트폴리오 수익률 분석',
-      '주식 비중 리밸런싱 방법',
-      '현금 비중 주식 투자 전략',
-    ],
+    insightKeys: ['weekly-return', 'holdings-weight', 'cash-ratio'],
+    searchLinks: [null, null, null],
   },
   {
     icon: 'edit_note',
@@ -713,6 +1037,7 @@ function WeeklyTab({ isMobile }: { isMobile: boolean }) {
   const [checked, setChecked] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(weekKey()) || '[]')); } catch { return new Set(); }
   });
+  const [insightType, setInsightType] = useState<string | null>(null);
 
   const toggle = (key: string) => {
     setChecked(prev => {
@@ -741,9 +1066,12 @@ function WeeklyTab({ isMobile }: { isMobile: boolean }) {
       </div>
 
       {WEEKLY_SECTIONS.map((section, si) => (
-        <SectionCard key={si} section={section} si={si} checked={checked} onToggle={toggle} isMobile={isMobile} />
+        <SectionCard key={si} section={section} si={si} checked={checked} onToggle={toggle} isMobile={isMobile}
+          onInsight={(_, key) => setInsightType(key)} />
       ))}
       <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>체크 항목은 매주 월요일에 초기화됩니다</p>
+
+      {insightType && <InsightModal type={insightType} onClose={() => setInsightType(null)} />}
     </div>
   );
 }
