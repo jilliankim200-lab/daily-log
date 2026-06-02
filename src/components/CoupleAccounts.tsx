@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MIcon } from './MIcon';
 import { useAppContext } from "../App";
-import { saveAccounts, kvGet, kvSet } from "../api";
+import { saveAccounts, kvGet, kvSet, saveOtherAssets } from "../api";
 import type { Account, Holding, OtherAsset } from "../types";
 import { holdingValue, holdingCost } from "../types";
 
@@ -299,6 +299,38 @@ function CalculatorModal({ onClose, onApply, initialValue }: {
   );
 }
 
+/* ── 삭제 확인 모달 ── */
+function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <>
+      <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000 }} />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        background: 'var(--bg-elevated)', borderRadius: 16, padding: '24px 24px 20px',
+        width: 'min(320px, calc(100vw - 40px))',
+        boxShadow: '0 16px 48px rgba(0,0,0,0.25)', border: '1px solid var(--border-primary)',
+        zIndex: 1001, textAlign: 'center',
+      }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#FFF0F1', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <MIcon name="delete_forever" size={22} style={{ color: '#F04452' }} />
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>삭제하시겠습니까?</div>
+        <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 22, lineHeight: 1.6 }}>{message}</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onCancel}
+            style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            취소
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#F04452', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            삭제
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── 계좌 카드 ── */
 function AccountCard({
   account, onUpdate, onDelete, isAmountHidden, prices, isMobile, highlightTicker, navigateTo,
@@ -322,6 +354,7 @@ function AccountCard({
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [returnSort, setReturnSort] = useState<'none' | 'asc' | 'desc'>('none');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, idx: number) => {
     setDragIdx(idx);
@@ -385,12 +418,26 @@ function AccountCard({
     setEditingHoldingId(null);
   };
 
-  const deleteHolding = (id: string) => {
-    onUpdate({ ...account, holdings: account.holdings.filter(x => x.id !== id) });
+  const deleteHolding = (id: string) => setConfirmDeleteId(id);
+  const confirmDeleteHolding = () => {
+    if (!confirmDeleteId) return;
+    onUpdate({ ...account, holdings: account.holdings.filter(x => x.id !== confirmDeleteId) });
+    setConfirmDeleteId(null);
   };
+
+  const confirmHoldingName = confirmDeleteId
+    ? account.holdings.find(h => h.id === confirmDeleteId)?.name ?? '이 종목'
+    : '';
 
   return (
     <div className="toss-card">
+      {confirmDeleteId && (
+        <ConfirmModal
+          message={`"${confirmHoldingName}"을(를) 삭제합니다. 복구할 수 없습니다.`}
+          onConfirm={confirmDeleteHolding}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
       {/* 헤더 */}
       {isMobile ? (
         /* 모바일: 수직 스택 */
@@ -936,6 +983,11 @@ export function CoupleAccounts() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [priceLoading, setPriceLoading] = useState(false);
   const [highlightTicker, setHighlightTicker] = useState<string | null>(null);
+  const [confirmDeleteAccountId, setConfirmDeleteAccountId] = useState<string | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<{
+    accounts: Account[]; otherAssets: OtherAsset[]; label: string;
+  } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 차트 페이지에서 돌아왔을 때 해당 종목 하이라이트
   useEffect(() => {
@@ -962,16 +1014,63 @@ export function CoupleAccounts() {
     finally { setPriceLoading(false); }
   };
 
-  const autoSave = async (next: Account[]) => {
+  const captureSnapshot = (label: string) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoSnapshot({
+      accounts: JSON.parse(JSON.stringify(accounts)),
+      otherAssets: JSON.parse(JSON.stringify(otherAssets)),
+      label,
+    });
+    undoTimerRef.current = setTimeout(() => setUndoSnapshot(null), 6000);
+  };
+
+  const autoSave = async (next: Account[], label = '변경사항이 저장되었습니다') => {
+    captureSnapshot(label);
     setAccounts(next);
     setSaveStatus('saving');
     try { await saveAccounts(next); setSaveStatus('saved'); setTimeout(() => setSaveStatus('idle'), 2000); }
     catch { setSaveStatus('error'); }
   };
 
-  const update = (a: Account) => autoSave(accounts.map(x => x.id === a.id ? a : x));
-  const del = (id: string) => { if (confirm('이 계좌를 삭제하시겠습니까?')) autoSave(accounts.filter(x => x.id !== id)); };
-  const add = (a: Account) => autoSave([...accounts, a]);
+  const handleUndo = async () => {
+    if (!undoSnapshot) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    const snap = undoSnapshot;
+    setUndoSnapshot(null);
+    setAccounts(snap.accounts);
+    setOtherAssets(snap.otherAssets);
+    setSaveStatus('saving');
+    try {
+      await saveAccounts(snap.accounts);
+      await saveOtherAssets(snap.otherAssets);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch { setSaveStatus('error'); }
+  };
+
+  const handleOtherAssetsUpdate = (next: OtherAsset[], label = '기타 자산이 변경되었습니다') => {
+    captureSnapshot(label);
+    setOtherAssets(next);
+    saveOtherAssets(next).catch(() => {});
+  };
+
+  const update = (a: Account) => {
+    const old = accounts.find(x => x.id === a.id);
+    let label = '계좌 정보가 수정되었습니다';
+    if (old) {
+      if (a.holdings.length < old.holdings.length) label = '종목이 삭제되었습니다';
+      else if (a.holdings.length > old.holdings.length) label = '종목이 추가되었습니다';
+      else if (JSON.stringify(a.holdings) !== JSON.stringify(old.holdings)) label = '종목 정보가 수정되었습니다';
+    }
+    autoSave(accounts.map(x => x.id === a.id ? a : x), label);
+  };
+  const del = (id: string) => setConfirmDeleteAccountId(id);
+  const confirmDelAccount = () => {
+    if (!confirmDeleteAccountId) return;
+    autoSave(accounts.filter(x => x.id !== confirmDeleteAccountId), '계좌가 삭제되었습니다');
+    setConfirmDeleteAccountId(null);
+  };
+  const add = (a: Account) => autoSave([...accounts, a], '계좌가 추가되었습니다');
 
   const calcHoldings = (accs: Account[]) => accs.reduce((s, a) => s + (a.cash || 0) + a.holdings.reduce((ss, h) => {
     return ss + holdingValue(h, prices[h.ticker]);
@@ -981,8 +1080,19 @@ export function CoupleAccounts() {
   const otherTotal = otherAssets.reduce((s, a) => s + a.amount, 0);
   const totalAll = wifeTotal + husbandTotal + otherTotal;
 
+  const confirmAccountName = confirmDeleteAccountId
+    ? accounts.find(a => a.id === confirmDeleteAccountId)
+    : null;
+
   return (
     <div style={{ padding: isMobile ? '12px' : '12px', maxWidth: 960, margin: '0 auto' }}>
+      {confirmDeleteAccountId && confirmAccountName && (
+        <ConfirmModal
+          message={`"${confirmAccountName.institution} ${confirmAccountName.accountType}${confirmAccountName.alias ? ` (${confirmAccountName.alias})` : ''}" 계좌를 삭제합니다. 복구할 수 없습니다.`}
+          onConfirm={confirmDelAccount}
+          onCancel={() => setConfirmDeleteAccountId(null)}
+        />
+      )}
       {/* 헤더 */}
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <div>
@@ -1076,8 +1186,37 @@ export function CoupleAccounts() {
           highlightTicker={highlightTicker} navigateTo={navigateTo} />
       )}
       {activeTab === 'other' && (
-        <OtherAssetsSection assets={otherAssets} onUpdate={setOtherAssets} isAmountHidden={isAmountHidden} />
+        <OtherAssetsSection assets={otherAssets} onUpdate={handleOtherAssetsUpdate} isAmountHidden={isAmountHidden} />
       )}
+
+      {/* 실행 취소 토스트 */}
+      {undoSnapshot && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: 12,
+          background: '#1A1A2E', color: '#fff',
+          borderRadius: 14, padding: '14px 18px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+          zIndex: 500, maxWidth: 'calc(100vw - 32px)',
+          animation: 'slideUp 0.22s ease',
+        }}>
+          <MIcon name="undo" size={18} style={{ color: '#a0a8c0', flexShrink: 0 }} />
+          <span style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {undoSnapshot.label}
+          </span>
+          <button
+            onClick={handleUndo}
+            style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#3B82F6', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+            실행 취소
+          </button>
+          <button
+            onClick={() => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); setUndoSnapshot(null); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0a8c0', display: 'flex', padding: 2, flexShrink: 0 }}>
+            <MIcon name="close" size={16} />
+          </button>
+        </div>
+      )}
+      <style>{`@keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(16px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
     </div>
   );
 }
@@ -1246,6 +1385,7 @@ function OtherAssetsSection({
   const [adding, setAdding] = useState(false);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [breakdownTargetId, setBreakdownTargetId] = useState<string | null>(null);
+  const [confirmDeleteAssetId, setConfirmDeleteAssetId] = useState<string | null>(null);
 
   const wifeAssets = assets.filter(a => a.owner === 'wife');
   const husbandAssets = assets.filter(a => a.owner === 'husband');
@@ -1264,8 +1404,11 @@ function OtherAssetsSection({
     setAdding(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('이 자산을 삭제하시겠습니까?')) onUpdate(assets.filter(a => a.id !== id));
+  const handleDelete = (id: string) => setConfirmDeleteAssetId(id);
+  const confirmDeleteAsset = () => {
+    if (!confirmDeleteAssetId) return;
+    onUpdate(assets.filter(a => a.id !== confirmDeleteAssetId));
+    setConfirmDeleteAssetId(null);
   };
 
   const renderGroup = (label: string, icon: string, items: OtherAsset[], groupTotal: number, owner: 'wife' | 'husband') => (
@@ -1325,8 +1468,19 @@ function OtherAssetsSection({
     </div>
   );
 
+  const confirmAssetName = confirmDeleteAssetId
+    ? assets.find(a => a.id === confirmDeleteAssetId)?.name ?? '이 자산'
+    : '';
+
   return (
     <div>
+      {confirmDeleteAssetId && (
+        <ConfirmModal
+          message={`"${confirmAssetName}"을(를) 삭제합니다. 복구할 수 없습니다.`}
+          onConfirm={confirmDeleteAsset}
+          onCancel={() => setConfirmDeleteAssetId(null)}
+        />
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, padding: '0 4px' }}>
         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
           총 {assets.length}건

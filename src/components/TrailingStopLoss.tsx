@@ -207,6 +207,7 @@ export function TrailingStopLoss() {
   const [addPrice, setAddPrice] = useState('');
   const [addCurrency, setAddCurrency] = useState<'KRW' | 'USD'>('KRW');
   const [addLoading, setAddLoading] = useState(false);
+  const [globalPct, setGlobalPct] = useState<number | null>(null);
 
   const isCustomView = selectedAccountId === 'custom';
 
@@ -310,12 +311,51 @@ export function TrailingStopLoss() {
 
   const updatePct = (ticker: string, pct: number) => {
     setEntries(prev => {
-      const avgPrice = accountHoldings.flatMap(a => a.holdings).find(h => h.ticker === ticker)?.avgPrice ?? 0;
-      const currentP = priceData[ticker]?.price ?? avgPrice;
-      const entry = prev[ticker] ?? { pct: 10, peakPrice: currentP };
+      const avgPrice =
+        accountHoldings.flatMap(a => a.holdings).find(h => h.ticker === ticker)?.avgPrice
+        ?? customStocks.find(s => s.ticker === ticker)?.avgPrice
+        ?? 0;
+      const currentP = priceData[ticker]?.price ?? (avgPrice > 0 ? avgPrice : undefined);
+      const existingPeak = prev[ticker]?.peakPrice;
+      const peakPrice = existingPeak && existingPeak > 0
+        ? existingPeak
+        : currentP ?? avgPrice;
+      const entry = prev[ticker] ?? { pct: 10, peakPrice };
       const next = { ...prev, [ticker]: { ...entry, pct } };
       save(next);
       return next;
+    });
+    // 필터 유지 시 변경된 항목이 사라지는 현상 방지
+    setActiveFilter('all');
+  };
+
+  const applyGlobalPct = (pct: number) => {
+    setGlobalPct(pct);
+    setActiveFilter('all');
+    setEntries(prev => {
+      const next = { ...prev };
+      let changed = false;
+      for (const ticker of visibleTickers) {
+        const avgPrice =
+          accountHoldings.flatMap(a => a.holdings).find(h => h.ticker === ticker)?.avgPrice
+          ?? customStocks.find(s => s.ticker === ticker)?.avgPrice
+          ?? 0;
+        const currentP = priceData[ticker]?.price;
+        const existingPeak = next[ticker]?.peakPrice;
+        const peakPrice = existingPeak && existingPeak > 0
+          ? existingPeak
+          : currentP ?? (avgPrice > 0 ? avgPrice : undefined);
+        if (!peakPrice) continue;
+        if (!next[ticker]) {
+          next[ticker] = { pct, peakPrice };
+          changed = true;
+        } else if (next[ticker].pct !== pct) {
+          next[ticker] = { ...next[ticker], pct };
+          changed = true;
+        }
+      }
+      if (changed) save(next);
+      return changed ? next : prev;
     });
   };
 
@@ -474,12 +514,42 @@ export function TrailingStopLoss() {
         )}
 
         {/* 원칙 안내 */}
-        <div style={{ background: '#EDF3FF', borderRadius: 12, padding: '12px 16px', marginBottom: 24, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div style={{ background: '#EDF3FF', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <MIcon name="info" size={18} style={{ color: 'var(--accent-blue)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: '#1B64DA', lineHeight: 1.7 }}>
             <b>추적 손절매 원칙</b> — 주가가 오르면 고점을 자동 갱신합니다. 고점 대비 설정 비율만큼 하락하면 매도합니다.
             <br />예) 고점 20,000원 · 손절률 10% → 손절가 18,000원. 주가가 18,000원 이하로 떨어지면 매도 신호.
           </div>
+        </div>
+
+        {/* 일괄 손절률 */}
+        <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <MIcon name="tune" size={16} style={{ color: 'var(--text-secondary)' }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>일괄 손절률</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[5, 7, 10, 15, 20].map(v => {
+              const isSelected = globalPct === v;
+              return (
+                <button key={v} onClick={() => applyGlobalPct(v)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                    background: isSelected ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+                    color: isSelected ? '#fff' : 'var(--text-secondary)',
+                    transition: 'all 0.15s',
+                  }}>
+                  {v}%
+                </button>
+              );
+            })}
+          </div>
+          {globalPct && (
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
+              전체 {visibleTickers.length}종목에 {globalPct}% 적용 · 손절 위험순 정렬
+            </span>
+          )}
         </div>
 
         {/* 개별종목 뷰 */}
@@ -531,7 +601,7 @@ export function TrailingStopLoss() {
                 <p style={{ fontSize: 13 }}>티커와 매수가를 입력해 종목을 추가하세요</p>
               </div>
             ) : (
-              customStocks
+              [...customStocks]
               .filter(cs => {
                 if (activeFilter === 'all') return true;
                 const e = entries[cs.ticker] ?? { pct: 10, peakPrice: cs.avgPrice };
@@ -542,6 +612,15 @@ export function TrailingStopLoss() {
                 if (activeFilter === 'triggered') return p <= stop;
                 if (activeFilter === 'warning') return p > stop && dist < 3;
                 return p > stop && dist >= 3;
+              })
+              .sort((a, b) => {
+                const getDist = (cs: CustomStock) => {
+                  const e = entries[cs.ticker];
+                  const p = priceData[cs.ticker]?.price;
+                  if (!e || !p) return 999;
+                  return (p - e.peakPrice * (1 - e.pct / 100)) / p * 100;
+                };
+                return getDist(a) - getDist(b);
               })
               .map(cs => {
                 const pd = priceData[cs.ticker];
@@ -597,20 +676,15 @@ export function TrailingStopLoss() {
 
             if (filtered.length === 0) return null;
 
-            // 손절 발생 → 주의 → 추적 중 순으로 정렬
-            const sorted = [...filtered].sort((a, b) => {
-              const getPriority = (h: typeof holdings[0]) => {
-                const e = entries[h.ticker];
-                if (!e) return 2;
-                const p = priceData[h.ticker]?.price;
-                if (!p) return 2;
-                const stop = e.peakPrice * (1 - e.pct / 100);
-                if (p <= stop) return 0;
-                if ((p - stop) / p * 100 < 3) return 1;
-                return 2;
-              };
-              return getPriority(a) - getPriority(b);
-            });
+            // 손절 위험순 정렬: distPct 오름차순 (낮을수록 위험)
+            const getDistPct = (h: typeof holdings[0]) => {
+              const e = entries[h.ticker];
+              const p = priceData[h.ticker]?.price;
+              if (!e || !p) return 999;
+              const stop = e.peakPrice * (1 - e.pct / 100);
+              return (p - stop) / p * 100;
+            };
+            const sorted = [...filtered].sort((a, b) => getDistPct(a) - getDistPct(b));
 
             return (
               <div key={account.id} style={{ marginBottom: 28 }}>

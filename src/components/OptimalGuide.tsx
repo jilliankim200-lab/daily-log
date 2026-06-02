@@ -2087,31 +2087,38 @@ export function OptimalGuide() {
     });
   }, [accounts]);
 
-  // 현재 데이터에 존재하는 신호 목록
+  // 전체 가능한 신호 목록 (항상 모두 표시)
+  const ALL_SELL_SIGNALS = [
+    { label: '매도 적합',   color: 'var(--color-profit)' },
+    { label: '매도 가능',   color: 'var(--color-profit)' },
+    { label: '반등 대기',   color: 'var(--color-warning)' },
+    { label: '저점 매도',   color: 'var(--color-loss)' },
+    { label: '반등 후 매도', color: 'var(--color-loss)' },
+  ];
+  const ALL_BUY_SIGNALS = [
+    { label: '매수 적합', color: 'var(--color-profit)' },
+    { label: '매수 가능', color: 'var(--color-profit)' },
+    { label: '분할 매수', color: 'var(--color-warning)' },
+    { label: '조정 대기', color: 'var(--color-loss)' },
+    { label: '반등 대기', color: 'var(--color-warning)' },
+  ];
+
+  // 현재 데이터에 실제 존재하는 신호 (매칭 여부 판별용)
   const availableSignals = useMemo(() => {
-    if (Object.keys(signals).length === 0) return { sell: [] as {label:string;color:string}[], buy: [] as {label:string;color:string}[] };
-    const sellMap = new Map<string, string>();
-    const buyMap = new Map<string, string>();
+    const sellSet = new Set<string>();
+    const buySet = new Set<string>();
     for (const plan of accountPlans) {
       for (const s of plan.sells) {
-        if (s.h.ticker && signals[s.h.ticker]) {
-          const sig = getSellSignal(signals[s.h.ticker]);
-          sellMap.set(sig.label, sig.color);
-        }
+        if (s.h.ticker && signals[s.h.ticker]) sellSet.add(getSellSignal(signals[s.h.ticker]).label);
       }
       for (const k of plan.keeps) {
         if (k.h.ticker && signals[k.h.ticker]) {
-          const sellSig = getSellSignal(signals[k.h.ticker]);
-          sellMap.set(sellSig.label, sellSig.color);
-          const buySig = getBuySignal(signals[k.h.ticker]);
-          buyMap.set(buySig.label, buySig.color);
+          sellSet.add(getSellSignal(signals[k.h.ticker]).label);
+          buySet.add(getBuySignal(signals[k.h.ticker]).label);
         }
       }
     }
-    return {
-      sell: [...sellMap.entries()].map(([label, color]) => ({ label, color })),
-      buy:  [...buyMap.entries()].map(([label, color]) => ({ label, color })),
-    };
+    return { sellSet, buySet };
   }, [accountPlans, signals]);
 
   // 신호 필터 적용
@@ -2606,7 +2613,7 @@ export function OptimalGuide() {
       )}
 
       {/* 신호 필터 + 액션 버튼 */}
-      {!signalsLoading && (availableSignals.sell.length > 0 || availableSignals.buy.length > 0) && (
+      {!signalsLoading && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
             <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
@@ -2619,39 +2626,43 @@ export function OptimalGuide() {
                   color: signalFilter.size === 0 ? 'var(--accent-blue-fg)' : 'var(--text-tertiary)' }}>
                 전체
               </button>
-              {/* 매도 신호 버튼들 */}
-              {availableSignals.sell.length > 0 && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매도</span>
-              )}
-              {availableSignals.sell.map(s => {
+              {/* 매도 신호 버튼들 — 항상 전체 표시, 매칭 없으면 흐리게 */}
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매도</span>
+              {ALL_SELL_SIGNALS.map(s => {
                 const key = `sell:${s.label}`;
                 const active = signalFilter.has(key);
+                const hasMatch = availableSignals.sellSet.has(s.label);
                 return (
                   <button key={key}
-                    onClick={() => toggleFilter(key)}
-                    style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
+                    onClick={() => hasMatch ? toggleFilter(key) : undefined}
+                    title={hasMatch ? undefined : '현재 해당 신호 종목 없음'}
+                    style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600,
+                      cursor: hasMatch ? 'pointer' : 'default', border: 'none',
                       background: active ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))` : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
                       color: s.color,
                       outline: active ? `1.5px solid ${s.color}` : 'none',
+                      opacity: hasMatch ? 1 : 0.3,
                     }}>
                     {s.label}
                   </button>
                 );
               })}
-              {/* 매수 신호 버튼들 */}
-              {availableSignals.buy.length > 0 && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매수</span>
-              )}
-              {availableSignals.buy.map(s => {
+              {/* 매수 신호 버튼들 — 항상 전체 표시, 매칭 없으면 흐리게 */}
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-quaternary)', padding: '0 2px' }}>매수</span>
+              {ALL_BUY_SIGNALS.map(s => {
                 const key = `buy:${s.label}`;
                 const active = signalFilter.has(key);
+                const hasMatch = availableSignals.buySet.has(s.label);
                 return (
                   <button key={key}
-                    onClick={() => toggleFilter(key)}
-                    style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', border: 'none',
+                    onClick={() => hasMatch ? toggleFilter(key) : undefined}
+                    title={hasMatch ? undefined : '현재 해당 신호 종목 없음'}
+                    style={{ padding: '3px 10px', borderRadius: 6, fontSize: 'var(--text-sm)', fontWeight: 600,
+                      cursor: hasMatch ? 'pointer' : 'default', border: 'none',
                       background: active ? `color-mix(in srgb, ${s.color} 25%, var(--bg-tertiary))` : `color-mix(in srgb, ${s.color} var(--badge-mix), transparent)`,
                       color: s.color,
                       outline: active ? `1.5px solid ${s.color}` : 'none',
+                      opacity: hasMatch ? 1 : 0.3,
                     }}>
                     {s.label}
                   </button>
