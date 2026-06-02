@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '../App';
 import { fetchCurrentPricesWithChange, detectCurrency } from '../utils/fetchPrices';
 import { kvGet, kvSet } from '../api';
@@ -59,9 +59,12 @@ interface RowProps {
   onPctChange: (pct: number) => void;
   onResetPeak: () => void;
   isAmountHidden: boolean;
+  onNameClick?: (ticker: string) => void;
+  highlight?: boolean;
+  rowRef?: React.RefObject<HTMLDivElement>;
 }
 
-function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, isAmountHidden }: RowProps) {
+function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, isAmountHidden, onNameClick, highlight, rowRef }: RowProps) {
   const { peakPrice, pct } = entry;
   const stopPrice = peakPrice * (1 - pct / 100);
   const hasPrice = currentPrice != null && currentPrice > 0;
@@ -77,19 +80,27 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
   const statusLabel = isTriggered ? '손절 발생' : isWarning ? '주의 구간' : '추적 중';
 
   return (
-    <div style={{
+    <div ref={rowRef} style={{
       background: '#fff',
       borderRadius: 14,
       padding: '14px 16px',
       marginBottom: 10,
-      border: isTriggered ? '1.5px solid #F04452' : '1px solid var(--border-primary)',
-      boxShadow: isTriggered ? '0 0 0 3px rgba(240,68,82,0.08)' : 'none',
+      border: highlight ? '2px solid var(--accent-blue)' : isTriggered ? '1.5px solid #F04452' : '1px solid var(--border-primary)',
+      boxShadow: highlight ? '0 0 0 4px rgba(49,130,246,0.12)' : isTriggered ? '0 0 0 3px rgba(240,68,82,0.08)' : 'none',
+      transition: 'border 0.3s, box-shadow 0.3s',
     }}>
       {/* 상단: 종목명 + 계좌 + 상태 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{holding.name}</span>
+            <span
+              onClick={holding.ticker && onNameClick ? () => onNameClick(holding.ticker!) : undefined}
+              onMouseEnter={e => { if (holding.ticker && onNameClick) e.currentTarget.style.color = 'var(--accent-blue)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+              style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', cursor: holding.ticker && onNameClick ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {holding.name}
+              {holding.ticker && onNameClick && <MIcon name="candlestick_chart" size={13} style={{ color: 'var(--text-tertiary)' }} />}
+            </span>
             <span style={{ fontSize: 11, color: 'var(--text-tertiary)', background: 'var(--bg-secondary)', padding: '2px 7px', borderRadius: 5, fontWeight: 500 }}>
               {holding.ticker}
             </span>
@@ -146,7 +157,10 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
           background: isTriggered ? '#FFF0F1' : isWarning ? '#FFF4E5' : 'var(--bg-secondary)',
           borderRadius: 10, padding: '10px 12px'
         }}>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500 }}>손절가</div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
+            손절가
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: `color-mix(in srgb, ${statusColor} 12%, transparent)`, color: statusColor }}>{pct}%</span>
+          </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: statusColor }}>
             {isAmountHidden ? '••••' : fmtPrice(stopPrice, currency)}
           </div>
@@ -195,7 +209,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
 type FilterType = 'all' | 'triggered' | 'warning' | 'safe';
 
 export function TrailingStopLoss() {
-  const { accounts, isMobile, isAmountHidden } = useAppContext();
+  const { accounts, isMobile, isAmountHidden, navigateTo } = useAppContext();
   const [priceData, setPriceData] = useState<Record<string, { price: number; changeRate: number }>>({});
   const [entries, setEntries] = useState<Record<string, TrailingEntry>>(load);
   const [loading, setLoading] = useState(false);
@@ -207,7 +221,9 @@ export function TrailingStopLoss() {
   const [addPrice, setAddPrice] = useState('');
   const [addCurrency, setAddCurrency] = useState<'KRW' | 'USD'>('KRW');
   const [addLoading, setAddLoading] = useState(false);
-  const [globalPct, setGlobalPct] = useState<number | null>(null);
+  const [globalPct, setGlobalPct] = useState<number>(10);
+  const [highlightTicker, setHighlightTicker] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   const isCustomView = selectedAccountId === 'custom';
 
@@ -308,6 +324,31 @@ export function TrailingStopLoss() {
   }, []);
 
   useEffect(() => { fetchPrices(); }, []);
+
+  // 차트에서 복귀 시 해당 종목 포커스
+  useEffect(() => {
+    const returnTicker = sessionStorage.getItem('chart_return_ticker');
+    if (!returnTicker) return;
+    sessionStorage.removeItem('chart_return_ticker');
+    setHighlightTicker(returnTicker);
+    // 잠시 후 스크롤 (렌더링 완료 대기)
+    setTimeout(() => {
+      // 티커로 직접 OR accountId-ticker 형식 중 첫 번째 매칭 ref 탐색
+      const ref = rowRefs.current[returnTicker]
+        ?? Object.entries(rowRefs.current).find(([k]) => k.endsWith(`-${returnTicker}`))?.[1];
+      if (ref?.current) {
+        ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      // 2.5초 후 하이라이트 제거
+      setTimeout(() => setHighlightTicker(null), 2500);
+    }, 300);
+  }, []);
+
+  const goToChart = (ticker: string) => {
+    sessionStorage.setItem('chart_nav_ticker', ticker);
+    sessionStorage.setItem('chart_nav_from', 'trailing-stop');
+    navigateTo('chart');
+  };
 
   const updatePct = (ticker: string, pct: number) => {
     setEntries(prev => {
@@ -545,11 +586,9 @@ export function TrailingStopLoss() {
               );
             })}
           </div>
-          {globalPct && (
-            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
-              전체 {visibleTickers.length}종목에 {globalPct}% 적용 · 손절 위험순 정렬
-            </span>
-          )}
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
+            전체 {visibleTickers.length}종목 기본 {globalPct}% · 손절 위험순 정렬
+          </span>
         </div>
 
         {/* 개별종목 뷰 */}
@@ -626,6 +665,7 @@ export function TrailingStopLoss() {
                 const pd = priceData[cs.ticker];
                 const entry = entries[cs.ticker] ?? { pct: 10, peakPrice: pd?.price ?? cs.avgPrice };
                 const fakeHolding: Holding = { id: cs.id, name: cs.name, ticker: cs.ticker, market: 'KR', avgPrice: cs.avgPrice, quantity: 1 };
+                if (!rowRefs.current[cs.ticker]) rowRefs.current[cs.ticker] = { current: null } as React.RefObject<HTMLDivElement>;
                 return (
                   <div key={cs.id} style={{ position: 'relative' }}>
                     <HoldingRow
@@ -638,6 +678,9 @@ export function TrailingStopLoss() {
                       onPctChange={p => updatePct(cs.ticker, p)}
                       onResetPeak={() => resetPeak(cs.ticker)}
                       isAmountHidden={isAmountHidden}
+                      onNameClick={goToChart}
+                      highlight={highlightTicker === cs.ticker}
+                      rowRef={rowRefs.current[cs.ticker]}
                     />
                     <button onClick={() => removeCustomStock(cs.id)}
                       title="삭제"
@@ -710,10 +753,12 @@ export function TrailingStopLoss() {
                     peakPrice: pd?.price ?? h.avgPrice,
                   };
                   const entry = entries[h.ticker] ?? defaultEntry;
+                  const rowKey = `${account.id}-${h.ticker}`;
+                  if (!rowRefs.current[rowKey]) rowRefs.current[rowKey] = { current: null } as React.RefObject<HTMLDivElement>;
 
                   return (
                     <HoldingRow
-                      key={`${account.id}-${h.ticker}`}
+                      key={rowKey}
                       holding={h}
                       account={account}
                       currentPrice={pd?.price}
@@ -723,6 +768,9 @@ export function TrailingStopLoss() {
                       onPctChange={(p) => updatePct(h.ticker, p)}
                       onResetPeak={() => resetPeak(h.ticker)}
                       isAmountHidden={isAmountHidden}
+                      onNameClick={goToChart}
+                      highlight={highlightTicker === h.ticker}
+                      rowRef={rowRefs.current[rowKey]}
                     />
                   );
                 })}
