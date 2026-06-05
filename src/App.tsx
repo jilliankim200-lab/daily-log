@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { CoupleAccounts } from "./components/CoupleAccounts";
 import { NewDashboard } from "./components/NewDashboard";
 import { AssetChange } from "./components/AssetChange";
@@ -55,6 +55,7 @@ interface AppContextType {
   navigateTo: (page: string) => void;
   isMobile: boolean;
   isHappyMode: boolean;
+  showToast: (msg: string, durationMs?: number) => void;
 }
 export const AppContext = createContext<AppContextType>({
   accounts: [], setAccounts: () => {}, reloadAccounts: async () => {}, isAmountHidden: true,
@@ -64,16 +65,17 @@ export const AppContext = createContext<AppContextType>({
   navigateTo: () => {},
   isMobile: false,
   isHappyMode: false,
+  showToast: () => {},
 });
 export const useAppContext = () => useContext(AppContext);
 
 const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드", materialIcon: "dashboard" },
   { id: "couple-accounts", label: "계좌종목등록", materialIcon: "group" },
-  { id: "trailing-stop", label: "추적손절매", materialIcon: "track_changes", updatedAt: "2026-05-27" },
+  { id: "trailing-stop", label: "추적손절매", materialIcon: "track_changes", updatedAt: "2026-06-05" },
   { id: "investment-routine", label: "투자루틴", materialIcon: "checklist", updatedAt: "2026-05-28" },
   { id: "stock-check", label: "신규종목체크", materialIcon: "manage_search", updatedAt: "2026-05-29" },
-  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-05-27" },
+  { id: "optimal-guide", label: "최적 가이드", materialIcon: "stars", updatedAt: "2026-06-05" },
   { id: "monthly-strategy-jun", label: "2026년6월", materialIcon: "calendar_month", updatedAt: "2026-05-31" },
   { id: "dividend", label: "배당", materialIcon: "paid", updatedAt: "2026-05-09" },
   { id: "national-growth-fund", label: "국민성장펀드", materialIcon: "account_balance", updatedAt: "2026-05-06" },
@@ -118,6 +120,12 @@ export default function App() {
   const [showHappyBtn, setShowHappyBtn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string, durationMs = 6000) => {
+    setToastMessage(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), durationMs);
+  }, []);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatPanelWidth, setChatPanelWidth] = useState(380);
@@ -293,7 +301,7 @@ export default function App() {
   const effectiveOtherAssets = isHappyMode ? [...otherAssets, HAPPY_BONUS] : otherAssets;
 
   return (
-    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, openPasswordModal: () => setIsPasswordModalOpen(true), otherAssets: effectiveOtherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile, isHappyMode }}>
+    <AppContext.Provider value={{ accounts, setAccounts, reloadAccounts, isAmountHidden, openPasswordModal: () => setIsPasswordModalOpen(true), otherAssets: effectiveOtherAssets, setOtherAssets, prices, loadPrices, navigateTo: setCurrentPage, isMobile, isHappyMode, showToast }}>
       <div style={{ display: 'flex', height: `${100 / FONT_SCALE}vh`, background: 'var(--bg-primary)', zoom: FONT_SCALE }}>
         {/* Mobile overlay */}
         {isSidebarOpen && (
@@ -594,13 +602,21 @@ export default function App() {
           <div style={{
             position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
             background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-            padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 500,
+            padding: '12px 14px 12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 500,
             boxShadow: '0 4px 24px rgba(0,0,0,0.3)', border: '1px solid var(--border-primary)',
-            zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8,
+            zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10, maxWidth: '90vw',
             animation: 'toast-in 0.25s ease',
           }}>
-            <MIcon name="check_circle" size={18} style={{ color: 'var(--color-success)' }} />
-            {toastMessage}
+            <MIcon name="check_circle" size={18} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>{toastMessage}</span>
+            <button
+              onClick={() => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); setToastMessage(null); }}
+              title="닫기"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, display: 'flex', flexShrink: 0, borderRadius: 6 }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+              <MIcon name="close" size={18} />
+            </button>
           </div>
         )}
 

@@ -6,9 +6,20 @@ import { MIcon } from './MIcon';
 import type { Holding, Account } from '../types';
 
 interface TrailingEntry {
-  pct: number;       // 손절률 (10 = 10%)
-  peakPrice: number; // 추적 고점
+  pct: number;        // 손절률 (10 = 10%)
+  peakPrice: number;  // 추적 고점
+  troughPrice?: number; // 손절 발생 이후 추적 저점 (재매수 반등 기준)
+  reboundPct?: number;  // 재매수 반등 확인 기준 (% , 기본 5)
+  rebuyBudget?: number; // 재매수 예산 (원/달러)
+  splitProfile?: 'safe' | 'balanced' | 'aggressive'; // 분할 비율 성향
 }
+
+// 분할 비율: [반등 확인선 %, 고점 회복선 %]
+const SPLIT_RATIOS: Record<'safe' | 'balanced' | 'aggressive', { rebound: number; recover: number; label: string }> = {
+  safe:       { rebound: 30, recover: 70, label: '안전' },
+  balanced:   { rebound: 50, recover: 50, label: '균형' },
+  aggressive: { rebound: 70, recover: 30, label: '공격' },
+};
 
 interface CustomStock {
   id: string;
@@ -20,6 +31,22 @@ interface CustomStock {
 
 const LS_KEY = 'trailing_stops_v1';
 const CUSTOM_KEY = 'trailing_custom_stocks_v1';
+const WATCH_KEY = 'trailing_rebuy_watch_v1';
+
+// 손절 발생 시 저장되는 재매수 워치 항목 (매도해도 카드가 사라지지 않게 별도 보관)
+interface RebuyWatch {
+  ticker: string;
+  name: string;
+  currency: 'KRW' | 'USD';
+  avgPrice: number;
+  peakPrice: number;       // 고점 회복선
+  troughPrice: number;     // 손절 후 저점
+  pct: number;             // 당시 손절률
+  reboundPct: number;
+  splitProfile: 'safe' | 'balanced' | 'aggressive';
+  rebuyBudget: number;
+  triggeredAt: number;     // 손절 발생 시각(ms)
+}
 
 function load(): Record<string, TrailingEntry> {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
@@ -28,6 +55,14 @@ function load(): Record<string, TrailingEntry> {
 function save(e: Record<string, TrailingEntry>) {
   localStorage.setItem(LS_KEY, JSON.stringify(e));
   kvSet(LS_KEY, e).catch(() => {});
+}
+function loadWatch(): RebuyWatch[] {
+  try { return JSON.parse(localStorage.getItem(WATCH_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveWatch(w: RebuyWatch[]) {
+  localStorage.setItem(WATCH_KEY, JSON.stringify(w));
+  kvSet(WATCH_KEY, w).catch(() => {});
 }
 function loadCustom(): CustomStock[] {
   try {
@@ -58,13 +93,17 @@ interface RowProps {
   currency: 'KRW' | 'USD';
   onPctChange: (pct: number) => void;
   onResetPeak: () => void;
+  onReboundPctChange: (pct: number) => void;
+  onBudgetChange: (budget: number) => void;
+  onProfileChange: (profile: 'safe' | 'balanced' | 'aggressive') => void;
   isAmountHidden: boolean;
   onNameClick?: (ticker: string) => void;
   highlight?: boolean;
   rowRef?: React.RefObject<HTMLDivElement>;
+  showGuide?: boolean;
 }
 
-function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, isAmountHidden, onNameClick, highlight, rowRef }: RowProps) {
+function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, onReboundPctChange, onBudgetChange, onProfileChange, isAmountHidden, onNameClick, highlight, rowRef, showGuide = true }: RowProps) {
   const { peakPrice, pct } = entry;
   const stopPrice = peakPrice * (1 - pct / 100);
   const hasPrice = currentPrice != null && currentPrice > 0;
@@ -193,7 +232,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
               style={{
                 padding: '4px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                background: pct === v ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+                background: pct === v ? '#2e343d' : 'var(--bg-secondary)',
                 color: pct === v ? '#fff' : 'var(--text-secondary)',
                 transition: 'all 0.1s',
               }}>
@@ -202,14 +241,364 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
           ))}
         </div>
       </div>
+
+      {/* ── 재매수 가이드 (손절 발생 종목에만, 토글로 표시 제어) ── */}
+      {showGuide && isTriggered && hasPrice && (() => {
+        const reboundPct = entry.reboundPct ?? 5;
+        const trough = entry.troughPrice ?? currentPrice!;          // 손절 후 저점
+        const rebuyLine = trough * (1 + reboundPct / 100);          // 반등 확인선(보수적)
+        const recoverLine = peakPrice;                              // 고점 회복선(추세전환)
+        const hitRebuy = currentPrice! >= rebuyLine;
+        const hitRecover = currentPrice! >= recoverLine;
+        const toRebuy = (rebuyLine - currentPrice!) / currentPrice! * 100;
+        const toRecover = (recoverLine - currentPrice!) / currentPrice! * 100;
+
+        // 분할 매수 계산
+        const profile = entry.splitProfile ?? 'balanced';
+        const ratio = SPLIT_RATIOS[profile];
+        const budget = entry.rebuyBudget ?? Math.round(holding.avgPrice * holding.quantity);
+        const calcAlloc = (linePrice: number, pctOfBudget: number) => {
+          const money = budget * pctOfBudget / 100;
+          const shares = linePrice > 0 ? Math.floor(money / linePrice) : 0;
+          return { pctOfBudget, shares, cost: shares * linePrice };
+        };
+        const allocRebuy = calcAlloc(rebuyLine, ratio.rebound);
+        const allocRecover = calcAlloc(recoverLine, ratio.recover);
+
+        const Line = ({ label, sub, price, hit, away, tone, alloc }: {
+          label: string; sub: string; price: number; hit: boolean; away: number; tone: string;
+          alloc: { pctOfBudget: number; shares: number; cost: number };
+        }) => (
+          <div style={{
+            background: hit ? 'color-mix(in srgb, #30C85E 10%, #fff)' : 'var(--bg-secondary)',
+            border: `1px solid ${hit ? 'color-mix(in srgb, #30C85E 40%, transparent)' : 'var(--border-primary)'}`,
+            borderRadius: 10, padding: '10px 12px', flex: 1, minWidth: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: tone }}>{label}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: `color-mix(in srgb, ${tone} 14%, transparent)`, color: tone }}>{alloc.pctOfBudget}%</span>
+              {hit && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: '#30C85E', color: '#fff' }}>도달</span>}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+              {isAmountHidden ? '••••' : fmtPrice(price, currency)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+              {hit ? sub : `현재가 +${away.toFixed(1)}% 필요 · ${sub}`}
+            </div>
+            {/* 분할 매수 배분 */}
+            <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px dashed var(--border-primary)', fontSize: 11.5 }}>
+              <span style={{ color: 'var(--text-secondary)' }}>이 선에서 </span>
+              <b style={{ color: tone }}>약 {isAmountHidden ? '••' : alloc.shares.toLocaleString()}주</b>
+              <span style={{ color: 'var(--text-tertiary)' }}> ({isAmountHidden ? '••••' : fmtPrice(alloc.cost, currency)})</span>
+            </div>
+          </div>
+        );
+
+        return (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <MIcon name="restart_alt" size={15} style={{ color: 'var(--accent-blue)' }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>재매수 가이드</span>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>손절도 규칙으로 했으니, 재매수도 규칙으로</span>
+            </div>
+
+            {/* 설명 */}
+            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.65, background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+              떨어지는 칼날을 잡지 않으려면 <b style={{ color: 'var(--text-primary)' }}>하락이 멈춘 신호</b>를 확인하고 들어갑니다. 아래 두 기준선에서 <b style={{ color: 'var(--text-primary)' }}>예산을 나눠</b> 매수해 타이밍 리스크를 분산합니다.
+              <div style={{ marginTop: 6, color: 'var(--text-tertiary)' }}>
+                · <b>반등 확인선</b>: 손절 후 저점({isAmountHidden ? '••••' : fmtPrice(trough, currency)}) 대비 +{reboundPct}% 회복 = 하락 멈춤(정찰 매수)<br/>
+                · <b>고점 회복선</b>: 직전 추적 고점 재돌파 = 추세 전환 확인(비중 확대)
+              </div>
+            </div>
+
+            {/* 예산 + 분할 성향 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>재매수 예산</span>
+                <input
+                  type="text" inputMode="numeric"
+                  value={isAmountHidden ? '••••' : budget.toLocaleString('ko-KR')}
+                  onChange={e => {
+                    const n = Number(e.target.value.replace(/[^0-9]/g, ''));
+                    if (!Number.isNaN(n)) onBudgetChange(n);
+                  }}
+                  style={{
+                    width: 120, padding: '5px 9px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit',
+                    border: '1px solid var(--border-primary)', background: '#fff', color: 'var(--text-primary)', textAlign: 'right',
+                  }} />
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{currency === 'USD' ? '$' : '원'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>분할 비율</span>
+                {(['safe', 'balanced', 'aggressive'] as const).map(k => (
+                  <button key={k} onClick={() => onProfileChange(k)} title={`반등 ${SPLIT_RATIOS[k].rebound} : 고점 ${SPLIT_RATIOS[k].recover}`}
+                    style={{
+                      padding: '4px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                      background: profile === k ? '#2e343d' : 'var(--bg-secondary)',
+                      color: profile === k ? '#fff' : 'var(--text-secondary)',
+                    }}>
+                    {SPLIT_RATIOS[k].label} {SPLIT_RATIOS[k].rebound}:{SPLIT_RATIOS[k].recover}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 기준선 2개 (분할 주수 포함) */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <Line label="① 반등 확인선" sub="정찰 매수" price={rebuyLine} hit={hitRebuy} away={Math.max(0, toRebuy)} tone="#30C85E" alloc={allocRebuy} />
+              <Line label="② 고점 회복선" sub="비중 확대" price={recoverLine} hit={hitRecover} away={Math.max(0, toRecover)} tone="var(--accent-blue)" alloc={allocRecover} />
+            </div>
+
+            {/* 반등 기준 조절 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>반등 기준</span>
+              {[3, 5, 7].map(v => (
+                <button key={v} onClick={() => onReboundPctChange(v)}
+                  style={{
+                    padding: '4px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                    background: reboundPct === v ? '#2e343d' : 'var(--bg-secondary)',
+                    color: reboundPct === v ? '#fff' : 'var(--text-secondary)',
+                  }}>
+                  +{v}%
+                </button>
+              ))}
+              <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', marginLeft: 4 }}>저점 대비 회복폭</span>
+            </div>
+
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8 }}>
+              ※ 매매 규칙 참고용이며 특정 시점 매수 권유가 아닙니다. 최종 판단은 본인 책임입니다.
+            </div>
+          </div>
+        );
+      })()}
     </div>
+  );
+}
+
+// ── 재매수 워치 패널 (손절 발생 종목을 매도 후에도 보관) ──
+interface WatchPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  watchList: RebuyWatch[];
+  priceData: Record<string, { price: number; changeRate: number }>;
+  isAmountHidden: boolean;
+  isMobile: boolean;
+  onPatch: (ticker: string, patch: Partial<RebuyWatch>) => void;
+  onRemove: (ticker: string) => void;
+  onNameClick?: (ticker: string) => void;
+}
+
+function RebuyWatchPanel({ isOpen, onClose, watchList, priceData, isAmountHidden, isMobile, onPatch, onRemove, onNameClick }: WatchPanelProps) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleCard = (t: string) => setCollapsed(prev => {
+    const n = new Set(prev);
+    n.has(t) ? n.delete(t) : n.add(t);
+    return n;
+  });
+  const collapseAll = () => setCollapsed(new Set(watchList.map(w => w.ticker)));
+  const expandAll = () => setCollapsed(new Set());
+  const allCollapsed = watchList.length > 0 && watchList.every(w => collapsed.has(w.ticker));
+
+  const hdrIconBtn = {
+    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)',
+    padding: 4, display: 'flex', borderRadius: 6,
+  } as const;
+
+  return (
+    <>
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 300,
+        width: isMobile ? '100%' : 360, maxWidth: '100vw',
+        background: 'var(--bg-secondary, #f7f8fa)',
+        borderLeft: '1px solid var(--border-primary)',
+        display: 'flex', flexDirection: 'column',
+        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: isOpen ? '-8px 0 32px rgba(0,0,0,0.18)' : 'none',
+      }}>
+        {/* ── 헤더 (고정) ── */}
+        <div style={{
+          flexShrink: 0, padding: '14px 8px 14px 16px',
+          background: 'var(--bg-primary, #fff)', borderBottom: '1px solid var(--border-primary)',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <MIcon name="bookmark" size={18} style={{ color: 'var(--accent-blue)' }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>재매수 워치</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: 'var(--accent-blue)', borderRadius: 10, padding: '1px 7px' }}>{watchList.length}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+            {watchList.length > 0 && (
+              allCollapsed ? (
+                <button onClick={expandAll} title="모두 펼치기" style={hdrIconBtn}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <MIcon name="unfold_more" size={19} />
+                </button>
+              ) : (
+                <button onClick={collapseAll} title="모두 접기" style={hdrIconBtn}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <MIcon name="unfold_less" size={19} />
+                </button>
+              )
+            )}
+            <button onClick={onClose} title="닫기" style={hdrIconBtn}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+              <MIcon name="close" size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* ── 본문 (자체 스크롤) ── */}
+        <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: 12 }}>
+        손절 발생한 종목은 여기 자동 저장됩니다. 매도해서 카드가 사라져도 재매수 기준선이 유지돼요.
+      </p>
+
+      {watchList.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '28px 8px', color: 'var(--text-tertiary)', fontSize: 12 }}>
+          <MIcon name="inbox" size={28} style={{ opacity: 0.4, display: 'block', margin: '0 auto 6px' }} />
+          아직 손절 발생 종목이 없습니다.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[...watchList].sort((a, b) => {
+            // 도달(반등/고점) 종목을 위로
+            const hit = (w: RebuyWatch) => {
+              const p = priceData[w.ticker]?.price;
+              if (p == null) return 0;
+              const rebuy = w.troughPrice * (1 + (w.reboundPct ?? 5) / 100);
+              return (p >= rebuy || p >= w.peakPrice) ? 1 : 0;
+            };
+            return hit(b) - hit(a);
+          }).map(w => {
+            const cur = priceData[w.ticker]?.price;
+            const chg = priceData[w.ticker]?.changeRate;
+            const reboundPct = w.reboundPct ?? 5;
+            const ratio = SPLIT_RATIOS[w.splitProfile ?? 'balanced'];
+            const budget = w.rebuyBudget ?? 0;
+            const rebuyLine = w.troughPrice * (1 + reboundPct / 100);
+            const recoverLine = w.peakPrice;
+            const sharesAt = (price: number, pctOfBudget: number) => price > 0 ? Math.floor(budget * pctOfBudget / 100 / price) : 0;
+            const hitRebuy = cur != null && cur >= rebuyLine;
+            const hitRecover = cur != null && cur >= recoverLine;
+            const awayRebuy = cur != null ? (rebuyLine - cur) / cur * 100 : null;
+            const awayRecover = cur != null ? (recoverLine - cur) / cur * 100 : null;
+            const d = new Date(w.triggeredAt);
+            const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+            const isCol = collapsed.has(w.ticker);
+
+            const MiniLine = ({ label, price, hit, away, shares, tone }: { label: string; price: number; hit: boolean; away: number | null; shares: number; tone: string }) => (
+              <div style={{ background: hit ? 'color-mix(in srgb, #30C85E 10%, transparent)' : 'var(--bg-secondary)', borderRadius: 8, padding: '7px 9px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: tone }}>{label}</span>
+                  {hit && <span style={{ fontSize: 9, fontWeight: 700, padding: '0 5px', borderRadius: 8, background: '#30C85E', color: '#fff' }}>도달</span>}
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{isAmountHidden ? '••••' : fmtPrice(price, w.currency)}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)', marginTop: 1 }}>
+                  {hit || away == null ? '' : `+${Math.max(0, away).toFixed(1)}% · `}약 {isAmountHidden ? '••' : shares.toLocaleString()}주
+                </div>
+              </div>
+            );
+
+            const anyHit = hitRebuy || hitRecover;
+            const hitLabel = hitRecover ? '고점 회복' : hitRebuy ? '반등 도달' : '';
+            return (
+              <div key={w.ticker} style={{
+                borderRadius: 12, padding: 11,
+                border: anyHit ? '1.5px solid #30C85E' : '1px solid var(--border-primary)',
+                background: anyHit ? 'color-mix(in srgb, #30C85E 8%, var(--bg-primary, #fff))' : 'var(--bg-primary, #fff)',
+                boxShadow: anyHit ? '0 0 0 3px rgba(48,200,94,0.14)' : '0 1px 3px rgba(0,0,0,0.06)',
+              }}>
+                {/* 헤더 */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                  <button onClick={() => toggleCard(w.ticker)} title={isCol ? '펼치기' : '접기'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, display: 'flex', marginTop: 1 }}>
+                    <MIcon name={isCol ? 'chevron_right' : 'expand_more'} size={18} />
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span
+                        onClick={onNameClick ? () => onNameClick(w.ticker) : undefined}
+                        style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', cursor: onNameClick ? 'pointer' : 'default', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {w.name}
+                      </span>
+                      {anyHit && (
+                        <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#30C85E', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                          <MIcon name="notifications_active" size={11} />{hitLabel}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)', marginTop: 1 }}>
+                      {w.ticker} · 손절 {dateStr}
+                      {isCol && cur != null && (
+                        <> · <b style={{ color: 'var(--text-secondary)' }}>{isAmountHidden ? '••••' : fmtPrice(cur, w.currency)}</b>
+                          {chg != null && <span style={{ color: chg >= 0 ? '#F04452' : '#3182F6', fontWeight: 600 }}> {fmtPct(chg)}</span>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <button onClick={() => onRemove(w.ticker)} title="워치에서 제거"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 2, display: 'flex' }}>
+                    <MIcon name="close" size={15} />
+                  </button>
+                </div>
+
+                {!isCol && (<>
+                {/* 현재가 */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '8px 0' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>현재가</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{cur != null ? (isAmountHidden ? '••••' : fmtPrice(cur, w.currency)) : '—'}</span>
+                  {chg != null && <span style={{ fontSize: 11, fontWeight: 600, color: chg >= 0 ? '#F04452' : '#3182F6' }}>{fmtPct(chg)}</span>}
+                </div>
+
+                {/* 두 기준선 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 8 }}>
+                  <MiniLine label={`반등 ${ratio.rebound}%`} price={rebuyLine} hit={hitRebuy} away={awayRebuy} shares={sharesAt(rebuyLine, ratio.rebound)} tone="#30C85E" />
+                  <MiniLine label={`고점 ${ratio.recover}%`} price={recoverLine} hit={hitRecover} away={awayRecover} shares={sharesAt(recoverLine, ratio.recover)} tone="var(--accent-blue)" />
+                </div>
+
+                {/* 컨트롤: 예산 + 비율 + 반등기준 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                  <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>예산</span>
+                  <input type="text" inputMode="numeric"
+                    value={isAmountHidden ? '••••' : budget.toLocaleString('ko-KR')}
+                    onChange={e => { const n = Number(e.target.value.replace(/[^0-9]/g, '')); if (!Number.isNaN(n)) onPatch(w.ticker, { rebuyBudget: n }); }}
+                    style={{ flex: 1, minWidth: 0, padding: '4px 7px', borderRadius: 7, fontSize: 11, fontFamily: 'inherit', border: '1px solid var(--border-primary)', background: '#fff', color: 'var(--text-primary)', textAlign: 'right' }} />
+                  <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>{w.currency === 'USD' ? '$' : '원'}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {(['safe', 'balanced', 'aggressive'] as const).map(k => (
+                    <button key={k} onClick={() => onPatch(w.ticker, { splitProfile: k })}
+                      style={{ padding: '3px 7px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit',
+                        background: (w.splitProfile ?? 'balanced') === k ? '#2e343d' : 'var(--bg-secondary)', color: (w.splitProfile ?? 'balanced') === k ? '#fff' : 'var(--text-secondary)' }}>
+                      {SPLIT_RATIOS[k].label}
+                    </button>
+                  ))}
+                  <span style={{ width: 1, background: 'var(--border-primary)', margin: '0 2px' }} />
+                  {[3, 5, 7].map(v => (
+                    <button key={v} onClick={() => onPatch(w.ticker, { reboundPct: v })}
+                      style={{ padding: '3px 7px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit',
+                        background: reboundPct === v ? '#2e343d' : 'var(--bg-secondary)', color: reboundPct === v ? '#fff' : 'var(--text-secondary)' }}>
+                      +{v}%
+                    </button>
+                  ))}
+                </div>
+                </>)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+        </div>{/* /본문 스크롤 */}
+      </div>{/* /드로어 */}
+    </>
   );
 }
 
 type FilterType = 'all' | 'triggered' | 'warning' | 'safe';
 
 export function TrailingStopLoss() {
-  const { accounts, isMobile, isAmountHidden, navigateTo } = useAppContext();
+  const { accounts, isMobile, isAmountHidden, navigateTo, showToast } = useAppContext();
   const [priceData, setPriceData] = useState<Record<string, { price: number; changeRate: number }>>({});
   const [entries, setEntries] = useState<Record<string, TrailingEntry>>(load);
   const [loading, setLoading] = useState(false);
@@ -223,6 +612,17 @@ export function TrailingStopLoss() {
   const [addLoading, setAddLoading] = useState(false);
   const [globalPct, setGlobalPct] = useState<number>(10);
   const [highlightTicker, setHighlightTicker] = useState<string | null>(null);
+  const [showPrinciple, setShowPrinciple] = useState(false);
+  const [watchList, setWatchList] = useState<RebuyWatch[]>(loadWatch);
+  const [watchOpen, setWatchOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(() => {
+    try { return localStorage.getItem('trailing_show_guide_v1') !== '0'; } catch { return true; }
+  });
+  const toggleGuide = () => setShowGuide(v => {
+    const next = !v;
+    try { localStorage.setItem('trailing_show_guide_v1', next ? '1' : '0'); } catch {}
+    return next;
+  });
   const rowRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   const isCustomView = selectedAccountId === 'custom';
@@ -250,6 +650,7 @@ export function TrailingStopLoss() {
   const tickers = [...new Set([
     ...accountHoldings.flatMap(a => a.holdings.map(h => h.ticker)),
     ...customStocks.map(s => s.ticker),
+    ...watchList.map(w => w.ticker),   // 매도된 워치 종목도 가격 계속 추적
   ])];
 
   const fetchPrices = useCallback(async () => {
@@ -275,6 +676,19 @@ export function TrailingStopLoss() {
             changed = true;
           } else if (p > next[ticker].peakPrice) {
             next[ticker] = { ...next[ticker], peakPrice: p };
+            changed = true;
+          }
+          // 재매수 추적: 손절가 이탈(손절 발생) 중이면 저점 갱신, 회복하면 저점 초기화
+          const e = next[ticker];
+          const stop = e.peakPrice * (1 - e.pct / 100);
+          if (p <= stop) {
+            if (e.troughPrice == null || p < e.troughPrice) {
+              next[ticker] = { ...e, troughPrice: p };
+              changed = true;
+            }
+          } else if (e.troughPrice != null) {
+            const { troughPrice, ...rest } = e;
+            next[ticker] = rest;
             changed = true;
           }
         }
@@ -321,9 +735,84 @@ export function TrailingStopLoss() {
       localStorage.setItem(CUSTOM_KEY, JSON.stringify(repaired));
       if (changed) kvSet(CUSTOM_KEY, repaired).catch(() => {});
     }).catch(() => {});
+    kvGet<RebuyWatch[]>(WATCH_KEY).then(remote => {
+      if (remote && remote.length > 0) {
+        setWatchList(remote);
+        localStorage.setItem(WATCH_KEY, JSON.stringify(remote));
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { fetchPrices(); }, []);
+
+  // 페이지 방문 시 재매수 도달 종목 유무를 토스트로 1회 안내
+  const visitToastRef = useRef(false);
+  useEffect(() => {
+    if (visitToastRef.current) return;
+    if (loading) return;                              // 첫 시세 로딩 완료 대기
+    if (Object.keys(priceData).length === 0) return; // 시세 없으면 대기
+    visitToastRef.current = true;
+    const hits = watchList.filter(w => {
+      const p = priceData[w.ticker]?.price;
+      if (p == null) return false;
+      const rebuy = w.troughPrice * (1 + (w.reboundPct ?? 5) / 100);
+      return p >= rebuy || p >= w.peakPrice;
+    });
+    if (hits.length > 0) {
+      const names = hits.map(h => h.name).slice(0, 3).join(', ');
+      showToast(`재매수 도달 ${hits.length}종목 — ${names}${hits.length > 3 ? ' 외' : ''}`, 10000);
+    } else if (watchList.length > 0) {
+      showToast(`재매수 도달 종목 없음 · 워치 ${watchList.length}종목 추적 중`, 7000);
+    } else {
+      showToast('재매수 워치에 등록된 종목이 없습니다', 7000);
+    }
+  }, [loading, priceData, watchList, showToast]);
+
+  // 손절 발생 종목을 재매수 워치리스트에 자동 저장 (매도해도 가이드 유지)
+  useEffect(() => {
+    // 현재 화면에서 알 수 있는 모든 보유/개별 종목의 메타
+    const meta: Record<string, { name: string; currency: 'KRW' | 'USD'; avgPrice: number; qty: number }> = {};
+    accountHoldings.forEach(a => a.holdings.forEach(h => {
+      meta[h.ticker] = { name: h.name, currency: detectCurrency(h.ticker), avgPrice: h.avgPrice, qty: h.quantity };
+    }));
+    customStocks.forEach(s => { meta[s.ticker] = { name: s.name, currency: s.currency, avgPrice: s.avgPrice, qty: 1 }; });
+
+    setWatchList(prev => {
+      let next = prev;
+      let changed = false;
+      for (const ticker of Object.keys(meta)) {
+        const e = entries[ticker];
+        const p = priceData[ticker]?.price;
+        if (!e || !p) continue;
+        const stop = e.peakPrice * (1 - e.pct / 100);
+        if (p > stop) continue; // 손절 발생 상태가 아니면 저장 안 함
+        const m = meta[ticker];
+        const snapshot: RebuyWatch = {
+          ticker, name: m.name, currency: m.currency, avgPrice: m.avgPrice,
+          peakPrice: e.peakPrice,
+          troughPrice: e.troughPrice ?? p,
+          pct: e.pct,
+          reboundPct: e.reboundPct ?? 5,
+          splitProfile: e.splitProfile ?? 'balanced',
+          rebuyBudget: e.rebuyBudget ?? Math.round(m.avgPrice * m.qty),
+          triggeredAt: prev.find(w => w.ticker === ticker)?.triggeredAt ?? Date.now(),
+        };
+        const idx = next.findIndex(w => w.ticker === ticker);
+        if (idx === -1) {
+          next = [...next, snapshot]; changed = true;
+        } else {
+          // 저점/고점/설정값 최신화 (triggeredAt 은 유지)
+          const cur = next[idx];
+          const merged = { ...snapshot, troughPrice: Math.min(cur.troughPrice, snapshot.troughPrice) };
+          if (JSON.stringify(cur) !== JSON.stringify(merged)) {
+            next = next.map((w, i) => i === idx ? merged : w); changed = true;
+          }
+        }
+      }
+      if (changed) saveWatch(next);
+      return changed ? next : prev;
+    });
+  }, [priceData, entries, customStocks.length]);
 
   // 차트에서 복귀 시 해당 종목 포커스
   useEffect(() => {
@@ -448,6 +937,52 @@ export function TrailingStopLoss() {
     });
   };
 
+  const updateReboundPct = (ticker: string, reboundPct: number) => {
+    setEntries(prev => {
+      const entry = prev[ticker];
+      if (!entry) return prev;
+      const next = { ...prev, [ticker]: { ...entry, reboundPct } };
+      save(next);
+      return next;
+    });
+  };
+
+  const updateRebuyBudget = (ticker: string, rebuyBudget: number) => {
+    setEntries(prev => {
+      const entry = prev[ticker];
+      if (!entry) return prev;
+      const next = { ...prev, [ticker]: { ...entry, rebuyBudget } };
+      save(next);
+      return next;
+    });
+  };
+
+  const updateSplitProfile = (ticker: string, splitProfile: 'safe' | 'balanced' | 'aggressive') => {
+    setEntries(prev => {
+      const entry = prev[ticker];
+      if (!entry) return prev;
+      const next = { ...prev, [ticker]: { ...entry, splitProfile } };
+      save(next);
+      return next;
+    });
+  };
+
+  // 재매수 워치 항목 수정/삭제
+  const patchWatch = (ticker: string, patch: Partial<RebuyWatch>) => {
+    setWatchList(prev => {
+      const next = prev.map(w => w.ticker === ticker ? { ...w, ...patch } : w);
+      saveWatch(next);
+      return next;
+    });
+  };
+  const removeWatch = (ticker: string) => {
+    setWatchList(prev => {
+      const next = prev.filter(w => w.ticker !== ticker);
+      saveWatch(next);
+      return next;
+    });
+  };
+
   // 현재 뷰에서 보이는 티커만 카운트 (계좌 선택 시 해당 계좌만, 개별종목 뷰면 개별종목만)
   const visibleTickers = isCustomView
     ? customStocks.map(s => s.ticker)
@@ -482,14 +1017,41 @@ export function TrailingStopLoss() {
   );
 
   return (
-    <div style={{ minHeight: '100%', background: 'var(--bg-page)' }}>
+    <div style={{
+      minHeight: '100%', background: 'var(--bg-page)',
+      paddingRight: !isMobile && watchOpen ? 360 : 0,
+      transition: 'padding-right 0.3s cubic-bezier(0.4,0,0.2,1)',
+    }}>
       <div style={{ padding: isMobile ? '16px 12px 32px' : '20px 20px 40px', maxWidth: 860, margin: '0 auto' }}>
 
         {/* 헤더 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
           <div>
-            <h1 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 5 }}>
+            <h1 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
               추적 손절매
+              {/* 원칙 안내 — 아이콘 hover 툴팁 */}
+              <span
+                style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'help' }}
+                onMouseEnter={() => setShowPrinciple(true)}
+                onMouseLeave={() => setShowPrinciple(false)}
+                onClick={() => setShowPrinciple(v => !v)}
+              >
+                <MIcon name="info" size={17} style={{ color: 'var(--accent-blue)', opacity: 0.8 }} />
+                {showPrinciple && (
+                  <span style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 50,
+                    width: isMobile ? 260 : 340,
+                    background: '#fff', border: '1px solid var(--border-primary)',
+                    borderRadius: 12, padding: '12px 14px',
+                    boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+                    fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.7,
+                    whiteSpace: 'normal',
+                  }}>
+                    <b style={{ color: 'var(--text-primary)' }}>추적 손절매 원칙</b> — 주가가 오르면 고점을 자동 갱신합니다. 고점 대비 설정 비율만큼 하락하면 매도합니다.
+                    <br />예) 고점 20,000원 · 손절률 10% → 손절가 18,000원. 주가가 18,000원 이하로 떨어지면 매도 신호.
+                  </span>
+                )}
+              </span>
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
               주가 상승 시 고점을 자동 추적하고, 고점 대비 설정 비율 하락 시 매도 신호를 알립니다
@@ -499,7 +1061,7 @@ export function TrailingStopLoss() {
             <select
               value={selectedAccountId}
               onChange={e => setSelectedAccountId(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--border-primary)', background: '#fff', fontSize: 13, color: selectedAccountId !== 'all' && triggeredAccountIds.has(selectedAccountId) ? '#F04452' : 'var(--text-primary)', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', minWidth: isMobile ? 140 : 200, maxWidth: isMobile ? 180 : 260 }}>
+              style={{ height: 38, boxSizing: 'border-box', padding: '0 10px', borderRadius: 10, border: '1px solid var(--border-primary)', background: '#fff', fontSize: 13, color: selectedAccountId !== 'all' && triggeredAccountIds.has(selectedAccountId) ? '#F04452' : 'var(--text-primary)', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', minWidth: isMobile ? 140 : 200, maxWidth: isMobile ? 180 : 260 }}>
               <option value="all">전체 계좌</option>
               {accounts.map(acc => (
                 <option key={acc.id} value={acc.id}
@@ -510,7 +1072,7 @@ export function TrailingStopLoss() {
               <option value="custom">── 개별종목 ({customStocks.length})</option>
             </select>
             <button onClick={fetchPrices} disabled={loading}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.65 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              style={{ height: 38, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.65 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
               <MIcon name="refresh" size={15} />
               {loading ? '조회 중' : '가격 갱신'}
             </button>
@@ -525,43 +1087,43 @@ export function TrailingStopLoss() {
 
         {/* 요약 카드 */}
         {(counts.triggered + counts.warning + counts.safe) > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
             {([
-              { label: '손절 발생', count: counts.triggered, color: '#F04452', bg: '#FFF0F1', icon: 'warning', filter: 'triggered' },
-              { label: '주의 구간', count: counts.warning, color: '#FF9500', bg: '#FFF4E5', icon: 'notification_important', filter: 'warning' },
-              { label: '추적 중', count: counts.safe, color: '#30C85E', bg: '#EDFBF2', icon: 'check_circle', filter: 'safe' },
+              { label: '손절 발생', count: counts.triggered, color: '#F04452', icon: 'warning', filter: 'triggered' },
+              { label: '주의 구간', count: counts.warning, color: '#FF9500', icon: 'notification_important', filter: 'warning' },
+              { label: '추적 중', count: counts.safe, color: '#30C85E', icon: 'check_circle', filter: 'safe' },
             ] as const).map(s => {
               const isActive = activeFilter === s.filter;
+              // 손절 발생 종목이 1개 이상이면 강하게(솔리드) 강조
+              const alarm = s.filter === 'triggered' && s.count > 0;
               return (
-                <div key={s.label}
+                <button key={s.label}
                   onClick={() => setActiveFilter(isActive ? 'all' : s.filter)}
                   style={{
-                    background: s.bg, borderRadius: 12, padding: '12px 14px',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    cursor: 'pointer', transition: 'all 0.15s',
-                    outline: isActive ? `2px solid ${s.color}` : '2px solid transparent',
-                    boxShadow: isActive ? `0 0 0 3px ${s.color}22` : 'none',
-                    transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                    flex: 1, minWidth: 0, fontFamily: 'inherit', cursor: 'pointer',
+                    background: alarm ? s.color : '#fff',
+                    border: `1.5px solid ${isActive || alarm ? s.color : 'var(--border-primary)'}`,
+                    borderRadius: 10, padding: '8px 12px',
+                    display: 'flex', alignItems: 'center', gap: 9,
+                    boxShadow: isActive ? `0 0 0 3px ${s.color}33` : alarm ? `0 2px 8px ${s.color}55` : '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s',
                   }}>
-                  <MIcon name={s.icon} size={20} style={{ color: s.color }} />
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.count}</div>
-                    <div style={{ fontSize: 11, color: s.color, marginTop: 2, fontWeight: 600 }}>{s.label}</div>
+                  <span style={{
+                    width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: alarm ? 'rgba(255,255,255,0.25)' : `color-mix(in srgb, ${s.color} 14%, transparent)`,
+                  }}>
+                    <MIcon name={s.icon} size={16} style={{ color: alarm ? '#fff' : s.color }} />
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                    <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: alarm ? '#fff' : s.color }}>{s.count}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1, whiteSpace: 'nowrap', color: alarm ? 'rgba(255,255,255,0.95)' : 'var(--text-secondary)' }}>{s.label}</span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         )}
-
-        {/* 원칙 안내 */}
-        <div style={{ background: '#EDF3FF', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <MIcon name="info" size={18} style={{ color: 'var(--accent-blue)', flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 12, color: '#1B64DA', lineHeight: 1.7 }}>
-            <b>추적 손절매 원칙</b> — 주가가 오르면 고점을 자동 갱신합니다. 고점 대비 설정 비율만큼 하락하면 매도합니다.
-            <br />예) 고점 20,000원 · 손절률 10% → 손절가 18,000원. 주가가 18,000원 이하로 떨어지면 매도 신호.
-          </div>
-        </div>
 
         {/* 일괄 손절률 */}
         <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -577,7 +1139,7 @@ export function TrailingStopLoss() {
                   style={{
                     padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
                     fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-                    background: isSelected ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+                    background: isSelected ? '#2e343d' : 'var(--bg-secondary)',
                     color: isSelected ? '#fff' : 'var(--text-secondary)',
                     transition: 'all 0.15s',
                   }}>
@@ -586,9 +1148,19 @@ export function TrailingStopLoss() {
               );
             })}
           </div>
-          <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
-            전체 {visibleTickers.length}종목 기본 {globalPct}% · 손절 위험순 정렬
-          </span>
+          {/* 재매수 가이드 표시 토글 */}
+          <button onClick={toggleGuide} title="손절 발생 카드의 재매수 가이드 표시/숨김"
+            style={{
+              marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
+              border: `1.5px solid ${showGuide ? 'var(--accent-blue)' : 'var(--border-primary)'}`,
+              background: showGuide ? 'color-mix(in srgb, var(--accent-blue) 10%, #fff)' : '#fff',
+              color: showGuide ? 'var(--accent-blue)' : 'var(--text-tertiary)',
+            }}>
+            <MIcon name={showGuide ? 'visibility' : 'visibility_off'} size={16} />
+            재매수 가이드 {showGuide ? '표시 중' : '숨김'}
+          </button>
         </div>
 
         {/* 개별종목 뷰 */}
@@ -677,10 +1249,14 @@ export function TrailingStopLoss() {
                       currency={cs.currency ?? detectCurrency(cs.ticker)}
                       onPctChange={p => updatePct(cs.ticker, p)}
                       onResetPeak={() => resetPeak(cs.ticker)}
+                      onReboundPctChange={(p) => updateReboundPct(cs.ticker, p)}
+                      onBudgetChange={(b) => updateRebuyBudget(cs.ticker, b)}
+                      onProfileChange={(p) => updateSplitProfile(cs.ticker, p)}
                       isAmountHidden={isAmountHidden}
                       onNameClick={goToChart}
                       highlight={highlightTicker === cs.ticker}
                       rowRef={rowRefs.current[cs.ticker]}
+                      showGuide={showGuide}
                     />
                     <button onClick={() => removeCustomStock(cs.id)}
                       title="삭제"
@@ -767,10 +1343,14 @@ export function TrailingStopLoss() {
                       currency={h.market === 'US' ? 'USD' : 'KRW'}
                       onPctChange={(p) => updatePct(h.ticker, p)}
                       onResetPeak={() => resetPeak(h.ticker)}
+                      onReboundPctChange={(p) => updateReboundPct(h.ticker, p)}
+                      onBudgetChange={(b) => updateRebuyBudget(h.ticker, b)}
+                      onProfileChange={(p) => updateSplitProfile(h.ticker, p)}
                       isAmountHidden={isAmountHidden}
                       onNameClick={goToChart}
                       highlight={highlightTicker === h.ticker}
                       rowRef={rowRefs.current[rowKey]}
+                      showGuide={showGuide}
                     />
                   );
                 })}
@@ -779,6 +1359,36 @@ export function TrailingStopLoss() {
           })
         ) : null}
       </div>
+
+      {/* 재매수 워치 — 우측 고정 드로어 (AI 어시스턴트 형식) */}
+      {!watchOpen && (
+        <button onClick={() => setWatchOpen(true)} title="재매수 워치 열기"
+          style={{
+            position: 'fixed', top: '50%', right: 0, transform: 'translateY(-50%)', zIndex: 298,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '12px 8px', border: 'none', cursor: 'pointer',
+            background: 'var(--accent-blue)', color: '#fff',
+            borderRadius: '12px 0 0 12px', boxShadow: '-4px 0 16px rgba(0,0,0,0.18)',
+            fontFamily: 'inherit',
+          }}>
+          <MIcon name="bookmark" size={20} />
+          <span style={{ fontSize: 11, fontWeight: 700 }}>재매수</span>
+          {watchList.length > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 700, background: '#fff', color: 'var(--accent-blue)', borderRadius: 10, padding: '0 6px', minWidth: 18, textAlign: 'center' }}>{watchList.length}</span>
+          )}
+        </button>
+      )}
+      <RebuyWatchPanel
+        isOpen={watchOpen}
+        onClose={() => setWatchOpen(false)}
+        watchList={watchList}
+        priceData={priceData}
+        isAmountHidden={isAmountHidden}
+        isMobile={isMobile}
+        onPatch={patchWatch}
+        onRemove={removeWatch}
+        onNameClick={goToChart}
+      />
     </div>
   );
 }
