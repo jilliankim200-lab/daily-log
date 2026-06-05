@@ -28,6 +28,10 @@
   --accent-blue-bg: #E8F3FF;
   --accent-blue-fg: #FFFFFF;
 
+  /* 선택된 토글 뱃지 (라이트: 진한 회색 / 다크: 밝은 회색) */
+  --pill-selected-bg: #2e343d;
+  --pill-selected-fg: #ffffff;
+
   /* 수익/손실 */
   --color-profit: #f07178;
   --color-profit-bg: #FFF0F0;
@@ -127,6 +131,10 @@
   --accent-blue-hover: #A3E8FF;
   --accent-blue-bg: rgba(137, 221, 255, 0.10);
   --accent-blue-fg: #0D0E16;
+
+  /* 선택된 토글 뱃지 (다크: 밝은 회색 + 어두운 글자) */
+  --pill-selected-bg: #cfd6e4;
+  --pill-selected-fg: #1a1d27;
 
   /* 수익/손실 — Material Oceanic palette */
   --color-profit: #F07178;

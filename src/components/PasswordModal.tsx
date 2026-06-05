@@ -65,7 +65,7 @@ export function PasswordModal({ open, onClose, onSuccess }: PasswordModalProps) 
               width: 36, height: 36, borderRadius: 10,
               background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <MIcon name="lock" size={18} style={{ color: '#fff' }} />
+              <MIcon name="lock" size={18} style={{ color: 'var(--accent-blue-fg)' }} />
             </div>
             <span style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)' }}>
               금액 보기

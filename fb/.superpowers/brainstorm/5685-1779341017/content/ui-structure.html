@@ -1,0 +1,162 @@
+<h2>WorldCup.tsx — 페이지 구성 목업</h2>
+<p class="subtitle">실제 컴포넌트 구조 미리보기. 클릭해서 섹션별 피드백 주세요.</p>
+
+<div class="mockup" style="max-width:900px;margin:0 auto">
+  <div class="mockup-header">WorldCup 페이지 (daily-log 메뉴 탭)</div>
+  <div class="mockup-body" style="background:#0f172a;padding:20px;font-family:system-ui;color:#e2e8f0">
+
+    <!-- 헤더 상태바 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:20px;font-weight:700">⚽ 2026 FIFA 월드컵</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px">USA · Canada · Mexico · 마지막 업데이트 06-15 18:32</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="background:#1e3a5f;border:1px solid #1d4ed8;border-radius:8px;padding:6px 14px;font-size:12px;color:#60a5fa;font-weight:600">조별리그 진행중</div>
+        <div style="background:#1e293b;border-radius:8px;padding:6px 14px;font-size:12px;color:#94a3b8">D+4일</div>
+      </div>
+    </div>
+
+    <!-- 오늘 경기 섹션 -->
+    <div style="font-size:11px;font-weight:700;color:#f59e0b;letter-spacing:0.08em;margin-bottom:10px">TODAY · 6월 15일 오늘 경기 3경기</div>
+
+    <!-- 경기 카드 1 (진행중) -->
+    <div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:10px;border-left:3px solid #f59e0b">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:16px;flex:1">
+          <div style="text-align:right;flex:1">
+            <div style="font-size:15px;font-weight:700">🇧🇷 브라질</div>
+            <div style="font-size:11px;color:#64748b">FIFA 5위</div>
+          </div>
+          <div style="text-align:center;min-width:80px">
+            <div style="font-size:24px;font-weight:800;color:#f59e0b">2 · 1</div>
+            <div style="font-size:10px;color:#f59e0b;margin-top:2px">● LIVE 67'</div>
+          </div>
+          <div style="text-align:left;flex:1">
+            <div style="font-size:15px;font-weight:700">아르헨티나 🇦🇷</div>
+            <div style="font-size:11px;color:#64748b">FIFA 1위</div>
+          </div>
+        </div>
+      </div>
+      <!-- 예측 + 관전포인트 -->
+      <div style="background:#0f172a;border-radius:8px;padding:12px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:10px;color:#64748b;margin-bottom:2px">브라질 승</div>
+            <div style="font-size:16px;font-weight:700;color:#22c55e">52%</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:10px;color:#64748b;margin-bottom:2px">무승부</div>
+            <div style="font-size:16px;font-weight:700;color:#94a3b8">24%</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:10px;color:#64748b;margin-bottom:2px">아르헨티나 승</div>
+            <div style="font-size:16px;font-weight:700;color:#f87171">24%</div>
+          </div>
+          <div style="width:1px;background:#1e293b"></div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:10px;color:#64748b;margin-bottom:2px">예측 스코어</div>
+            <div style="font-size:16px;font-weight:700;color:#60a5fa">2 - 1</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#94a3b8;line-height:1.6;border-top:1px solid #1e293b;padding-top:8px">
+          <span style="color:#f59e0b;font-weight:600">⚡ 관전포인트</span> Vinícius Jr vs Di María — 두 팀 에이스의 정면 충돌. 브라질 중원 압박이 아르헨티나 빌드업을 얼마나 막느냐가 승부의 핵심. Mbappé 없이 치르는 아르헨티나의 수비 집중력 주목.
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:#64748b">
+          🔑 주목 선수: <span style="color:#e2e8f0">Vinícius Jr</span> · 최근 5경기 4골 2도움
+        </div>
+      </div>
+    </div>
+
+    <!-- 경기 카드 2 (예정) -->
+    <div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:10px;border-left:3px solid #334155;opacity:0.85">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:16px;flex:1">
+          <div style="text-align:right;flex:1">
+            <div style="font-size:15px;font-weight:700">🇩🇪 독일</div>
+          </div>
+          <div style="text-align:center;min-width:80px">
+            <div style="font-size:13px;font-weight:600;color:#94a3b8">21:00</div>
+            <div style="font-size:10px;color:#64748b;margin-top:2px">예측 1-1</div>
+          </div>
+          <div style="text-align:left;flex:1">
+            <div style="font-size:15px;font-weight:700">스페인 🇪🇸</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#0f172a;border-radius:8px;padding:10px;font-size:12px;color:#94a3b8;line-height:1.6">
+        <span style="color:#94a3b8;font-weight:600">⚡ 관전포인트</span> 무리뉴 없는 스페인의 포제션 vs 독일의 압박 전술. 최근 H2H 3전 스페인 2승 1무.
+      </div>
+    </div>
+
+    <!-- 탭: 조별 순위 -->
+    <div style="margin-top:20px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#3b82f6;letter-spacing:0.08em;margin-bottom:10px">조별 순위</div>
+      <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="background:#1d4ed8;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">A조</span>
+        <span style="background:#1e293b;color:#64748b;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer">B조</span>
+        <span style="background:#1e293b;color:#64748b;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer">C조</span>
+        <span style="color:#475569;padding:3px 6px;font-size:11px">… L조</span>
+      </div>
+      <div style="background:#1e293b;border-radius:10px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:24px 1fr 32px 32px 32px 32px 40px;gap:0;font-size:11px;color:#64748b;padding:8px 14px;border-bottom:1px solid #0f172a">
+          <span>#</span><span>팀</span><span style="text-align:center">승</span><span style="text-align:center">무</span><span style="text-align:center">패</span><span style="text-align:center">득실</span><span style="text-align:center;font-weight:700">승점</span>
+        </div>
+        <div style="display:grid;grid-template-columns:24px 1fr 32px 32px 32px 32px 40px;padding:10px 14px;align-items:center;border-bottom:1px solid #0f172a">
+          <span style="font-size:11px;color:#22c55e;font-weight:700">1</span>
+          <span style="font-size:13px;font-weight:600">🇧🇷 브라질</span>
+          <span style="text-align:center;font-size:12px">2</span><span style="text-align:center;font-size:12px">0</span><span style="text-align:center;font-size:12px">0</span><span style="text-align:center;font-size:12px;color:#22c55e">+5</span>
+          <span style="text-align:center;font-size:14px;font-weight:700;color:#22c55e">6</span>
+        </div>
+        <div style="display:grid;grid-template-columns:24px 1fr 32px 32px 32px 32px 40px;padding:10px 14px;align-items:center;border-bottom:1px solid #0f172a;background:#1d4ed808">
+          <span style="font-size:11px;color:#22c55e;font-weight:700">2</span>
+          <span style="font-size:13px;font-weight:600">🇦🇷 아르헨티나</span>
+          <span style="text-align:center;font-size:12px">1</span><span style="text-align:center;font-size:12px">1</span><span style="text-align:center;font-size:12px">0</span><span style="text-align:center;font-size:12px;color:#22c55e">+2</span>
+          <span style="text-align:center;font-size:14px;font-weight:700">4</span>
+        </div>
+        <div style="display:grid;grid-template-columns:24px 1fr 32px 32px 32px 32px 40px;padding:10px 14px;align-items:center;border-bottom:1px solid #0f172a;opacity:0.6">
+          <span style="font-size:11px;color:#64748b;font-weight:700">3</span>
+          <span style="font-size:13px">🇲🇽 멕시코</span>
+          <span style="text-align:center;font-size:12px">0</span><span style="text-align:center;font-size:12px">1</span><span style="text-align:center;font-size:12px">1</span><span style="text-align:center;font-size:12px;color:#f87171">-2</span>
+          <span style="text-align:center;font-size:14px;font-weight:700">1</span>
+        </div>
+        <div style="display:grid;grid-template-columns:24px 1fr 32px 32px 32px 32px 40px;padding:10px 14px;align-items:center;opacity:0.4">
+          <span style="font-size:11px;color:#64748b;font-weight:700">4</span>
+          <span style="font-size:13px">🇨🇦 캐나다</span>
+          <span style="text-align:center;font-size:12px">0</span><span style="text-align:center;font-size:12px">0</span><span style="text-align:center;font-size:12px">2</span><span style="text-align:center;font-size:12px;color:#f87171">-5</span>
+          <span style="text-align:center;font-size:14px;font-weight:700">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 핫 플레이어 -->
+    <div style="margin-top:20px">
+      <div style="font-size:11px;font-weight:700;color:#a855f7;letter-spacing:0.08em;margin-bottom:10px">⚡ 대회 핫 플레이어</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div style="background:#1e293b;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:18px;margin-bottom:4px">🇫🇷</div>
+          <div style="font-size:13px;font-weight:700">Mbappé</div>
+          <div style="font-size:11px;color:#64748b">프랑스</div>
+          <div style="margin-top:6px;font-size:12px"><span style="color:#f59e0b">3골</span> · <span style="color:#60a5fa">1도움</span></div>
+        </div>
+        <div style="background:#1e293b;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:18px;margin-bottom:4px">🇧🇷</div>
+          <div style="font-size:13px;font-weight:700">Vinícius Jr</div>
+          <div style="font-size:11px;color:#64748b">브라질</div>
+          <div style="margin-top:6px;font-size:12px"><span style="color:#f59e0b">2골</span> · <span style="color:#60a5fa">2도움</span></div>
+        </div>
+        <div style="background:#1e293b;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:18px;margin-bottom:4px">🇵🇹</div>
+          <div style="font-size:13px;font-weight:700">R. Leão</div>
+          <div style="font-size:11px;color:#64748b">포르투갈</div>
+          <div style="margin-top:6px;font-size:12px"><span style="color:#f59e0b">1골</span> · <span style="color:#60a5fa">3도움</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:16px;font-size:13px;color:var(--text-secondary);text-align:center">
+  이 구성으로 진행할까요? 변경할 섹션이 있으면 알려주세요.
+</div>

@@ -48,7 +48,7 @@ export function PageLock({ children }: { children: React.ReactNode }) {
             border: 'none',
             cursor: 'pointer',
             background: 'var(--accent-blue)',
-            color: '#fff',
+            color: 'var(--accent-blue-fg)',
             fontSize: 14,
             fontWeight: 600,
             fontFamily: 'inherit',

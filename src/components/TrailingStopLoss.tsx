@@ -115,12 +115,12 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
   const isWarning = !isTriggered && hasPrice && distPct! < 3;
 
   const statusColor = isTriggered ? '#F04452' : isWarning ? '#FF9500' : '#30C85E';
-  const statusBg = isTriggered ? '#FFF0F1' : isWarning ? '#FFF4E5' : '#EDFBF2';
+  const statusBg = isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-card))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-card))' : 'color-mix(in srgb, #30C85E 12%, var(--bg-card))';
   const statusLabel = isTriggered ? '손절 발생' : isWarning ? '주의 구간' : '추적 중';
 
   return (
     <div ref={rowRef} style={{
-      background: '#fff',
+      background: 'var(--bg-card)',
       borderRadius: 14,
       padding: '14px 16px',
       marginBottom: 10,
@@ -193,7 +193,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
 
         {/* 손절가 */}
         <div style={{
-          background: isTriggered ? '#FFF0F1' : isWarning ? '#FFF4E5' : 'var(--bg-secondary)',
+          background: isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-card))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-card))' : 'var(--bg-secondary)',
           borderRadius: 10, padding: '10px 12px'
         }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -232,8 +232,8 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
               style={{
                 padding: '4px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                background: pct === v ? '#2e343d' : 'var(--bg-secondary)',
-                color: pct === v ? '#fff' : 'var(--text-secondary)',
+                background: pct === v ? 'var(--pill-selected-bg)' : 'var(--bg-secondary)',
+                color: pct === v ? 'var(--pill-selected-fg)' : 'var(--text-secondary)',
                 transition: 'all 0.1s',
               }}>
               {v}%
@@ -324,7 +324,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
                   }}
                   style={{
                     width: 120, padding: '5px 9px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit',
-                    border: '1px solid var(--border-primary)', background: '#fff', color: 'var(--text-primary)', textAlign: 'right',
+                    border: '1px solid var(--border-primary)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', textAlign: 'right',
                   }} />
                 <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{currency === 'USD' ? '$' : '원'}</span>
               </div>
@@ -335,8 +335,8 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
                     style={{
                       padding: '4px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
                       fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                      background: profile === k ? '#2e343d' : 'var(--bg-secondary)',
-                      color: profile === k ? '#fff' : 'var(--text-secondary)',
+                      background: profile === k ? 'var(--pill-selected-bg)' : 'var(--bg-secondary)',
+                      color: profile === k ? 'var(--pill-selected-fg)' : 'var(--text-secondary)',
                     }}>
                     {SPLIT_RATIOS[k].label} {SPLIT_RATIOS[k].rebound}:{SPLIT_RATIOS[k].recover}
                   </button>
@@ -358,8 +358,8 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
                   style={{
                     padding: '4px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                    background: reboundPct === v ? '#2e343d' : 'var(--bg-secondary)',
-                    color: reboundPct === v ? '#fff' : 'var(--text-secondary)',
+                    background: reboundPct === v ? 'var(--pill-selected-bg)' : 'var(--bg-secondary)',
+                    color: reboundPct === v ? 'var(--pill-selected-fg)' : 'var(--text-secondary)',
                   }}>
                   +{v}%
                 </button>
@@ -563,14 +563,14 @@ function RebuyWatchPanel({ isOpen, onClose, watchList, priceData, isAmountHidden
                   <input type="text" inputMode="numeric"
                     value={isAmountHidden ? '••••' : budget.toLocaleString('ko-KR')}
                     onChange={e => { const n = Number(e.target.value.replace(/[^0-9]/g, '')); if (!Number.isNaN(n)) onPatch(w.ticker, { rebuyBudget: n }); }}
-                    style={{ flex: 1, minWidth: 0, padding: '4px 7px', borderRadius: 7, fontSize: 11, fontFamily: 'inherit', border: '1px solid var(--border-primary)', background: '#fff', color: 'var(--text-primary)', textAlign: 'right' }} />
+                    style={{ flex: 1, minWidth: 0, padding: '4px 7px', borderRadius: 7, fontSize: 11, fontFamily: 'inherit', border: '1px solid var(--border-primary)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', textAlign: 'right' }} />
                   <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>{w.currency === 'USD' ? '$' : '원'}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {(['safe', 'balanced', 'aggressive'] as const).map(k => (
                     <button key={k} onClick={() => onPatch(w.ticker, { splitProfile: k })}
                       style={{ padding: '3px 7px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit',
-                        background: (w.splitProfile ?? 'balanced') === k ? '#2e343d' : 'var(--bg-secondary)', color: (w.splitProfile ?? 'balanced') === k ? '#fff' : 'var(--text-secondary)' }}>
+                        background: (w.splitProfile ?? 'balanced') === k ? 'var(--pill-selected-bg)' : 'var(--bg-secondary)', color: (w.splitProfile ?? 'balanced') === k ? 'var(--pill-selected-fg)' : 'var(--text-secondary)' }}>
                       {SPLIT_RATIOS[k].label}
                     </button>
                   ))}
@@ -578,7 +578,7 @@ function RebuyWatchPanel({ isOpen, onClose, watchList, priceData, isAmountHidden
                   {[3, 5, 7].map(v => (
                     <button key={v} onClick={() => onPatch(w.ticker, { reboundPct: v })}
                       style={{ padding: '3px 7px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit',
-                        background: reboundPct === v ? '#2e343d' : 'var(--bg-secondary)', color: reboundPct === v ? '#fff' : 'var(--text-secondary)' }}>
+                        background: reboundPct === v ? 'var(--pill-selected-bg)' : 'var(--bg-secondary)', color: reboundPct === v ? 'var(--pill-selected-fg)' : 'var(--text-secondary)' }}>
                       +{v}%
                     </button>
                   ))}
@@ -1041,7 +1041,7 @@ export function TrailingStopLoss() {
                   <span style={{
                     position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 50,
                     width: isMobile ? 260 : 340,
-                    background: '#fff', border: '1px solid var(--border-primary)',
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border-primary)',
                     borderRadius: 12, padding: '12px 14px',
                     boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
                     fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', lineHeight: 1.7,
@@ -1061,7 +1061,7 @@ export function TrailingStopLoss() {
             <select
               value={selectedAccountId}
               onChange={e => setSelectedAccountId(e.target.value)}
-              style={{ height: 38, boxSizing: 'border-box', padding: '0 10px', borderRadius: 10, border: '1px solid var(--border-primary)', background: '#fff', fontSize: 13, color: selectedAccountId !== 'all' && triggeredAccountIds.has(selectedAccountId) ? '#F04452' : 'var(--text-primary)', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', minWidth: isMobile ? 140 : 200, maxWidth: isMobile ? 180 : 260 }}>
+              style={{ height: 38, boxSizing: 'border-box', padding: '0 10px', borderRadius: 10, border: '1px solid var(--border-primary)', background: 'var(--bg-elevated)', fontSize: 13, color: selectedAccountId !== 'all' && triggeredAccountIds.has(selectedAccountId) ? '#F04452' : 'var(--text-primary)', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', minWidth: isMobile ? 140 : 200, maxWidth: isMobile ? 180 : 260 }}>
               <option value="all">전체 계좌</option>
               {accounts.map(acc => (
                 <option key={acc.id} value={acc.id}
@@ -1071,10 +1071,9 @@ export function TrailingStopLoss() {
               ))}
               <option value="custom">── 개별종목 ({customStocks.length})</option>
             </select>
-            <button onClick={fetchPrices} disabled={loading}
-              style={{ height: 38, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 5, padding: '0 14px', background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.65 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-              <MIcon name="refresh" size={15} />
-              {loading ? '조회 중' : '가격 갱신'}
+            <button onClick={fetchPrices} disabled={loading} title={loading ? '조회 중...' : '가격 갱신'}
+              style={{ width: 38, height: 38, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0, background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)', borderRadius: 10, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.65 : 1, fontFamily: 'inherit' }}>
+              <MIcon name="refresh" size={18} style={{ animation: loading ? 'spin 0.9s linear infinite' : 'none' }} />
             </button>
           </div>
         </div>
@@ -1101,7 +1100,7 @@ export function TrailingStopLoss() {
                   onClick={() => setActiveFilter(isActive ? 'all' : s.filter)}
                   style={{
                     flex: 1, minWidth: 0, fontFamily: 'inherit', cursor: 'pointer',
-                    background: alarm ? s.color : '#fff',
+                    background: alarm ? s.color : 'var(--bg-card)',
                     border: `1.5px solid ${isActive || alarm ? s.color : 'var(--border-primary)'}`,
                     borderRadius: 10, padding: '8px 12px',
                     display: 'flex', alignItems: 'center', gap: 9,
@@ -1126,7 +1125,7 @@ export function TrailingStopLoss() {
         )}
 
         {/* 일괄 손절률 */}
-        <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <MIcon name="tune" size={16} style={{ color: 'var(--text-secondary)' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>일괄 손절률</span>
@@ -1139,8 +1138,8 @@ export function TrailingStopLoss() {
                   style={{
                     padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
                     fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-                    background: isSelected ? '#2e343d' : 'var(--bg-secondary)',
-                    color: isSelected ? '#fff' : 'var(--text-secondary)',
+                    background: isSelected ? 'var(--pill-selected-bg)' : 'var(--bg-secondary)',
+                    color: isSelected ? 'var(--pill-selected-fg)' : 'var(--text-secondary)',
                     transition: 'all 0.15s',
                   }}>
                   {v}%
@@ -1155,7 +1154,7 @@ export function TrailingStopLoss() {
               padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit',
               fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
               border: `1.5px solid ${showGuide ? 'var(--accent-blue)' : 'var(--border-primary)'}`,
-              background: showGuide ? 'color-mix(in srgb, var(--accent-blue) 10%, #fff)' : '#fff',
+              background: showGuide ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-card))' : 'var(--bg-card)',
               color: showGuide ? 'var(--accent-blue)' : 'var(--text-tertiary)',
             }}>
             <MIcon name={showGuide ? 'visibility' : 'visibility_off'} size={16} />
@@ -1167,7 +1166,7 @@ export function TrailingStopLoss() {
         {isCustomView && (
           <div style={{ marginBottom: 28 }}>
             {/* 추가 폼 */}
-            <div style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>종목 추가</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <input
