@@ -32,7 +32,7 @@ function ChartModal({ config, onClose }: { config: ChartConfig; onClose: () => v
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }} onClick={onClose}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 20, padding: '22px 20px 20px', width: '100%', maxWidth: 460, boxShadow: '0 24px 64px rgba(0,0,0,0.22)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 20, padding: '22px 20px 20px', width: '100%', maxWidth: 460, boxShadow: '0 24px 64px rgba(0,0,0,0.22)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{config.title}</div>
@@ -780,7 +780,7 @@ function NotesCalendarModal({ selectedDate, onSelectDate, onClose }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }} onClick={onClose}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
         {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <button onClick={prev} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border-primary)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MIcon name="chevron_left" size={18} /></button>
@@ -875,7 +875,7 @@ function DailyNoteSection({ isMobile }: { isMobile: boolean }) {
   };
 
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
+    <div style={{ background: 'var(--bg-primary)', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <div style={{ width: 32, height: 32, borderRadius: 9, background: '#EDFBF2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <MIcon name="edit_note" size={17} style={{ color: '#30C85E' }} />
@@ -885,7 +885,7 @@ function DailyNoteSection({ isMobile }: { isMobile: boolean }) {
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>{displayDate}</div>
         </div>
         <button onClick={() => setShowCal(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-card)', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
           <MIcon name="calendar_month" size={13} />달력
         </button>
       </div>
@@ -984,7 +984,7 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
   );
 
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: 16, padding: isMobile ? '14px 14px' : '16px 20px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+    <div style={{ background: 'var(--bg-primary)', borderRadius: 16, padding: isMobile ? '14px 14px' : '16px 20px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -992,7 +992,7 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>아침 시황</span>
           {fetchedAt && <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>· {fetchedAt} 기준</span>}
         </div>
-        <button onClick={fetch_} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-card)', cursor: loading ? 'default' : 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
+        <button onClick={fetch_} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', cursor: loading ? 'default' : 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'inherit' }}>
           <MIcon name="refresh" size={14} style={{ opacity: loading ? 0.4 : 1, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
           {loading ? '조회 중...' : '새로고침'}
         </button>
@@ -1029,7 +1029,7 @@ function MorningBriefWidget({ isMobile }: { isMobile: boolean }) {
               </div>
             </div>
             <div onClick={() => setChartModal({ title: '미 10년물 국채 금리', endpoint: 'chart/tnx', color: '#FF9500', unit: '%', decimals: 3 })}
-              style={{ flex: 1, background: data.tnx ? (data.tnx.changePct > 0 ? 'color-mix(in srgb, #FF9500 14%, var(--bg-card))' : 'color-mix(in srgb, #3182F6 12%, var(--bg-card))') : 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+              style={{ flex: 1, background: data.tnx ? (data.tnx.changePct > 0 ? 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))' : 'color-mix(in srgb, #3182F6 12%, var(--bg-primary))') : 'var(--bg-secondary)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>미 10년물 금리</div>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{data.tnx ? (data.tnx.changePct > 0 ? '주가 하락 압력 ↑' : '주식 매력 상승 ↑') : ''}</div>
@@ -1100,7 +1100,7 @@ function SectionCard({ section, si, checked, onToggle, isMobile, onInsight }: {
   onInsight?: (itemIndex: number, key: string) => void;
 }) {
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
+    <div style={{ background: 'var(--bg-primary)', borderRadius: 16, padding: isMobile ? '16px' : '20px 24px', marginBottom: 12, border: '1px solid var(--border-primary)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <div style={{ width: 32, height: 32, borderRadius: 9, background: section.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <MIcon name={section.icon} size={17} style={{ color: section.color }} />
@@ -1192,7 +1192,7 @@ const DAILY_SECTIONS = [
   {
     icon: 'wb_sunny',
     color: '#FF9500',
-    bg: 'color-mix(in srgb, #FF9500 14%, var(--bg-card))',
+    bg: 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))',
     title: '아침 시황 확인',
     subtitle: '뉴스를 보되, 해석은 천천히. 제목에 휘둘리지 말 것',
     items: [
@@ -1267,7 +1267,7 @@ function DailyTab({ isMobile }: { isMobile: boolean }) {
       ))}
 
       {/* 진행률 */}
-      <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>오늘의 루틴</span>
@@ -1326,7 +1326,7 @@ const WEEKLY_SECTIONS: SectionDef[] = [
   {
     icon: 'lightbulb',
     color: '#FF9500',
-    bg: 'color-mix(in srgb, #FF9500 14%, var(--bg-card))',
+    bg: 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))',
     title: '다음 주 계획',
     subtitle: '지난 주 이유가 다음 주 전략이 된다',
     items: [
@@ -1364,7 +1364,7 @@ function WeeklyTab({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>이번 주 루틴</span>
@@ -1428,7 +1428,7 @@ const MONTHLY_SECTIONS: SectionDef[] = [
   {
     icon: 'tune',
     color: '#FF9500',
-    bg: 'color-mix(in srgb, #FF9500 14%, var(--bg-card))',
+    bg: 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))',
     title: '포트폴리오 비중 점검',
     subtitle: '한 달 전 세운 구성이 지금도 유효한가',
     items: [
@@ -1482,7 +1482,7 @@ function MonthlyTab({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>이번 달 루틴</span>
@@ -1603,7 +1603,7 @@ function QuarterlyTab({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>이번 분기 루틴</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: pct === 100 ? '#30C85E' : 'var(--text-tertiary)' }}>{checked.size}/{totalItems}</span>
@@ -1645,7 +1645,7 @@ const YEARLY_SECTIONS: SectionDef[] = [
   {
     icon: 'psychology_alt',
     color: '#F04452',
-    bg: 'color-mix(in srgb, #F04452 12%, var(--bg-card))',
+    bg: 'color-mix(in srgb, #F04452 12%, var(--bg-primary))',
     title: '판단을 흔든 요인 기록',
     subtitle: '이 기록은 내년의 실수를 막는 방패입니다',
     items: [
@@ -1721,7 +1721,7 @@ function YearlyTab({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+      <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: '14px 18px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>올해 루틴</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: pct === 100 ? '#30C85E' : 'var(--text-tertiary)' }}>{checked.size}/{totalItems}</span>
@@ -2344,7 +2344,7 @@ export function InvestmentRoutine() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 20, border: activeTab === tab.id ? 'none' : '1px solid var(--border-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, background: activeTab === tab.id ? '#191F28' : 'var(--bg-card)', color: activeTab === tab.id ? '#fff' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 20, border: activeTab === tab.id ? 'none' : '1px solid var(--border-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, background: activeTab === tab.id ? '#191F28' : 'var(--bg-primary)', color: activeTab === tab.id ? '#fff' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
               <MIcon name={tab.icon} size={15} />
               {tab.label}
             </button>

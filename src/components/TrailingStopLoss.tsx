@@ -115,12 +115,12 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
   const isWarning = !isTriggered && hasPrice && distPct! < 3;
 
   const statusColor = isTriggered ? '#F04452' : isWarning ? '#FF9500' : '#30C85E';
-  const statusBg = isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-card))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-card))' : 'color-mix(in srgb, #30C85E 12%, var(--bg-card))';
+  const statusBg = isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-primary))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))' : 'color-mix(in srgb, #30C85E 12%, var(--bg-primary))';
   const statusLabel = isTriggered ? '손절 발생' : isWarning ? '주의 구간' : '추적 중';
 
   return (
     <div ref={rowRef} style={{
-      background: 'var(--bg-card)',
+      background: 'var(--bg-primary)',
       borderRadius: 14,
       padding: '14px 16px',
       marginBottom: 10,
@@ -193,7 +193,7 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
 
         {/* 손절가 */}
         <div style={{
-          background: isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-card))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-card))' : 'var(--bg-secondary)',
+          background: isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-primary))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))' : 'var(--bg-secondary)',
           borderRadius: 10, padding: '10px 12px'
         }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1100,7 +1100,7 @@ export function TrailingStopLoss() {
                   onClick={() => setActiveFilter(isActive ? 'all' : s.filter)}
                   style={{
                     flex: 1, minWidth: 0, fontFamily: 'inherit', cursor: 'pointer',
-                    background: alarm ? s.color : 'var(--bg-card)',
+                    background: alarm ? s.color : 'var(--bg-primary)',
                     border: `1.5px solid ${isActive || alarm ? s.color : 'var(--border-primary)'}`,
                     borderRadius: 10, padding: '8px 12px',
                     display: 'flex', alignItems: 'center', gap: 9,
@@ -1125,7 +1125,7 @@ export function TrailingStopLoss() {
         )}
 
         {/* 일괄 손절률 */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--bg-primary)', borderRadius: 12, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <MIcon name="tune" size={16} style={{ color: 'var(--text-secondary)' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>일괄 손절률</span>
@@ -1154,7 +1154,7 @@ export function TrailingStopLoss() {
               padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit',
               fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
               border: `1.5px solid ${showGuide ? 'var(--accent-blue)' : 'var(--border-primary)'}`,
-              background: showGuide ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-card))' : 'var(--bg-card)',
+              background: showGuide ? 'color-mix(in srgb, var(--accent-blue) 12%, var(--bg-primary))' : 'var(--bg-primary)',
               color: showGuide ? 'var(--accent-blue)' : 'var(--text-tertiary)',
             }}>
             <MIcon name={showGuide ? 'visibility' : 'visibility_off'} size={16} />
@@ -1166,7 +1166,7 @@ export function TrailingStopLoss() {
         {isCustomView && (
           <div style={{ marginBottom: 28 }}>
             {/* 추가 폼 */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
+            <div style={{ background: 'var(--bg-primary)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, border: '1px solid var(--border-primary)' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>종목 추가</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <input
