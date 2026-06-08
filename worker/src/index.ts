@@ -52,7 +52,7 @@ async function fetchCurrentPrice(ticker: string): Promise<number | null> {
   }
 }
 
-async function fetchCurrentPriceWithChange(ticker: string): Promise<{ price: number; changeRate: number } | null> {
+async function fetchCurrentPriceWithChange(ticker: string): Promise<{ price: number; changeRate: number; low?: number } | null> {
   try {
     const res = await fetch(
       `https://polling.finance.naver.com/api/realtime/domestic/stock/${ticker}`,
@@ -64,7 +64,10 @@ async function fetchCurrentPriceWithChange(ticker: string): Promise<{ price: num
     if (!item?.closePriceRaw) return null;
     const price = parseInt(item.closePriceRaw, 10);
     const changeRate = parseFloat(String(item.fluctuationsRatio ?? item.fluctuationsRatioRaw ?? 0).replace(/,/g, ''));
-    return { price, changeRate };
+    // 장중 저가 (당일 최저가) — 있으면 함께 반환
+    const lowRaw = item.lowPriceRaw ?? item.lowPrice;
+    const low = lowRaw != null ? parseInt(String(lowRaw).replace(/,/g, ''), 10) : undefined;
+    return { price, changeRate, ...(low != null && !Number.isNaN(low) ? { low } : {}) };
   } catch {
     return null;
   }
@@ -1147,10 +1150,67 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
       const tickers = raw.split(',').map(t => t.trim()).filter(t => /^[0-9A-Z]{6}$/i.test(t));
       if (tickers.length === 0) return json({});
       const entries = await Promise.all(
-        tickers.map(async t => [t, await fetchCurrentPriceWithChange(t)] as [string, { price: number; changeRate: number } | null])
+        tickers.map(async t => [t, await fetchCurrentPriceWithChange(t)] as [string, { price: number; changeRate: number; low?: number } | null])
       );
-      const result: Record<string, { price: number; changeRate: number }> = {};
+      const result: Record<string, { price: number; changeRate: number; low?: number }> = {};
       for (const [t, d] of entries) { if (d !== null) result[t] = d; }
+      return json(result);
+    }
+
+    // GET /stock-low-since?ticker=000660&since=YYYYMMDD — 손절일 이후 일봉 저가 중 최저값
+    if (request.method === 'GET' && url.pathname === '/stock-low-since') {
+      const ticker = (url.searchParams.get('ticker') || '').trim();
+      const since = (url.searchParams.get('since') || '').trim();
+      if (!/^[0-9A-Z]{6}$/i.test(ticker) || !/^\d{8}$/.test(since)) return json({ low: null });
+      try {
+        const now = new Date();
+        const end = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const api = `https://api.finance.naver.com/siseJson.naver?symbol=${ticker}&requestType=1&startTime=${since}&endTime=${end}&timeframe=day`;
+        const res = await fetch(api, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://finance.naver.com/' } });
+        if (!res.ok) return json({ low: null });
+        const text = await res.text();
+        // 응답: [['날짜','시가','고가','저가','종가',...], ['20260605', 100, 110, 95, 105, ...], ...]
+        const rows = text.match(/\[[^\[\]]*\]/g) || [];
+        let min: number | null = null;
+        for (const row of rows) {
+          const cols = row.replace(/[\[\]'"]/g, '').split(',').map(c => c.trim());
+          if (!/^\d{8}$/.test(cols[0])) continue;       // 헤더/잡행 제외
+          if (cols[0] < since) continue;                 // since 이전 제외
+          const low = parseFloat(cols[3]);               // 저가 = 4번째 컬럼
+          if (!Number.isNaN(low) && low > 0) min = (min == null) ? low : Math.min(min, low);
+        }
+        return json({ low: min });
+      } catch {
+        return json({ low: null });
+      }
+    }
+
+    // GET /stock-trend?tickers=... — 추세 상태 (120일선 대비 / 전 저점 이탈)
+    if (request.method === 'GET' && url.pathname === '/stock-trend') {
+      const raw = url.searchParams.get('tickers') || '';
+      const tickers = raw.split(',').map(t => t.trim()).filter(t => /^[0-9A-Z]{6}$/i.test(t));
+      if (tickers.length === 0) return json({});
+      const entries = await Promise.all(tickers.map(async t => {
+        try {
+          const hist = await fetchHistoricalPrices(t, 130);
+          const arr = Object.entries(hist).sort(([a], [b]) => a.localeCompare(b)).map(([, p]) => p).filter(p => p > 0);
+          if (arr.length < 20) return [t, null] as const;
+          const cur = arr[arr.length - 1];
+          const ma120arr = arr.slice(-120);
+          const ma120 = Math.round(ma120arr.reduce((s, p) => s + p, 0) / ma120arr.length);
+          // 전 저점 = 최근 10일 제외한 구간의 최저 종가 (직전 의미있는 저점)
+          const prior = arr.slice(0, Math.max(1, arr.length - 10));
+          const prevLow = Math.min(...prior);
+          const belowMa120 = cur < ma120;
+          const belowPrevLow = cur < prevLow;
+          const broken = belowMa120;       // 장기 추세선 이탈 = 추세 훼손 1차 판정
+          return [t, { cur, ma120, prevLow, belowMa120, belowPrevLow, broken }] as const;
+        } catch {
+          return [t, null] as const;
+        }
+      }));
+      const result: Record<string, unknown> = {};
+      for (const [t, d] of entries) { if (d) result[t] = d; }
       return json(result);
     }
 

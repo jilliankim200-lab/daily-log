@@ -38,10 +38,10 @@ export function detectCurrency(ticker: string): 'KRW' | 'USD' {
   return isKrTicker(ticker) ? 'KRW' : 'USD';
 }
 
-export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<Record<string, { price: number; changeRate: number }>> {
+export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<Record<string, { price: number; changeRate: number; low?: number }>> {
   const krTickers = [...new Set(tickers.filter(isKrTicker))];
   const usTickers = [...new Set(tickers.filter(isUsTicker))];
-  const result: Record<string, { price: number; changeRate: number }> = {};
+  const result: Record<string, { price: number; changeRate: number; low?: number }> = {};
 
   await Promise.all([
     // 국내 — Naver
@@ -52,7 +52,7 @@ export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<R
           const batch = krTickers.slice(i, i + 50);
           const res = await fetch(`${WORKER_URL}/stock-prices-with-change?tickers=${batch.join(',')}`);
           if (!res.ok) continue;
-          const data: Record<string, { price: number; changeRate: number }> = await res.json();
+          const data: Record<string, { price: number; changeRate: number; low?: number }> = await res.json();
           Object.assign(result, data);
         }
       } catch { /* skip */ }
@@ -65,7 +65,7 @@ export async function fetchCurrentPricesWithChange(tickers: string[]): Promise<R
           const batch = usTickers.slice(i, i + 20);
           const res = await fetch(`${WORKER_URL}/stock-prices-foreign?tickers=${batch.join(',')}`);
           if (!res.ok) continue;
-          const data: Record<string, { price: number; changeRate: number }> = await res.json();
+          const data: Record<string, { price: number; changeRate: number; low?: number }> = await res.json();
           Object.assign(result, data);
         }
       } catch { /* skip */ }
@@ -101,4 +101,37 @@ export async function fetchCurrentPrices(tickers: string[]): Promise<Record<stri
 
   setCache(result);
   return result;
+}
+
+// 손절일(since: YYYYMMDD) 이후 일봉 저가 중 최저값 — 국내 종목만 (해외는 null)
+export async function fetchLowSince(ticker: string, since: string): Promise<number | null> {
+  if (!isKrTicker(ticker)) return null;
+  try {
+    const res = await fetch(`${WORKER_URL}/stock-low-since?ticker=${ticker}&since=${since}`);
+    if (!res.ok) return null;
+    const data: { low: number | null } = await res.json();
+    return (data && typeof data.low === 'number' && data.low > 0) ? data.low : null;
+  } catch {
+    return null;
+  }
+}
+
+// 추세 상태 (120일선 대비 / 전 저점 이탈) — 국내 종목만
+export interface TrendInfo {
+  cur: number; ma120: number; prevLow: number;
+  belowMa120: boolean; belowPrevLow: boolean; broken: boolean;
+}
+export async function fetchTrend(tickers: string[]): Promise<Record<string, TrendInfo>> {
+  const kr = [...new Set(tickers.filter(isKrTicker))];
+  if (kr.length === 0) return {};
+  const out: Record<string, TrendInfo> = {};
+  try {
+    for (let i = 0; i < kr.length; i += 30) {
+      const batch = kr.slice(i, i + 30);
+      const res = await fetch(`${WORKER_URL}/stock-trend?tickers=${batch.join(',')}`);
+      if (!res.ok) continue;
+      Object.assign(out, await res.json());
+    }
+  } catch { /* skip */ }
+  return out;
 }
