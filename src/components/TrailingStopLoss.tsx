@@ -10,10 +10,12 @@ interface TrailingEntry {
   pct: number;        // 손절률 (10 = 10%)
   peakPrice: number;  // 추적 고점
   troughPrice?: number; // 손절 발생 이후 추적 저점 (재매수 반등 기준)
+  troughAt?: number;    // 저점이 마지막으로 갱신된 시각(ms) — "신저가 없는 날 수" 계산용
   reboundPct?: number;  // 재매수 반등 확인 기준 (% , 기본 5)
   rebuyBudget?: number; // 재매수 예산 (원/달러)
   splitProfile?: 'safe' | 'balanced' | 'aggressive'; // 분할 비율 성향
   sellReboundPct?: number; // (보유·못판 경우) 반등 매도 알림 기준 (%, 기본 5)
+  trendMa?: 20 | 60 | 120; // 추세 판정 이동평균선 (기본 120)
 }
 
 // 분할 비율: [반등 확인선 %, 고점 회복선 %]
@@ -97,6 +99,7 @@ interface RowProps {
   onResetPeak: () => void;
   onReboundPctChange: (pct: number) => void;
   onSellReboundChange: (pct: number) => void;
+  onTrendMaChange: (ma: 20 | 60 | 120) => void;
   onBudgetChange: (budget: number) => void;
   onProfileChange: (profile: 'safe' | 'balanced' | 'aggressive') => void;
   isAmountHidden: boolean;
@@ -107,7 +110,7 @@ interface RowProps {
   trend?: TrendInfo;
 }
 
-function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, onReboundPctChange, onSellReboundChange, onBudgetChange, onProfileChange, isAmountHidden, onNameClick, highlight, rowRef, showGuide = true, trend }: RowProps) {
+function HoldingRow({ holding, account, currentPrice, changeRate, entry, currency, onPctChange, onResetPeak, onReboundPctChange, onSellReboundChange, onTrendMaChange, onBudgetChange, onProfileChange, isAmountHidden, onNameClick, highlight, rowRef, showGuide = true, trend }: RowProps) {
   const { peakPrice, pct } = entry;
   const stopPrice = peakPrice * (1 - pct / 100);
   const hasPrice = currentPrice != null && currentPrice > 0;
@@ -117,6 +120,10 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
 
   const isTriggered = hasPrice && currentPrice! <= stopPrice;
   const isWarning = !isTriggered && hasPrice && distPct! < 3;
+
+  // 반등 매도선 도달 여부 (손절 발생 보유 종목) — 카드 전체 강조용
+  const sellReboundReached = isTriggered && hasPrice
+    && currentPrice! >= (entry.troughPrice ?? currentPrice!) * (1 + (entry.sellReboundPct ?? 5) / 100);
 
   const statusColor = isTriggered ? '#F04452' : isWarning ? '#FF9500' : '#30C85E';
   const statusBg = isTriggered ? 'color-mix(in srgb, #F04452 12%, var(--bg-primary))' : isWarning ? 'color-mix(in srgb, #FF9500 14%, var(--bg-primary))' : 'color-mix(in srgb, #30C85E 12%, var(--bg-primary))';
@@ -128,8 +135,8 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
       borderRadius: 14,
       padding: '14px 16px',
       marginBottom: 10,
-      border: highlight ? '2px solid var(--accent-blue)' : isTriggered ? '1.5px solid #F04452' : '1px solid var(--border-primary)',
-      boxShadow: highlight ? '0 0 0 4px rgba(49,130,246,0.12)' : isTriggered ? '0 0 0 3px rgba(240,68,82,0.08)' : 'none',
+      border: highlight ? '2px solid var(--accent-blue)' : sellReboundReached ? '2px solid #FF9500' : isTriggered ? '1.5px solid #F04452' : '1px solid var(--border-primary)',
+      boxShadow: highlight ? '0 0 0 4px rgba(49,130,246,0.12)' : sellReboundReached ? '0 0 0 4px rgba(255,149,0,0.18)' : isTriggered ? '0 0 0 3px rgba(240,68,82,0.08)' : 'none',
       transition: 'border 0.3s, box-shadow 0.3s',
     }}>
       {/* 상단: 종목명 + 계좌 + 상태 */}
@@ -253,8 +260,13 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
         const sellLine = trough * (1 + sellPct / 100);           // 반등 매도선
         const reached = currentPrice! >= sellLine;               // 저점에서 +N% 반등
         const toLine = (sellLine - currentPrice!) / currentPrice! * 100;
-        // 추세 판정: 깨짐(120일선 이탈 또는 전 저점 이탈) → 매도 권장 / 유지 → 보유 고려
-        const broken = trend ? (trend.belowMa120 || trend.belowPrevLow) : null;
+        // 추세 판정: 선택한 이동평균선(기본 120) 이탈 또는 전 저점 이탈 → 매도 권장
+        const maPeriod = entry.trendMa ?? 120;
+        const maVal = trend ? (maPeriod === 20 ? trend.ma20 : maPeriod === 60 ? trend.ma60 : trend.ma120) : null;
+        const belowMa = trend && maVal != null ? trend.cur < maVal : false;
+        const broken = trend ? (belowMa || trend.belowPrevLow) : null;
+        // 저점 갱신 후 경과일 (신저가 없는 날 수) — 바닥 신뢰도 가늠
+        const daysSinceLow = entry.troughAt != null ? Math.floor((Date.now() - entry.troughAt) / 86400000) : null;
         return (
           <div style={{
             marginTop: 12, padding: '11px 13px', borderRadius: 10,
@@ -269,21 +281,35 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
             </div>
             {/* 추세 상태 + 판정 */}
             {trend && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
-                  background: trend.belowMa120 ? 'color-mix(in srgb, #F04452 14%, transparent)' : 'color-mix(in srgb, #30C85E 14%, transparent)',
-                  color: trend.belowMa120 ? '#F04452' : '#30C85E' }}>
-                  120일선 {trend.belowMa120 ? '이탈' : '위'}
+                  background: belowMa ? 'color-mix(in srgb, #F04452 14%, transparent)' : 'color-mix(in srgb, #30C85E 14%, transparent)',
+                  color: belowMa ? '#F04452' : '#30C85E' }}>
+                  {maPeriod}일선 {belowMa ? '아래' : '위'}
                 </span>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
                   background: trend.belowPrevLow ? 'color-mix(in srgb, #F04452 14%, transparent)' : 'var(--bg-secondary)',
                   color: trend.belowPrevLow ? '#F04452' : 'var(--text-tertiary)' }}>
-                  전 저점 {trend.belowPrevLow ? '이탈' : '유지'}
+                  {trend.belowPrevLow ? '예전 바닥도 깨짐' : '예전 바닥 안 깨짐'}
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 'auto', color: broken ? '#F04452' : '#30C85E' }}>
                   {broken ? '추세 깨짐 → 매도 권장' : '추세 유지 → 보유 고려'}
                 </span>
               </div>
+              {/* 추세선 선택 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>추세선</span>
+                {([20, 60, 120] as const).map(v => (
+                  <button key={v} onClick={() => onTrendMaChange(v)}
+                    style={{ padding: '3px 8px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit',
+                      background: maPeriod === v ? 'var(--pill-selected-bg)' : 'var(--bg-primary)', color: maPeriod === v ? 'var(--pill-selected-fg)' : 'var(--text-secondary)' }}>
+                    {v}일
+                  </button>
+                ))}
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 2 }}>20=단기 · 120=장기</span>
+              </div>
+              </>
             )}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>반등 매도선</span>
@@ -292,6 +318,17 @@ function HoldingRow({ holding, account, currentPrice, changeRate, entry, currenc
                 {reached ? `저점 +${sellPct}% 도달${broken === false ? ' (추세 유지 — 보유도 선택)' : ' — 매도 고려'}` : `현재가 +${Math.max(0, toLine).toFixed(1)}% 더 오르면`}
               </span>
             </div>
+            {/* 저점 후 경과일 — 하락 멈춤(바닥) 신뢰도 */}
+            {daysSinceLow != null && (
+              <div style={{ marginBottom: 8, fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <MIcon name="schedule" size={13} style={{ color: daysSinceLow >= 3 ? '#30C85E' : 'var(--text-tertiary)' }} />
+                {daysSinceLow === 0
+                  ? <span style={{ color: '#F04452', fontWeight: 600 }}>오늘 신저가 — 아직 바닥 확인 안 됨</span>
+                  : <span style={{ color: daysSinceLow >= 3 ? '#30C85E' : 'var(--text-secondary)', fontWeight: 600 }}>
+                      저점 후 {daysSinceLow}일째 신저가 없음{daysSinceLow >= 3 ? ' · 바닥 신뢰도 ↑' : ''}
+                    </span>}
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>반등 기준</span>
               {[3, 5, 7].map(v => (
@@ -815,11 +852,11 @@ export function TrailingStopLoss() {
           const stop = e.peakPrice * (1 - e.pct / 100);
           if (p <= stop) {
             if (e.troughPrice == null || dayLow < e.troughPrice) {
-              next[ticker] = { ...e, troughPrice: dayLow };
+              next[ticker] = { ...e, troughPrice: dayLow, troughAt: Date.now() }; // 신저가 → 시각 기록
               changed = true;
             }
           } else if (e.troughPrice != null) {
-            const { troughPrice, ...rest } = e;
+            const { troughPrice, troughAt, ...rest } = e;
             next[ticker] = rest;
             changed = true;
           }
@@ -1154,6 +1191,16 @@ export function TrailingStopLoss() {
     });
   };
 
+  const updateTrendMa = (ticker: string, trendMa: 20 | 60 | 120) => {
+    setEntries(prev => {
+      const entry = prev[ticker];
+      if (!entry) return prev;
+      const next = { ...prev, [ticker]: { ...entry, trendMa } };
+      save(next);
+      return next;
+    });
+  };
+
   const updateRebuyBudget = (ticker: string, rebuyBudget: number) => {
     setEntries(prev => {
       const entry = prev[ticker];
@@ -1465,6 +1512,7 @@ export function TrailingStopLoss() {
                       onResetPeak={() => resetPeak(cs.ticker)}
                       onReboundPctChange={(p) => updateReboundPct(cs.ticker, p)}
                       onSellReboundChange={(p) => updateSellReboundPct(cs.ticker, p)}
+                      onTrendMaChange={(m) => updateTrendMa(cs.ticker, m)}
                       onBudgetChange={(b) => updateRebuyBudget(cs.ticker, b)}
                       onProfileChange={(p) => updateSplitProfile(cs.ticker, p)}
                       isAmountHidden={isAmountHidden}
@@ -1561,6 +1609,7 @@ export function TrailingStopLoss() {
                       onResetPeak={() => resetPeak(h.ticker)}
                       onReboundPctChange={(p) => updateReboundPct(h.ticker, p)}
                       onSellReboundChange={(p) => updateSellReboundPct(h.ticker, p)}
+                      onTrendMaChange={(m) => updateTrendMa(h.ticker, m)}
                       onBudgetChange={(b) => updateRebuyBudget(h.ticker, b)}
                       onProfileChange={(p) => updateSplitProfile(h.ticker, p)}
                       isAmountHidden={isAmountHidden}

@@ -1196,15 +1196,13 @@ MA60: ${body.ma60 ? fmt(body.ma60) + '원 (현재가 대비 ' + diff(body.curren
           const arr = Object.entries(hist).sort(([a], [b]) => a.localeCompare(b)).map(([, p]) => p).filter(p => p > 0);
           if (arr.length < 20) return [t, null] as const;
           const cur = arr[arr.length - 1];
-          const ma120arr = arr.slice(-120);
-          const ma120 = Math.round(ma120arr.reduce((s, p) => s + p, 0) / ma120arr.length);
+          const ma = (n: number) => { const s = arr.slice(-n); return Math.round(s.reduce((a, p) => a + p, 0) / s.length); };
+          const ma20 = ma(20), ma60 = ma(60), ma120 = ma(120);
           // 전 저점 = 최근 10일 제외한 구간의 최저 종가 (직전 의미있는 저점)
           const prior = arr.slice(0, Math.max(1, arr.length - 10));
           const prevLow = Math.min(...prior);
-          const belowMa120 = cur < ma120;
           const belowPrevLow = cur < prevLow;
-          const broken = belowMa120;       // 장기 추세선 이탈 = 추세 훼손 1차 판정
-          return [t, { cur, ma120, prevLow, belowMa120, belowPrevLow, broken }] as const;
+          return [t, { cur, ma20, ma60, ma120, prevLow, belowPrevLow }] as const;
         } catch {
           return [t, null] as const;
         }

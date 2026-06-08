@@ -118,8 +118,8 @@ export async function fetchLowSince(ticker: string, since: string): Promise<numb
 
 // 추세 상태 (120일선 대비 / 전 저점 이탈) — 국내 종목만
 export interface TrendInfo {
-  cur: number; ma120: number; prevLow: number;
-  belowMa120: boolean; belowPrevLow: boolean; broken: boolean;
+  cur: number; ma20: number; ma60: number; ma120: number;
+  prevLow: number; belowPrevLow: boolean;
 }
 export async function fetchTrend(tickers: string[]): Promise<Record<string, TrendInfo>> {
   const kr = [...new Set(tickers.filter(isKrTicker))];
