@@ -789,6 +789,7 @@ export function TrailingStopLoss() {
     try { localStorage.setItem('trailing_show_guide_v1', next ? '1' : '0'); } catch {}
     return next;
   });
+  const [showSellSummary, setShowSellSummary] = useState(true);
   const rowRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   const isCustomView = selectedAccountId === 'custom';
@@ -1423,6 +1424,64 @@ export function TrailingStopLoss() {
             재매수 가이드 {showGuide ? '표시 중' : '숨김'}
           </button>
         </div>
+
+        {/* 반등 매도 한눈에 — 손절 발생 보유 종목 요약 */}
+        {(() => {
+          const rows = accounts
+            .flatMap(acc => acc.holdings.filter(h => !h.isFund && h.ticker && h.quantity > 0).map(h => ({ name: h.name, ticker: h.ticker!, currency: detectCurrency(h.ticker!) })))
+            .concat(customStocks.map(s => ({ name: s.name, ticker: s.ticker, currency: s.currency })))
+            .map(o => {
+              const e = entries[o.ticker]; const p = priceData[o.ticker]?.price;
+              if (!e || !p) return null;
+              const stop = e.peakPrice * (1 - e.pct / 100);
+              if (p > stop) return null;                         // 손절 발생만
+              const trough = e.troughPrice ?? p;
+              const sellLine = trough * (1 + (e.sellReboundPct ?? 5) / 100);
+              const reached = p >= sellLine;
+              const t = trend[o.ticker];
+              const maP = e.trendMa ?? 120;
+              const maVal = t ? (maP === 20 ? t.ma20 : maP === 60 ? t.ma60 : t.ma120) : null;
+              const broken = t ? ((maVal != null && t.cur < maVal) || t.belowPrevLow) : null;
+              const toLine = (sellLine - p) / p * 100;
+              return { ...o, p, sellLine, reached, broken, toLine };
+            })
+            .filter((x): x is NonNullable<typeof x> => x != null)
+            .sort((a, b) => (b.reached ? 1 : 0) - (a.reached ? 1 : 0));
+          if (rows.length === 0) return null;
+          const reachedN = rows.filter(r => r.reached).length;
+          const dedup = [...new Map(rows.map(r => [r.ticker, r])).values()];
+          return (
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+              <button onClick={() => setShowSellSummary(v => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <MIcon name="sell" size={16} style={{ color: '#FF9500' }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>반등 매도 한눈에</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: reachedN > 0 ? '#FF9500' : 'var(--text-tertiary)', borderRadius: 10, padding: '1px 7px' }}>{reachedN > 0 ? `지금 ${reachedN}` : dedup.length}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>손절 발생 보유 {dedup.length}종목</span>
+                <MIcon name={showSellSummary ? 'expand_less' : 'expand_more'} size={18} style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }} />
+              </button>
+              {showSellSummary && (
+                <div style={{ borderTop: '1px solid var(--border-primary)' }}>
+                  {dedup.map(r => (
+                    <div key={r.ticker}
+                      onClick={() => { const ref = rowRefs.current[r.ticker] ?? Object.entries(rowRefs.current).find(([k]) => k.endsWith(`-${r.ticker}`))?.[1]; ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setHighlightTicker(r.ticker); setTimeout(() => setHighlightTicker(null), 2000); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderTop: '1px solid var(--border-primary)', cursor: 'pointer',
+                        background: r.reached ? 'color-mix(in srgb, #FF9500 8%, var(--bg-primary))' : 'transparent' }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                      {r.reached
+                        ? <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#FF9500', color: '#fff', flexShrink: 0 }}>지금 반등</span>
+                        : <span style={{ fontSize: 11, color: 'var(--text-tertiary)', flexShrink: 0 }}>+{Math.max(0, r.toLine).toFixed(1)}%</span>}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#FF9500', flexShrink: 0, minWidth: 72, textAlign: 'right' }}>{isAmountHidden ? '••••' : fmtPrice(r.sellLine, r.currency)}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 700, flexShrink: 0, minWidth: 64, textAlign: 'right', color: r.broken == null ? 'var(--text-tertiary)' : r.broken ? '#F04452' : '#30C85E' }}>
+                        {r.broken == null ? '—' : r.broken ? '매도 권장' : '보유 고려'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 개별종목 뷰 */}
         {isCustomView && (
