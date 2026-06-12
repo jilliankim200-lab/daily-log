@@ -19,9 +19,7 @@ export function Sidebar({ currentPage, onNavigate, isCollapsed = false, onToggle
     return `${year}${month}${date}`;
   };
 
-  const externalItems = [
-    { label: "월드컵", icon: "sports_soccer", url: "/worldcup.html", gradient: "from-yellow-500 to-orange-500" },
-  ];
+  const externalItems: { label: string; icon: string; url: string; gradient: string }[] = [];
 
   const menuItems = [
     { id: "couple-accounts", label: "부부 계좌", icon: "person", gradient: "from-purple-500 to-pink-500" },
